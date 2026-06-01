@@ -56,3 +56,7 @@
 | 2026-06-02 | `wc -c docs/process/agent-general-rules.md docs/process/mj-prompt-studio-rules.md` | 22,822 / 20,542 bytes | 分割先も 32KiB 未満 |
 | 2026-06-02 | `git diff --check` | 成功 | 空白エラーなし |
 | 2026-06-02 | `.venv/bin/python -m pytest` | 成功 | 31 passed |
+| 2026-06-02 | GitHub Actions `Quality and package` | 失敗 | `docs/` へ移動した禁止バージョン表記の例示が public text policy に検出された |
+| 2026-06-02 | `.venv/bin/python scripts/verify_ui_text.py` | 成功 | 禁止例の具体文字列を汎用説明へ修正 |
+| 2026-06-02 | `.venv/bin/python -m pytest` | 成功 | 31 passed |
+| 2026-06-02 | `git diff --check` | 成功 | 空白エラーなし |

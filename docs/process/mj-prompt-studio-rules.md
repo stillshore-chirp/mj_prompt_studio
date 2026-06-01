@@ -51,7 +51,7 @@
 ### UI 表記ルール
 
 - アプリ名はユーザー向けには `MJ Prompt Studio` を基本とする。
-- UI 上に `V8.1`、`v8`、`Version 8`、`Midjourney V...` など、Midjourney の特定バージョン番号を表示しない。
+- UI 上に、サービス名と特定バージョン番号を組み合わせたラベルや、バージョン番号だけを強調するラベルを表示しない。
 - `Alpha`、`Current Model`、`Latest Version` のようなサービス状態を誤認させる UI 表記も避ける。
 - ユーザー向けの設定名は `Ruleset`、`Capability Profile`、`Prompt Compatibility`、`Generation Service Profile` など、バージョン非依存の表現にする。
 - 内部 ruleset の詳細を見せる必要がある場合も、表示名は `Generic image prompt profile`、`Strict compatibility profile` などにし、内部 ID は詳細表示やログに限定する。
