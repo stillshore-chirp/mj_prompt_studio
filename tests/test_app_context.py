@@ -26,6 +26,6 @@ def test_app_context_persists_feature_level_llm_profiles(tmp_path) -> None:
     profile = reloaded.settings.feature_profile_for("PromptDoctorAgent")
 
     assert profile.model == "gpt-5.4-mini"
-    assert profile.reasoning_effort == "high"
+    assert profile.reasoning_effort == "medium"
     assert profile.vocabulary_amount == "rich"
     reloaded.shutdown()
