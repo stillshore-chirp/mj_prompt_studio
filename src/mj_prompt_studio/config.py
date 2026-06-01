@@ -11,9 +11,9 @@ ENV_PREFIX = "MJPS_"
 OPENAI_API_KEY_ENV_NAMES = ("OPENAI_API_KEY", "OPENAI_KEY", f"{ENV_PREFIX}OPENAI_API_KEY")
 LLM_FEATURE_PROFILES_SETTING_KEY = "llm_feature_profiles"
 
-AVAILABLE_LLM_MODELS = ("gpt-5.5", "gpt-5.4-mini", "gpt-5.4-nano")
-DEFAULT_LLM_MODEL = "gpt-5.5"
-REASONING_EFFORTS = ("none", "low", "medium", "high", "xhigh")
+AVAILABLE_LLM_MODELS = ("gpt-5.4-mini", "gpt-5.4-nano")
+DEFAULT_LLM_MODEL = "gpt-5.4-mini"
+REASONING_EFFORTS = ("none", "low", "medium")
 DEFAULT_REASONING_EFFORT = "medium"
 VOCABULARY_AMOUNTS = ("compact", "standard", "rich")
 DEFAULT_VOCABULARY_AMOUNT = "standard"
@@ -53,12 +53,54 @@ class LLMModelConfig:
     vision_model: str = DEFAULT_LLM_MODEL
     deep_review_model: str = DEFAULT_LLM_MODEL
 
+    def __post_init__(self) -> None:
+        for field_name in (
+            "default_model",
+            "inline_model",
+            "vision_model",
+            "deep_review_model",
+        ):
+            object.__setattr__(
+                self,
+                field_name,
+                _validated_choice(
+                    str(getattr(self, field_name)),
+                    AVAILABLE_LLM_MODELS,
+                    DEFAULT_LLM_MODEL,
+                ),
+            )
+
 
 @dataclass(frozen=True)
 class LLMFeatureProfile:
     model: str = DEFAULT_LLM_MODEL
     reasoning_effort: str = DEFAULT_REASONING_EFFORT
     vocabulary_amount: str = DEFAULT_VOCABULARY_AMOUNT
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "model",
+            _validated_choice(str(self.model), AVAILABLE_LLM_MODELS, DEFAULT_LLM_MODEL),
+        )
+        object.__setattr__(
+            self,
+            "reasoning_effort",
+            _validated_choice(
+                str(self.reasoning_effort),
+                REASONING_EFFORTS,
+                DEFAULT_REASONING_EFFORT,
+            ),
+        )
+        object.__setattr__(
+            self,
+            "vocabulary_amount",
+            _validated_choice(
+                str(self.vocabulary_amount),
+                VOCABULARY_AMOUNTS,
+                DEFAULT_VOCABULARY_AMOUNT,
+            ),
+        )
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> LLMFeatureProfile:
@@ -104,6 +146,21 @@ class RuntimeSettings:
     timeout_seconds: int = 120
     retry_count: int = 2
 
+    def __post_init__(self) -> None:
+        raw_model_config: Any = self.model_config
+        if isinstance(raw_model_config, LLMModelConfig):
+            model_config = LLMModelConfig(**vars(raw_model_config))
+        elif isinstance(raw_model_config, Mapping):
+            model_config = LLMModelConfig(**raw_model_config)
+        else:
+            model_config = LLMModelConfig()
+        object.__setattr__(self, "model_config", model_config)
+        object.__setattr__(
+            self,
+            "feature_profiles",
+            normalize_feature_profiles(self.feature_profiles),
+        )
+
     @property
     def privacy_mode(self) -> bool:
         return self.response_storage.lower() == "privacy"
@@ -131,10 +188,12 @@ def load_runtime_settings() -> RuntimeSettings:
         llm_mode=(configured_llm_mode or _default_llm_mode()).lower(),
         response_storage=os.environ.get(f"{ENV_PREFIX}RESPONSE_STORAGE", "normal").lower(),
         model_config=LLMModelConfig(
-            default_model=os.environ.get(f"{ENV_PREFIX}MODEL_DEFAULT", "gpt-5.5"),
-            inline_model=os.environ.get(f"{ENV_PREFIX}MODEL_INLINE", "gpt-5.5"),
-            vision_model=os.environ.get(f"{ENV_PREFIX}MODEL_VISION", "gpt-5.5"),
-            deep_review_model=os.environ.get(f"{ENV_PREFIX}MODEL_DEEP_REVIEW", "gpt-5.5"),
+            default_model=os.environ.get(f"{ENV_PREFIX}MODEL_DEFAULT", DEFAULT_LLM_MODEL),
+            inline_model=os.environ.get(f"{ENV_PREFIX}MODEL_INLINE", DEFAULT_LLM_MODEL),
+            vision_model=os.environ.get(f"{ENV_PREFIX}MODEL_VISION", DEFAULT_LLM_MODEL),
+            deep_review_model=os.environ.get(
+                f"{ENV_PREFIX}MODEL_DEEP_REVIEW", DEFAULT_LLM_MODEL
+            ),
         ),
         max_parallel_jobs=int(os.environ.get(f"{ENV_PREFIX}MAX_PARALLEL_JOBS", "3")),
         timeout_seconds=int(os.environ.get(f"{ENV_PREFIX}TIMEOUT_SECONDS", "120")),

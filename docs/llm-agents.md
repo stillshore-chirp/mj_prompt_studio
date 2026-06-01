@@ -8,7 +8,8 @@
 - Patchは適用前に差分確認を必須にする。
 - APIキー未設定時はMockLLMが同じschemaで応答する。
 - LLM Jobは `queued`、`running`、`succeeded`、`failed`、`cancelled` の状態を持ち、UIからキャンセルと再実行を操作できる。
-- SettingsでAgentごとにモデル、推論強度、語彙量を保存できる。既定は `gpt-5.5`、`medium`、`standard`。
+- SettingsでAgentごとにモデル、推論強度、語彙量を保存できる。コスト抑制のため、通常モデル以上は使わず、モデルは `gpt-5.4-mini` または `gpt-5.4-nano` だけを許可する。推論強度は `none`、`low`、`medium` だけを許可し、`high` 以上は使わない。既定は `gpt-5.4-mini`、`medium`、`standard`。
+- 環境変数、保存済み設定、低レベルOpenAI client呼び出しのいずれでも、不許可モデルや `high` 以上の推論強度は既定値へ丸める。
 - ログやJob payloadにはAPIキー、Token、Cookieを含めない。
 - React UIはAgentを直接呼ばず、`/api/agents/*` または機能別endpointからJobを作成する。
 - Job結果の永続化やPromptDocument更新はPython Application Service / Repositoryを通す。
@@ -70,6 +71,5 @@ CIではOpenAI実APIを呼ばない。納品前またはリリース前に、API
 
 - [Responses API Reference](https://platform.openai.com/docs/api-reference/responses)
 - [Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs)
-- [gpt-5.5](https://developers.openai.com/api/docs/models/gpt-5.5)
 - [gpt-5.4-mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini)
 - [gpt-5.4-nano](https://developers.openai.com/api/docs/models/gpt-5.4-nano)

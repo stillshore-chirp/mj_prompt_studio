@@ -7,6 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from mj_prompt_studio.config import (
+    AVAILABLE_LLM_MODELS,
+    DEFAULT_LLM_MODEL,
+    DEFAULT_REASONING_EFFORT,
+    REASONING_EFFORTS,
+)
+
 
 @dataclass(frozen=True)
 class OpenAIResponse:
@@ -33,9 +40,9 @@ class OpenAIResponsesClient:
         store: bool,
     ) -> OpenAIResponse:
         kwargs: dict[str, Any] = {
-            "model": model,
+            "model": _safe_model(model),
             "input": input_payload,
-            "reasoning": {"effort": reasoning_effort},
+            "reasoning": {"effort": _safe_reasoning_effort(reasoning_effort)},
             "text": {"format": text_format},
             "store": store,
         }
@@ -79,3 +86,15 @@ def image_input_item(image_path: Path) -> dict[str, Any]:
         "type": "input_image",
         "image_url": f"data:{mime_type};base64,{encoded}",
     }
+
+
+def _safe_model(model: str) -> str:
+    return model if model in AVAILABLE_LLM_MODELS else DEFAULT_LLM_MODEL
+
+
+def _safe_reasoning_effort(reasoning_effort: str) -> str:
+    return (
+        reasoning_effort
+        if reasoning_effort in REASONING_EFFORTS
+        else DEFAULT_REASONING_EFFORT
+    )

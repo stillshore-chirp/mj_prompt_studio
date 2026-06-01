@@ -79,6 +79,8 @@ def test_rich_vocabulary_setting_expands_mock_suggestions(tmp_path) -> None:
 
     result = orchestrator.run_agent("VocabularyAgent", {"text": "上質"})
 
+    assert result.model == "gpt-5.4-mini"
+    assert result.reasoning_effort == "medium"
     assert len(result.output_json["suggestions"][0]["terms"]) == 5
 
 
