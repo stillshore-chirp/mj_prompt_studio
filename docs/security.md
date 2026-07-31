@@ -27,6 +27,8 @@
 
 - 画像解析や結果レビューを実行した場合のみ、必要な画像と最小限のメタデータをLLMへ渡す。
 - Privacy modeではResponses APIの保存を無効化し、会話ID継続を使わない。
+- 通常モードでも、保存モデルが `gpt-5.6-luna` と一致しない旧会話IDは送信しない。
+- LLM計測にはAgent名、token usage、latency、画像入力数、再試行数、schema成否、response ID有無だけを使い、APIキー、prompt本文、画像内容を含めない。
 - connection testと代表Agentの実API手動検証は `OPENAI_API_KEY` を設定した環境でだけ行う。通常テストとCIはMockLLMを使う。
 
 ## 生成サービス境界

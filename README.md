@@ -20,6 +20,8 @@ Node.js と npm が必要です。Apple Silicon で Python の architecture mism
 
 APIキーがない場合でも、既定ではMockLLMで主要フローを確認できます。端末の環境変数 `OPENAI_API_KEY` にAPIキーがある場合は、起動時に自動で実API利用に切り替わります。
 
+実APIの全機能と接続テストは、`gpt-5.6-luna`、reasoning effort `high`、text verbosity `low` の固定構成を使います。モデルと推論強度は変更できません。Settingsでは実効構成を読み取り専用で確認し、機能ごとの語彙量だけを調整できます。旧 `MJPS_MODEL_*` 環境変数は無視され、起動時に削除を促す警告が出ます。
+
 ```bash
 export OPENAI_API_KEY="..."
 ```
@@ -61,7 +63,7 @@ OpenAPI schemaを更新する場合は `make generate-openapi` を実行しま�
 - Matrix Lab: 実験目的からvariantを生成し、選択コピー、一括コピー、CSV/Markdownで出力。
 - Result Review: 手動取り込み画像を元プロンプトと比較し、画像プレビュー、parameters snapshot、改善候補をComposerへPatchとして戻す。
 - Export: Prompt only、Markdown record、JSON snapshot、CSV/Markdown matrix variants。
-- Jobs: LLM処理の状態表示、キャンセル、再実行。
+- Jobs: LLM処理の状態、固定実効構成、キャンセル、再実行を表示。
 
 ## データとセキュリティ
 
