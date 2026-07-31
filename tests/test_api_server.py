@@ -7,7 +7,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from mj_prompt_studio.config import LLMModelConfig, RuntimeSettings
+from mj_prompt_studio.config import RuntimeSettings
 from mj_prompt_studio.server.app_state import create_state
 from mj_prompt_studio.server.main import create_app
 
@@ -18,7 +18,6 @@ def _client(tmp_path: Path) -> TestClient:
             data_dir=tmp_path,
             llm_mode="mock",
             response_storage="normal",
-            model_config=LLMModelConfig(),
         )
     )
     return TestClient(create_app(state))
@@ -65,6 +64,9 @@ def test_workspace_compile_and_agent_job_use_real_services(tmp_path: Path) -> No
         assert job_response.status_code == 200
         job = _wait_for_job(client, job_response.json()["job"]["id"])
         assert job["status"] == "succeeded"
+        assert job["model"] == "gpt-5.6-luna"
+        assert job["reasoning_effort"] == "high"
+        assert job["text_verbosity"] == "low"
         assert "document" in job["output_json"]
 
 
@@ -113,3 +115,50 @@ def test_openapi_schema_contains_react_contract_endpoints(tmp_path: Path) -> Non
     assert "/api/prompt-documents/{document_id}/compile" in paths
     assert "/api/projects/{project_id}/references/upload" in paths
     assert "/api/jobs/{job_id}" in paths
+    assert "/api/settings/feature-preferences" in paths
+    assert "/api/settings/llm-profiles" not in paths
+
+
+def test_settings_expose_fixed_execution_policy_and_vocabulary_only(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        settings = client.get("/api/settings").json()["settings"]
+
+    assert settings["effective_model"] == "gpt-5.6-luna"
+    assert settings["effective_reasoning_effort"] == "high"
+    assert settings["effective_text_verbosity"] == "low"
+    assert "available_models" not in settings
+    assert "reasoning_efforts" not in settings
+    assert set(settings["feature_preferences"]["VocabularyAgent"]) == {
+        "vocabulary_amount"
+    }
+
+
+def test_feature_preferences_api_rejects_legacy_model_fields(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        valid = client.put(
+            "/api/settings/feature-preferences",
+            json={
+                "preferences": {
+                    "VocabularyAgent": {"vocabulary_amount": "rich"}
+                }
+            },
+        )
+        legacy = client.put(
+            "/api/settings/feature-preferences",
+            json={
+                "preferences": {
+                    "VocabularyAgent": {
+                        "model": "gpt-5.4-mini",
+                        "reasoning_effort": "medium",
+                        "vocabulary_amount": "rich",
+                    }
+                }
+            },
+        )
+
+    assert valid.status_code == 200
+    assert (
+        valid.json()["settings"]["feature_preferences"]["VocabularyAgent"]
+        == {"vocabulary_amount": "rich"}
+    )
+    assert legacy.status_code == 422

@@ -76,6 +76,12 @@ test("core local workflow parity", async ({ page }) => {
   await expect(page.getByText(/コピー前の最終監査/)).toBeVisible();
 
   await page.getByLabel("Main tabs").getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByText("GPT-5.6 Luna")).toBeVisible();
+  await expect(page.getByText("High", { exact: true })).toBeVisible();
+  await expect(page.getByText("Low", { exact: true })).toBeVisible();
+  await page.getByLabel("語彙補助 vocabulary amount").selectOption("rich");
+  await page.getByRole("button", { name: /語彙設定を保存/ }).click();
+  await expect(page.getByText("語彙設定を保存しました")).toBeVisible();
   const privacyMode = page.getByLabel("Settings").getByLabel("Privacy mode");
   await privacyMode.setChecked(true);
   await expect(page.getByText("Privacy 設定を保存しました")).toBeVisible();

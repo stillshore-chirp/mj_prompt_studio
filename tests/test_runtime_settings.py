@@ -1,9 +1,11 @@
+import pytest
+
 from mj_prompt_studio.config import (
-    LLMFeatureProfile,
-    LLMModelConfig,
-    default_feature_profiles,
+    LLM_EXECUTION_POLICY,
+    LLMFeaturePreferences,
+    default_feature_preferences,
     load_runtime_settings,
-    normalize_feature_profiles,
+    normalize_feature_preferences,
     read_openai_api_key_from_environment,
 )
 from mj_prompt_studio.domain.prompt_document import LLMContext
@@ -38,55 +40,75 @@ def test_secret_store_reads_windows_or_shell_alias(monkeypatch) -> None:
     assert SecretStore().read_openai_api_key() == "alias-key"
 
 
-def test_feature_profiles_default_to_mini_model_and_medium_reasoning() -> None:
-    profiles = default_feature_profiles()
-
-    assert all(profile.model == "gpt-5.4-mini" for profile in profiles.values())
-    assert all(profile.reasoning_effort == "medium" for profile in profiles.values())
-    assert all(profile.vocabulary_amount == "standard" for profile in profiles.values())
+def test_execution_policy_is_luna_high_with_low_verbosity() -> None:
+    assert LLM_EXECUTION_POLICY.model == "gpt-5.6-luna"
+    assert LLM_EXECUTION_POLICY.reasoning_effort == "high"
+    assert LLM_EXECUTION_POLICY.text_verbosity == "low"
 
 
-def test_feature_profile_normalization_rejects_high_cost_choices() -> None:
-    profiles = normalize_feature_profiles(
+def test_feature_preferences_only_control_vocabulary_amount() -> None:
+    preferences = default_feature_preferences()
+
+    assert all(
+        preference == LLMFeaturePreferences(vocabulary_amount="standard")
+        for preference in preferences.values()
+    )
+
+
+def test_feature_preference_normalization_migrates_legacy_profiles() -> None:
+    preferences = normalize_feature_preferences(
         {
             "VocabularyAgent": {
-                "model": "unknown",
-                "reasoning_effort": "extreme",
-                "vocabulary_amount": "verbose",
-            },
-            "PromptDoctorAgent": LLMFeatureProfile(
-                model="gpt-5.4-mini",
-                reasoning_effort="high",
-                vocabulary_amount="rich",
-            ),
-            "PromptCompilerAgent": {
                 "model": "gpt-5.4-nano",
                 "reasoning_effort": "none",
                 "vocabulary_amount": "compact",
             },
+            "PromptDoctorAgent": {
+                "model": "gpt-5.4-mini",
+                "reasoning_effort": "medium",
+                "vocabulary_amount": "rich",
+            },
+            "PromptCompilerAgent": {"vocabulary_amount": "unknown"},
+            "UnknownAgent": {"vocabulary_amount": "rich"},
         }
     )
 
-    assert profiles["VocabularyAgent"] == LLMFeatureProfile()
-    assert profiles["PromptDoctorAgent"].model == "gpt-5.4-mini"
-    assert profiles["PromptDoctorAgent"].reasoning_effort == "medium"
-    assert profiles["PromptDoctorAgent"].vocabulary_amount == "rich"
-    assert profiles["PromptCompilerAgent"].reasoning_effort == "none"
+    assert preferences["VocabularyAgent"].to_dict() == {
+        "vocabulary_amount": "compact"
+    }
+    assert preferences["PromptDoctorAgent"].vocabulary_amount == "rich"
+    assert preferences["PromptCompilerAgent"] == LLMFeaturePreferences()
+    assert "UnknownAgent" not in preferences
 
 
-def test_model_config_env_values_are_capped(monkeypatch) -> None:
-    monkeypatch.setenv("MJPS_MODEL_DEFAULT", "gpt-5.5")
-    monkeypatch.setenv("MJPS_MODEL_INLINE", "gpt-5.4-mini")
-    monkeypatch.setenv("MJPS_MODEL_VISION", "gpt-5.5")
-    monkeypatch.setenv("MJPS_MODEL_DEEP_REVIEW", "gpt-5.4-mini")
+def test_legacy_model_environment_is_ignored_with_warning(monkeypatch) -> None:
+    monkeypatch.setenv("MJPS_MODEL_DEFAULT", "gpt-5.4-mini")
+    monkeypatch.setenv("MJPS_MODEL_VISION", "gpt-5.6-sol")
 
-    settings = load_runtime_settings()
+    with pytest.warns(RuntimeWarning, match="ignored"):
+        settings = load_runtime_settings()
 
-    assert settings.model_config == LLMModelConfig()
+    assert settings.feature_preferences == default_feature_preferences()
+    assert LLM_EXECUTION_POLICY.model == "gpt-5.6-luna"
 
 
-def test_saved_llm_context_disallowed_values_are_capped() -> None:
-    context = LLMContext(model="gpt-5.5", reasoning_effort="high")
+def test_saved_llm_context_preserves_legacy_model_boundary() -> None:
+    context = LLMContext.from_dict(
+        {
+            "latest_response_id": "resp_legacy",
+            "model": "gpt-5.4-mini",
+            "reasoning_effort": "medium",
+        }
+    )
 
     assert context.model == "gpt-5.4-mini"
     assert context.reasoning_effort == "medium"
+    assert context.text_verbosity == ""
+
+
+def test_new_llm_context_uses_fixed_execution_policy() -> None:
+    context = LLMContext()
+
+    assert context.model == LLM_EXECUTION_POLICY.model
+    assert context.reasoning_effort == LLM_EXECUTION_POLICY.reasoning_effort
+    assert context.text_verbosity == LLM_EXECUTION_POLICY.text_verbosity

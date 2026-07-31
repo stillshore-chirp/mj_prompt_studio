@@ -15,8 +15,6 @@ def test_job_queue_runs_work_and_reports_success() -> None:
 
     queue.submit(
         agent_name="VocabularyAgent",
-        model="mock",
-        reasoning_effort="low",
         input_snapshot={"text": "高級感"},
         work=lambda: {"ok": True},
         callback=callback,
@@ -39,8 +37,6 @@ def test_job_queue_retries_retained_work() -> None:
 
     first = queue.submit(
         agent_name="VocabularyAgent",
-        model="mock",
-        reasoning_effort="low",
         input_snapshot={"text": "高級感"},
         work=work,
         callback=lambda _job: done.set(),
@@ -51,4 +47,8 @@ def test_job_queue_retries_retained_work() -> None:
     queue.retry(first.id)
     assert done.wait(3)
     assert calls["count"] == 2
+    assert first.model == "gpt-5.6-luna"
+    assert first.reasoning_effort == "high"
+    assert first.text_verbosity == "low"
+    assert first.retry_count == 1
     queue.shutdown()

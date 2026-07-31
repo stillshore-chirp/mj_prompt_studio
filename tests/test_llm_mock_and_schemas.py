@@ -1,4 +1,9 @@
-from mj_prompt_studio.config import LLMFeatureProfile, LLMModelConfig, RuntimeSettings
+from mj_prompt_studio.config import (
+    LLM_EXECUTION_POLICY,
+    LLMFeaturePreferences,
+    RuntimeSettings,
+)
+from mj_prompt_studio.llm.mock_client import MockLLMClient
 from mj_prompt_studio.llm.orchestrator import LLMOrchestrator
 from mj_prompt_studio.llm.response_schemas import schema_for_agent, validate_schema_payload
 
@@ -8,7 +13,6 @@ def test_mock_intent_agent_returns_schema_valid_payload(tmp_path) -> None:
         data_dir=tmp_path,
         llm_mode="mock",
         response_storage="normal",
-        model_config=LLMModelConfig(),
     )
     orchestrator = LLMOrchestrator(settings)
 
@@ -36,27 +40,23 @@ def test_schema_validation_rejects_wrong_types() -> None:
         raise AssertionError("schema validation should fail")
 
 
-def test_orchestrator_uses_feature_level_model_and_reasoning(tmp_path) -> None:
+def test_orchestrator_uses_fixed_execution_policy_and_vocabulary_preference(tmp_path) -> None:
     settings = RuntimeSettings(
         data_dir=tmp_path,
         llm_mode="mock",
         response_storage="normal",
-        model_config=LLMModelConfig(),
-    ).with_feature_profiles(
+    ).with_feature_preferences(
         {
-            "VocabularyAgent": LLMFeatureProfile(
-                model="gpt-5.4-nano",
-                reasoning_effort="low",
-                vocabulary_amount="compact",
-            )
+            "VocabularyAgent": LLMFeaturePreferences(vocabulary_amount="compact")
         }
     )
     orchestrator = LLMOrchestrator(settings)
 
     result = orchestrator.run_agent("VocabularyAgent", {"text": "上質"})
 
-    assert result.model == "gpt-5.4-nano"
-    assert result.reasoning_effort == "low"
+    assert result.model == LLM_EXECUTION_POLICY.model
+    assert result.reasoning_effort == LLM_EXECUTION_POLICY.reasoning_effort
+    assert result.text_verbosity == LLM_EXECUTION_POLICY.text_verbosity
     assert len(result.output_json["suggestions"][0]["terms"]) == 2
 
 
@@ -65,23 +65,39 @@ def test_rich_vocabulary_setting_expands_mock_suggestions(tmp_path) -> None:
         data_dir=tmp_path,
         llm_mode="mock",
         response_storage="normal",
-        model_config=LLMModelConfig(),
-    ).with_feature_profiles(
+    ).with_feature_preferences(
         {
-            "VocabularyAgent": LLMFeatureProfile(
-                model="gpt-5.5",
-                reasoning_effort="medium",
-                vocabulary_amount="rich",
-            )
+            "VocabularyAgent": LLMFeaturePreferences(vocabulary_amount="rich")
         }
     )
     orchestrator = LLMOrchestrator(settings)
 
     result = orchestrator.run_agent("VocabularyAgent", {"text": "上質"})
 
-    assert result.model == "gpt-5.4-mini"
-    assert result.reasoning_effort == "medium"
+    assert result.model == LLM_EXECUTION_POLICY.model
+    assert result.reasoning_effort == LLM_EXECUTION_POLICY.reasoning_effort
     assert len(result.output_json["suggestions"][0]["terms"]) == 5
+
+
+def test_mock_payload_only_receives_model_independent_preferences(tmp_path) -> None:
+    settings = RuntimeSettings(
+        data_dir=tmp_path,
+        llm_mode="mock",
+        response_storage="normal",
+    )
+    orchestrator = LLMOrchestrator(settings)
+    delegate = MockLLMClient()
+    seen = {}
+
+    class CapturingMock:
+        def create_agent_response(self, agent_name, payload):
+            seen.update(payload)
+            return delegate.create_agent_response(agent_name, payload)
+
+    orchestrator.mock_client = CapturingMock()
+    orchestrator.run_agent("VocabularyAgent", {"text": "上質"})
+
+    assert seen["llm_preferences"] == {"vocabulary_amount": "standard"}
 
 
 def test_mock_agent_payloads_match_strict_response_schemas(tmp_path) -> None:
@@ -89,7 +105,6 @@ def test_mock_agent_payloads_match_strict_response_schemas(tmp_path) -> None:
         data_dir=tmp_path,
         llm_mode="mock",
         response_storage="normal",
-        model_config=LLMModelConfig(),
     )
     orchestrator = LLMOrchestrator(settings)
     payloads = {
@@ -110,6 +125,9 @@ def test_mock_agent_payloads_match_strict_response_schemas(tmp_path) -> None:
 
     for agent_name, payload in payloads.items():
         result = orchestrator.run_agent(agent_name, payload)
+        assert result.model == "gpt-5.6-luna"
+        assert result.reasoning_effort == "high"
+        assert result.text_verbosity == "low"
         _assert_matches_json_schema(result.output_json, schema_for_agent(agent_name)["schema"])
 
 

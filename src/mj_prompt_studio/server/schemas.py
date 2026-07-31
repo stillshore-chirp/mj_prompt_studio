@@ -59,8 +59,12 @@ class ResultCompareRequest(APIModel):
     project_id: str
 
 
-class LLMProfilesRequest(APIModel):
-    profiles: dict[str, dict[str, str]]
+class LLMFeaturePreferencesPayload(APIModel):
+    vocabulary_amount: Literal["compact", "standard", "rich"]
+
+
+class LLMFeaturePreferencesRequest(APIModel):
+    preferences: dict[str, LLMFeaturePreferencesPayload]
 
 
 class ResponseStorageRequest(APIModel):
@@ -82,4 +86,3 @@ class ExportRequest(APIModel):
     ]
     matrix_plan: dict[str, Any] | None = None
     matrix_variants: list[dict[str, Any]] = Field(default_factory=list)
-

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from mj_prompt_studio.app.app_context import AppContext
-from mj_prompt_studio.config import LLMModelConfig, RuntimeSettings
+from mj_prompt_studio.config import RuntimeSettings
 from mj_prompt_studio.domain.prompt_document import PromptPatch
 
 
@@ -11,7 +11,6 @@ def test_mock_workflow_creates_compiled_prompt_and_reference(tmp_path: Path) -> 
             data_dir=tmp_path,
             llm_mode="mock",
             response_storage="normal",
-            model_config=LLMModelConfig(),
         )
     )
     project, document = context.ensure_workspace()
@@ -34,7 +33,6 @@ def test_confirmed_patch_updates_user_vocabulary_profile(tmp_path: Path) -> None
             data_dir=tmp_path,
             llm_mode="mock",
             response_storage="normal",
-            model_config=LLMModelConfig(),
         )
     )
     _project, document = context.ensure_workspace()

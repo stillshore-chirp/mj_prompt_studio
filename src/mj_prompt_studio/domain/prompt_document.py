@@ -5,12 +5,7 @@ from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import uuid4
 
-from mj_prompt_studio.config import (
-    AVAILABLE_LLM_MODELS,
-    DEFAULT_LLM_MODEL,
-    DEFAULT_REASONING_EFFORT,
-    REASONING_EFFORTS,
-)
+from mj_prompt_studio.config import LLM_EXECUTION_POLICY
 
 
 def utc_now() -> datetime:
@@ -131,24 +126,20 @@ class PromptReferences:
 class LLMContext:
     latest_response_id: str | None = None
     last_agent: str | None = None
-    model: str = DEFAULT_LLM_MODEL
-    reasoning_effort: str = DEFAULT_REASONING_EFFORT
+    model: str = LLM_EXECUTION_POLICY.model
+    reasoning_effort: str = LLM_EXECUTION_POLICY.reasoning_effort
+    text_verbosity: str = LLM_EXECUTION_POLICY.text_verbosity
     user_vocab_snapshot_id: str | None = None
     project_style_profile_id: str | None = None
-
-    def __post_init__(self) -> None:
-        if self.model not in AVAILABLE_LLM_MODELS:
-            self.model = DEFAULT_LLM_MODEL
-        if self.reasoning_effort not in REASONING_EFFORTS:
-            self.reasoning_effort = DEFAULT_REASONING_EFFORT
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> LLMContext:
         return cls(
             latest_response_id=_optional_string(data.get("latest_response_id")),
             last_agent=_optional_string(data.get("last_agent")),
-            model=str(data.get("model", DEFAULT_LLM_MODEL)),
-            reasoning_effort=str(data.get("reasoning_effort", DEFAULT_REASONING_EFFORT)),
+            model=str(data.get("model") or ""),
+            reasoning_effort=str(data.get("reasoning_effort") or ""),
+            text_verbosity=str(data.get("text_verbosity") or ""),
             user_vocab_snapshot_id=_optional_string(data.get("user_vocab_snapshot_id")),
             project_style_profile_id=_optional_string(data.get("project_style_profile_id")),
         )

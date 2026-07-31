@@ -7,6 +7,7 @@ from datetime import datetime
 from threading import Lock
 from typing import Any, Literal
 
+from mj_prompt_studio.config import LLM_EXECUTION_POLICY
 from mj_prompt_studio.domain.prompt_document import new_id, utc_now
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
@@ -20,6 +21,7 @@ class LLMJob:
     agent_name: str
     model: str
     reasoning_effort: str
+    text_verbosity: str
     status: JobStatus
     input_snapshot: dict[str, Any]
     output_json: dict[str, Any] | None = None
@@ -49,8 +51,6 @@ class LLMJobQueue:
         self,
         *,
         agent_name: str,
-        model: str,
-        reasoning_effort: str,
         input_snapshot: dict[str, Any],
         work: JobCallable,
         callback: JobCallback | None = None,
@@ -58,8 +58,9 @@ class LLMJobQueue:
         job = LLMJob(
             id=new_id("job"),
             agent_name=agent_name,
-            model=model,
-            reasoning_effort=reasoning_effort,
+            model=LLM_EXECUTION_POLICY.model,
+            reasoning_effort=LLM_EXECUTION_POLICY.reasoning_effort,
+            text_verbosity=LLM_EXECUTION_POLICY.text_verbosity,
             status="queued",
             input_snapshot=input_snapshot,
         )

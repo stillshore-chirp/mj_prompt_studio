@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -9,12 +10,15 @@ from typing import Any
 APP_NAME = "MJ Prompt Studio"
 ENV_PREFIX = "MJPS_"
 OPENAI_API_KEY_ENV_NAMES = ("OPENAI_API_KEY", "OPENAI_KEY", f"{ENV_PREFIX}OPENAI_API_KEY")
-LLM_FEATURE_PROFILES_SETTING_KEY = "llm_feature_profiles"
+LLM_FEATURE_PREFERENCES_SETTING_KEY = "llm_feature_preferences"
+LEGACY_LLM_FEATURE_PROFILES_SETTING_KEY = "llm_feature_profiles"
+LEGACY_MODEL_ENV_NAMES = (
+    f"{ENV_PREFIX}MODEL_DEFAULT",
+    f"{ENV_PREFIX}MODEL_INLINE",
+    f"{ENV_PREFIX}MODEL_VISION",
+    f"{ENV_PREFIX}MODEL_DEEP_REVIEW",
+)
 
-AVAILABLE_LLM_MODELS = ("gpt-5.4-mini", "gpt-5.4-nano")
-DEFAULT_LLM_MODEL = "gpt-5.4-mini"
-REASONING_EFFORTS = ("none", "low", "medium")
-DEFAULT_REASONING_EFFORT = "medium"
 VOCABULARY_AMOUNTS = ("compact", "standard", "rich")
 DEFAULT_VOCABULARY_AMOUNT = "standard"
 VOCABULARY_AMOUNT_LABELS = {
@@ -47,51 +51,20 @@ LLM_FEATURE_DISPLAY_NAMES = {
 
 
 @dataclass(frozen=True)
-class LLMModelConfig:
-    default_model: str = DEFAULT_LLM_MODEL
-    inline_model: str = DEFAULT_LLM_MODEL
-    vision_model: str = DEFAULT_LLM_MODEL
-    deep_review_model: str = DEFAULT_LLM_MODEL
+class LLMExecutionPolicy:
+    model: str = "gpt-5.6-luna"
+    reasoning_effort: str = "high"
+    text_verbosity: str = "low"
 
-    def __post_init__(self) -> None:
-        for field_name in (
-            "default_model",
-            "inline_model",
-            "vision_model",
-            "deep_review_model",
-        ):
-            object.__setattr__(
-                self,
-                field_name,
-                _validated_choice(
-                    str(getattr(self, field_name)),
-                    AVAILABLE_LLM_MODELS,
-                    DEFAULT_LLM_MODEL,
-                ),
-            )
+
+LLM_EXECUTION_POLICY = LLMExecutionPolicy()
 
 
 @dataclass(frozen=True)
-class LLMFeatureProfile:
-    model: str = DEFAULT_LLM_MODEL
-    reasoning_effort: str = DEFAULT_REASONING_EFFORT
+class LLMFeaturePreferences:
     vocabulary_amount: str = DEFAULT_VOCABULARY_AMOUNT
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "model",
-            _validated_choice(str(self.model), AVAILABLE_LLM_MODELS, DEFAULT_LLM_MODEL),
-        )
-        object.__setattr__(
-            self,
-            "reasoning_effort",
-            _validated_choice(
-                str(self.reasoning_effort),
-                REASONING_EFFORTS,
-                DEFAULT_REASONING_EFFORT,
-            ),
-        )
         object.__setattr__(
             self,
             "vocabulary_amount",
@@ -103,34 +76,11 @@ class LLMFeatureProfile:
         )
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> LLMFeatureProfile:
-        model = _validated_choice(
-            str(data.get("model", DEFAULT_LLM_MODEL)),
-            AVAILABLE_LLM_MODELS,
-            DEFAULT_LLM_MODEL,
-        )
-        reasoning_effort = _validated_choice(
-            str(data.get("reasoning_effort", DEFAULT_REASONING_EFFORT)),
-            REASONING_EFFORTS,
-            DEFAULT_REASONING_EFFORT,
-        )
-        vocabulary_amount = _validated_choice(
-            str(data.get("vocabulary_amount", DEFAULT_VOCABULARY_AMOUNT)),
-            VOCABULARY_AMOUNTS,
-            DEFAULT_VOCABULARY_AMOUNT,
-        )
-        return cls(
-            model=model,
-            reasoning_effort=reasoning_effort,
-            vocabulary_amount=vocabulary_amount,
-        )
+    def from_dict(cls, data: Mapping[str, Any]) -> LLMFeaturePreferences:
+        return cls(vocabulary_amount=str(data.get("vocabulary_amount", "")))
 
     def to_dict(self) -> dict[str, str]:
-        return {
-            "model": self.model,
-            "reasoning_effort": self.reasoning_effort,
-            "vocabulary_amount": self.vocabulary_amount,
-        }
+        return {"vocabulary_amount": self.vocabulary_amount}
 
 
 @dataclass(frozen=True)
@@ -138,40 +88,34 @@ class RuntimeSettings:
     data_dir: Path
     llm_mode: str
     response_storage: str
-    model_config: LLMModelConfig
-    feature_profiles: dict[str, LLMFeatureProfile] = field(
-        default_factory=lambda: default_feature_profiles()
+    feature_preferences: dict[str, LLMFeaturePreferences] = field(
+        default_factory=lambda: default_feature_preferences()
     )
     max_parallel_jobs: int = 3
     timeout_seconds: int = 120
     retry_count: int = 2
 
     def __post_init__(self) -> None:
-        raw_model_config: Any = self.model_config
-        if isinstance(raw_model_config, LLMModelConfig):
-            model_config = LLMModelConfig(**vars(raw_model_config))
-        elif isinstance(raw_model_config, Mapping):
-            model_config = LLMModelConfig(**raw_model_config)
-        else:
-            model_config = LLMModelConfig()
-        object.__setattr__(self, "model_config", model_config)
         object.__setattr__(
             self,
-            "feature_profiles",
-            normalize_feature_profiles(self.feature_profiles),
+            "feature_preferences",
+            normalize_feature_preferences(self.feature_preferences),
         )
 
     @property
     def privacy_mode(self) -> bool:
         return self.response_storage.lower() == "privacy"
 
-    def feature_profile_for(self, agent_name: str) -> LLMFeatureProfile:
-        return self.feature_profiles.get(agent_name, LLMFeatureProfile())
+    def feature_preferences_for(self, agent_name: str) -> LLMFeaturePreferences:
+        return self.feature_preferences.get(agent_name, LLMFeaturePreferences())
 
-    def with_feature_profiles(
-        self, profiles: Mapping[str, LLMFeatureProfile | Mapping[str, Any]]
+    def with_feature_preferences(
+        self, preferences: Mapping[str, LLMFeaturePreferences | Mapping[str, Any]]
     ) -> RuntimeSettings:
-        return replace(self, feature_profiles=normalize_feature_profiles(profiles))
+        return replace(
+            self,
+            feature_preferences=normalize_feature_preferences(preferences),
+        )
 
 
 def default_data_dir() -> Path:
@@ -182,19 +126,12 @@ def default_data_dir() -> Path:
 
 
 def load_runtime_settings() -> RuntimeSettings:
+    _warn_about_legacy_model_environment()
     configured_llm_mode = os.environ.get(f"{ENV_PREFIX}LLM_MODE")
     return RuntimeSettings(
         data_dir=default_data_dir(),
         llm_mode=(configured_llm_mode or _default_llm_mode()).lower(),
         response_storage=os.environ.get(f"{ENV_PREFIX}RESPONSE_STORAGE", "normal").lower(),
-        model_config=LLMModelConfig(
-            default_model=os.environ.get(f"{ENV_PREFIX}MODEL_DEFAULT", DEFAULT_LLM_MODEL),
-            inline_model=os.environ.get(f"{ENV_PREFIX}MODEL_INLINE", DEFAULT_LLM_MODEL),
-            vision_model=os.environ.get(f"{ENV_PREFIX}MODEL_VISION", DEFAULT_LLM_MODEL),
-            deep_review_model=os.environ.get(
-                f"{ENV_PREFIX}MODEL_DEEP_REVIEW", DEFAULT_LLM_MODEL
-            ),
-        ),
         max_parallel_jobs=int(os.environ.get(f"{ENV_PREFIX}MAX_PARALLEL_JOBS", "3")),
         timeout_seconds=int(os.environ.get(f"{ENV_PREFIX}TIMEOUT_SECONDS", "120")),
         retry_count=int(os.environ.get(f"{ENV_PREFIX}RETRY_COUNT", "2")),
@@ -213,29 +150,42 @@ def _default_llm_mode() -> str:
     return "real" if read_openai_api_key_from_environment() else "mock"
 
 
-def default_feature_profiles() -> dict[str, LLMFeatureProfile]:
-    return {feature_id: LLMFeatureProfile() for feature_id in LLM_FEATURE_IDS}
+def default_feature_preferences() -> dict[str, LLMFeaturePreferences]:
+    return {feature_id: LLMFeaturePreferences() for feature_id in LLM_FEATURE_IDS}
 
 
-def normalize_feature_profiles(
-    profiles: Mapping[str, LLMFeatureProfile | Mapping[str, Any]]
-) -> dict[str, LLMFeatureProfile]:
-    normalized = default_feature_profiles()
-    for feature_id, profile in profiles.items():
+def normalize_feature_preferences(
+    preferences: Mapping[str, LLMFeaturePreferences | Mapping[str, Any]],
+) -> dict[str, LLMFeaturePreferences]:
+    normalized = default_feature_preferences()
+    for feature_id, preference in preferences.items():
         if feature_id not in normalized:
             continue
-        if isinstance(profile, LLMFeatureProfile):
-            normalized[feature_id] = LLMFeatureProfile.from_dict(profile.to_dict())
-        elif isinstance(profile, Mapping):
-            normalized[feature_id] = LLMFeatureProfile.from_dict(profile)
+        if isinstance(preference, LLMFeaturePreferences):
+            normalized[feature_id] = LLMFeaturePreferences.from_dict(preference.to_dict())
+        elif isinstance(preference, Mapping):
+            normalized[feature_id] = LLMFeaturePreferences.from_dict(preference)
     return normalized
 
 
-def serialize_feature_profiles(
-    profiles: Mapping[str, LLMFeatureProfile | Mapping[str, Any]]
+def serialize_feature_preferences(
+    preferences: Mapping[str, LLMFeaturePreferences | Mapping[str, Any]],
 ) -> dict[str, dict[str, str]]:
-    normalized = normalize_feature_profiles(profiles)
-    return {feature_id: profile.to_dict() for feature_id, profile in normalized.items()}
+    normalized = normalize_feature_preferences(preferences)
+    return {feature_id: preference.to_dict() for feature_id, preference in normalized.items()}
+
+
+def _warn_about_legacy_model_environment() -> None:
+    configured = [name for name in LEGACY_MODEL_ENV_NAMES if os.environ.get(name)]
+    if not configured:
+        return
+    joined = ", ".join(configured)
+    warnings.warn(
+        f"Legacy model environment variables are ignored: {joined}. "
+        "Remove them; MJ Prompt Studio always uses GPT-5.6 Luna High.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
 
 
 def _validated_choice(value: str, choices: tuple[str, ...], fallback: str) -> str:

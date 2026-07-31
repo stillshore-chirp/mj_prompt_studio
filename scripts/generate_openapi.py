@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from mj_prompt_studio.config import LLMModelConfig, RuntimeSettings
+from mj_prompt_studio.config import RuntimeSettings
 from mj_prompt_studio.server.app_state import create_state
 from mj_prompt_studio.server.main import create_app
 
@@ -16,7 +16,6 @@ def main() -> int:
         data_dir=Path(tempfile.mkdtemp(prefix="mjps-openapi-")),
         llm_mode="mock",
         response_storage="normal",
-        model_config=LLMModelConfig(),
     )
     app = create_app(create_state(settings))
     output.write_text(

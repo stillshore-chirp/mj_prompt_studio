@@ -5,9 +5,8 @@ from typing import Any
 
 from mj_prompt_studio.app.app_context import AppContext
 from mj_prompt_studio.config import (
-    AVAILABLE_LLM_MODELS,
+    LLM_EXECUTION_POLICY,
     LLM_FEATURE_DISPLAY_NAMES,
-    REASONING_EFFORTS,
     VOCABULARY_AMOUNT_LABELS,
     VOCABULARY_AMOUNTS,
 )
@@ -79,19 +78,20 @@ def public_ruleset(context: AppContext) -> dict[str, Any]:
 
 
 def public_settings(context: AppContext) -> dict[str, Any]:
-    profiles = {
-        feature_id: profile.to_dict()
-        for feature_id, profile in context.settings.feature_profiles.items()
+    preferences = {
+        feature_id: preference.to_dict()
+        for feature_id, preference in context.settings.feature_preferences.items()
     }
     return {
         "llm_mode": context.settings.llm_mode,
         "response_storage": context.settings.response_storage,
         "privacy_mode": context.settings.privacy_mode,
         "api_key_configured": context.orchestrator.api_key is not None,
-        "feature_profiles": profiles,
+        "feature_preferences": preferences,
         "feature_display_names": LLM_FEATURE_DISPLAY_NAMES,
-        "available_models": list(AVAILABLE_LLM_MODELS),
-        "reasoning_efforts": list(REASONING_EFFORTS),
+        "effective_model": LLM_EXECUTION_POLICY.model,
+        "effective_reasoning_effort": LLM_EXECUTION_POLICY.reasoning_effort,
+        "effective_text_verbosity": LLM_EXECUTION_POLICY.text_verbosity,
         "vocabulary_amounts": list(VOCABULARY_AMOUNTS),
         "vocabulary_amount_labels": VOCABULARY_AMOUNT_LABELS,
         "ruleset": public_ruleset(context),
@@ -123,4 +123,3 @@ def _redact_sensitive(value: Any) -> Any:
     if isinstance(value, list):
         return [_redact_sensitive(item) for item in value]
     return value
-
