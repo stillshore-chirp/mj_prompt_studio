@@ -84,8 +84,11 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 - セッション内API key適用。
 - OS資格情報ストアへのAPI key保存。保存不可環境ではセッション内適用に留める。
 - Privacy mode / normal response storage。
-- 機能別LLM設定: モデル、推論強度、語彙量。
+- AI execution profile: `GPT-5.6 Luna`、`High`、`Low` を読み取り専用表示。
+- Feature vocabulary preferences: Agentごとの語彙量だけを編集・保存。
 - Ruleset display_name。
 - connection test。
+
+モデルと推論強度のselectは表示しない。下部Jobsには新規Jobのモデル、推論強度、応答詳細を表示する。
 
 UIではRulesetの内部IDと特定のMidjourneyモデルバージョン番号を表示しない。

@@ -311,6 +311,10 @@ class SQLiteRepository:
                 (key, _to_json(value), utc_now().isoformat()),
             )
 
+    def delete_setting(self, key: str) -> None:
+        with self.connect() as connection:
+            connection.execute("DELETE FROM settings WHERE key = ?", (key,))
+
     def healthcheck(self) -> dict[str, Any]:
         with self.connect() as connection:
             tables = connection.execute(

@@ -2,7 +2,7 @@ import type {
   AgentJobResponse,
   DocumentResponse,
   JsonObject,
-  LLMFeatureProfile,
+  LLMFeaturePreferences,
   LLMJob,
   MatrixPlan,
   MatrixVariant,
@@ -231,10 +231,10 @@ export const api = {
       body: JSON.stringify({ document_id: documentId })
     }),
   settings: () => requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings"),
-  saveProfiles: (profiles: Record<string, LLMFeatureProfile>) =>
-    requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings/llm-profiles", {
+  saveFeaturePreferences: (preferences: Record<string, LLMFeaturePreferences>) =>
+    requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings/feature-preferences", {
       method: "PUT",
-      body: JSON.stringify({ profiles })
+      body: JSON.stringify({ preferences })
     }),
   saveResponseStorage: (responseStorage: "normal" | "privacy") =>
     requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings/response-storage", {

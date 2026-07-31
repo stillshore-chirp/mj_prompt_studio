@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 
 from mj_prompt_studio.application.free_editor_transform import format_free_editor_result
-from mj_prompt_studio.config import LLMFeatureProfile
+from mj_prompt_studio.config import LLMFeaturePreferences
 from mj_prompt_studio.domain.matrix import MatrixPlan, MatrixVariant
 from mj_prompt_studio.domain.prompt_document import (
     PromptBlocks,
@@ -30,7 +30,7 @@ from mj_prompt_studio.server.schemas import (
     APIKeyRequest,
     BlocksUpdateRequest,
     ExportRequest,
-    LLMProfilesRequest,
+    LLMFeaturePreferencesRequest,
     MatrixExportRequest,
     MatrixGenerateRequest,
     PatchApplyRequest,
@@ -552,12 +552,14 @@ def _register_routes(app: FastAPI) -> None:
     def get_settings(state: StateDep) -> dict[str, Any]:
         return {"settings": public_settings(state.context)}
 
-    @app.put("/api/settings/llm-profiles")
-    def update_llm_profiles(payload: LLMProfilesRequest, state: StateDep) -> dict[str, Any]:
-        state.context.set_llm_feature_profiles(
+    @app.put("/api/settings/feature-preferences")
+    def update_llm_feature_preferences(
+        payload: LLMFeaturePreferencesRequest, state: StateDep
+    ) -> dict[str, Any]:
+        state.context.set_llm_feature_preferences(
             {
-                feature_id: LLMFeatureProfile.from_dict(profile)
-                for feature_id, profile in payload.profiles.items()
+                feature_id: LLMFeaturePreferences.from_dict(preference.model_dump())
+                for feature_id, preference in payload.preferences.items()
             }
         )
         return {"settings": public_settings(state.context)}

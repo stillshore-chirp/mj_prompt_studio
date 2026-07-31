@@ -170,8 +170,9 @@
 
 ### API / LLM 設定
 
-- 既定モデル、深いレビュー用モデル、reasoning effort、verbosity、timeout、retry、response storage mode は設定として集約する。
-- `gpt-5.4` と `gpt-5.4-pro` を標準候補として扱う場合も、文字列は設定モジュールに集約し、Agent に直書きしない。
+- 実APIの全Responses API呼び出しは、設定モジュールの固定実行ポリシーを唯一の正本として `gpt-5.6-luna`、reasoning effort `high`、text verbosity `low` を使う。
+- モデルと推論強度をAgent、機能別保存設定、環境変数、UI、API requestから上書きできる構造を追加しない。
+- timeout、retry、response storage mode、語彙量などモデル非依存の設定だけを変更可能にする。
 - 実 API 呼び出しを必要とする手動検証は、通常テストとは分離し、明示的な環境変数やフラグがある場合のみ実行する。
 - API エラー、rate limit、schema mismatch、network timeout、cancelled job、invalid API key を区別して扱う。
 - Structured Outputs の schema 変更では、後方互換性と migration を確認する。

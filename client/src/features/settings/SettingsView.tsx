@@ -1,14 +1,14 @@
 import { KeyRound, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import type { LLMFeatureProfile, RuntimeSettingsPublic } from "../../shared/types/api";
+import type { LLMFeaturePreferences, RuntimeSettingsPublic } from "../../shared/types/api";
 
 interface SettingsViewProps {
   settings: RuntimeSettingsPublic;
   onSessionKey: (apiKey: string) => void;
   onPersistKey: (apiKey: string) => void;
   onResponseStorage: (mode: "normal" | "privacy") => void;
-  onProfiles: (profiles: Record<string, LLMFeatureProfile>) => void;
+  onPreferences: (preferences: Record<string, LLMFeaturePreferences>) => void;
   onConnectionTest: () => void;
 }
 
@@ -17,29 +17,25 @@ export function SettingsView({
   onSessionKey,
   onPersistKey,
   onResponseStorage,
-  onProfiles,
+  onPreferences,
   onConnectionTest
 }: SettingsViewProps) {
   const [apiKey, setApiKey] = useState("");
-  const [profiles, setProfiles] = useState(settings.feature_profiles);
+  const [preferences, setPreferences] = useState(settings.feature_preferences);
   const [responseStorage, setResponseStorage] = useState(settings.response_storage);
 
   useEffect(() => {
-    setProfiles(settings.feature_profiles);
-  }, [settings.feature_profiles]);
+    setPreferences(settings.feature_preferences);
+  }, [settings.feature_preferences]);
 
   useEffect(() => {
     setResponseStorage(settings.response_storage);
   }, [settings.response_storage]);
 
-  const updateProfile = (
-    featureId: string,
-    field: keyof LLMFeatureProfile,
-    value: string
-  ) => {
-    setProfiles({
-      ...profiles,
-      [featureId]: { ...profiles[featureId], [field]: value }
+  const updateVocabularyAmount = (featureId: string, value: string) => {
+    setPreferences({
+      ...preferences,
+      [featureId]: { vocabulary_amount: value }
     });
   };
 
@@ -47,8 +43,8 @@ export function SettingsView({
     <section className="workspace-pane" aria-label="Settings">
       <div className="section-header">
         <h1>Settings</h1>
-        <button type="button" onClick={() => onProfiles(profiles)}>
-          <Save size={16} /> Profiles 保存
+        <button type="button" onClick={() => onPreferences(preferences)}>
+          <Save size={16} /> 語彙設定を保存
         </button>
       </div>
 
@@ -96,37 +92,35 @@ export function SettingsView({
       </section>
 
       <section className="plain-panel">
-        <h2>LLM Feature Profiles</h2>
+        <h2>AI execution profile</h2>
+        <dl className="execution-profile" aria-label="AI execution profile">
+          <div>
+            <dt>Model</dt>
+            <dd>{displayModel(settings.effective_model)}</dd>
+          </div>
+          <div>
+            <dt>Reasoning</dt>
+            <dd>{displayValue(settings.effective_reasoning_effort)}</dd>
+          </div>
+          <div>
+            <dt>Response detail</dt>
+            <dd>{displayValue(settings.effective_text_verbosity)}</dd>
+          </div>
+        </dl>
+        <p>この実行構成は全AI機能と接続テストで共通です。</p>
+      </section>
+
+      <section className="plain-panel">
+        <h2>Feature vocabulary preferences</h2>
         <div className="profiles-grid">
-          {Object.entries(profiles).map(([featureId, profile]) => (
+          {Object.entries(preferences).map(([featureId, preference]) => (
             <article className="profile-row" key={featureId}>
               <strong>{settings.feature_display_names[featureId] ?? featureId}</strong>
               <select
-                value={profile.model}
-                onChange={(event) => updateProfile(featureId, "model", event.currentTarget.value)}
-              >
-                {settings.available_models.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={profile.reasoning_effort}
+                aria-label={`${settings.feature_display_names[featureId] ?? featureId} vocabulary amount`}
+                value={preference.vocabulary_amount}
                 onChange={(event) =>
-                  updateProfile(featureId, "reasoning_effort", event.currentTarget.value)
-                }
-              >
-                {settings.reasoning_efforts.map((effort) => (
-                  <option key={effort} value={effort}>
-                    {effort}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={profile.vocabulary_amount}
-                onChange={(event) =>
-                  updateProfile(featureId, "vocabulary_amount", event.currentTarget.value)
+                  updateVocabularyAmount(featureId, event.currentTarget.value)
                 }
               >
                 {settings.vocabulary_amounts.map((amount) => (
@@ -141,4 +135,17 @@ export function SettingsView({
       </section>
     </section>
   );
+}
+
+function displayModel(model: string): string {
+  const [family, version, ...nameParts] = model.split("-");
+  if (family.toLowerCase() !== "gpt" || !version) {
+    return model;
+  }
+  const name = nameParts.map(displayValue).join(" ");
+  return [`GPT-${version}`, name].filter(Boolean).join(" ");
+}
+
+function displayValue(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

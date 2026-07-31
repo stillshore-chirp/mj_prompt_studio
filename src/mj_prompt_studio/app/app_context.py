@@ -13,12 +13,13 @@ from mj_prompt_studio.application.services import (
     ResultReviewWorkflowService,
 )
 from mj_prompt_studio.config import (
-    LLM_FEATURE_PROFILES_SETTING_KEY,
-    LLMFeatureProfile,
+    LEGACY_LLM_FEATURE_PROFILES_SETTING_KEY,
+    LLM_FEATURE_PREFERENCES_SETTING_KEY,
+    LLMFeaturePreferences,
     RuntimeSettings,
     load_runtime_settings,
     read_openai_api_key_from_environment,
-    serialize_feature_profiles,
+    serialize_feature_preferences,
 )
 from mj_prompt_studio.domain.prompt_document import PromptDocument
 from mj_prompt_studio.infra.asset_store import AssetStore
@@ -57,10 +58,12 @@ class AppContext:
         self.settings = effective_settings
         self._rebuild_services()
 
-    def set_llm_feature_profiles(self, profiles: dict[str, LLMFeatureProfile]) -> None:
-        serialized = serialize_feature_profiles(profiles)
-        self.repository.set_setting(LLM_FEATURE_PROFILES_SETTING_KEY, serialized)
-        self.settings = self.settings.with_feature_profiles(serialized)
+    def set_llm_feature_preferences(
+        self, preferences: dict[str, LLMFeaturePreferences]
+    ) -> None:
+        serialized = serialize_feature_preferences(preferences)
+        self.repository.set_setting(LLM_FEATURE_PREFERENCES_SETTING_KEY, serialized)
+        self.settings = self.settings.with_feature_preferences(serialized)
         self.orchestrator = LLMOrchestrator(self.settings, self.orchestrator.api_key)
         self._rebuild_services()
 
@@ -92,11 +95,8 @@ class AppContext:
         work: JobCallable,
         callback: JobCallback | None = None,
     ) -> LLMJob:
-        model, effort = self.orchestrator.agent_route(agent_name)
         return self.job_queue.submit(
             agent_name=agent_name,
-            model=model,
-            reasoning_effort=effort,
             input_snapshot=input_snapshot,
             work=work,
             callback=callback,
@@ -114,15 +114,33 @@ class AppContext:
         self.repository.save_job(job.id, job.agent_name, job.to_dict())
 
     def _load_persisted_llm_settings(self, settings: RuntimeSettings) -> RuntimeSettings:
-        stored_profiles = self.repository.get_setting(LLM_FEATURE_PROFILES_SETTING_KEY, {})
-        stored_response_storage = self.repository.get_setting(
-            "response_storage", settings.response_storage
-        )
+        try:
+            stored_preferences = self.repository.get_setting(
+                LLM_FEATURE_PREFERENCES_SETTING_KEY, None
+            )
+            if stored_preferences is None:
+                stored_preferences = self.repository.get_setting(
+                    LEGACY_LLM_FEATURE_PROFILES_SETTING_KEY, {}
+                )
+        except (TypeError, ValueError):
+            stored_preferences = {}
+        try:
+            stored_response_storage = self.repository.get_setting(
+                "response_storage", settings.response_storage
+            )
+        except (TypeError, ValueError):
+            stored_response_storage = settings.response_storage
         if isinstance(stored_response_storage, str) and stored_response_storage in {
             "normal",
             "privacy",
         }:
             settings = replace(settings, response_storage=stored_response_storage)
-        if not isinstance(stored_profiles, dict):
-            return settings
-        return settings.with_feature_profiles(stored_profiles)
+        if not isinstance(stored_preferences, dict):
+            stored_preferences = {}
+        settings = settings.with_feature_preferences(stored_preferences)
+        self.repository.set_setting(
+            LLM_FEATURE_PREFERENCES_SETTING_KEY,
+            serialize_feature_preferences(settings.feature_preferences),
+        )
+        self.repository.delete_setting(LEGACY_LLM_FEATURE_PROFILES_SETTING_KEY)
+        return settings

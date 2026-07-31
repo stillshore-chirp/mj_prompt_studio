@@ -24,6 +24,9 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps
             <div>
               <strong>{job.agent_name}</strong>
               <span>{job.status}</span>
+              <small>
+                {job.model} · {job.reasoning_effort} · {job.text_verbosity} detail
+              </small>
               {job.error_message && <small>{job.error_message}</small>}
             </div>
             <div className="job-actions">

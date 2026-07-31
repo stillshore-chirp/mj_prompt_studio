@@ -90,7 +90,11 @@ React.js + TypeScript client
 
 - Responses API adapter、MockLLM、Structured Outputs schema、Job Queue。
 - Agent名とschemaを一致させ、schema検証後にApplicationへ返す。
-- 機能別LLM設定はSQLite settingsへ保存し、Agent実行時にモデル、推論強度、語彙量として解決する。
+- `config.py` の固定実行ポリシーを唯一の正本とし、全経路を `gpt-5.6-luna` / reasoning `high` / text verbosity `low` で実行する。
+- 機能別に保存するのはモデル非依存の語彙量だけとする。旧プロファイルは起動時に語彙量だけを保持して冪等移行する。
+- Responses API adapterは呼び出し側からモデルと推論強度を受け取らず、固定ポリシーからpayloadを構築する。
+- PromptDocumentの継続IDは保存モデルが固定モデルと一致する場合だけ再利用する。
+- token usage、request latency、画像入力数、schema成否、response ID有無を本文や秘密情報なしで記録できる。
 
 分岐条件:
 

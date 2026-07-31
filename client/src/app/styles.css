@@ -633,8 +633,28 @@ dt {
   background: #101d29;
   border: 1px solid var(--line);
   border-radius: 8px;
-  grid-template-columns: minmax(140px, 1fr) repeat(3, minmax(120px, 0.7fr));
+  grid-template-columns: minmax(180px, 1fr) minmax(140px, 0.7fr);
   padding: 10px;
+}
+
+.execution-profile {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.execution-profile > div {
+  background: #101d29;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+}
+
+.execution-profile dd {
+  margin: 0;
 }
 
 .compact-list {

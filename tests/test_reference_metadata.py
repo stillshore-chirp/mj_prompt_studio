@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image
 
 from mj_prompt_studio.app.app_context import AppContext
-from mj_prompt_studio.config import LLMModelConfig, RuntimeSettings
+from mj_prompt_studio.config import RuntimeSettings
 
 
 def test_reference_import_records_local_image_metadata(tmp_path: Path) -> None:
@@ -15,7 +15,6 @@ def test_reference_import_records_local_image_metadata(tmp_path: Path) -> None:
             data_dir=tmp_path / "data",
             llm_mode="mock",
             response_storage="normal",
-            model_config=LLMModelConfig(),
         )
     )
     project, _document = context.ensure_workspace()

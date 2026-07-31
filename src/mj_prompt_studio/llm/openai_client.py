@@ -5,20 +5,26 @@ import json
 import mimetypes
 from dataclasses import dataclass
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
-from mj_prompt_studio.config import (
-    AVAILABLE_LLM_MODELS,
-    DEFAULT_LLM_MODEL,
-    DEFAULT_REASONING_EFFORT,
-    REASONING_EFFORTS,
-)
+from mj_prompt_studio.config import LLM_EXECUTION_POLICY
+
+
+@dataclass(frozen=True)
+class TokenUsage:
+    input_tokens: int = 0
+    cached_input_tokens: int = 0
+    output_tokens: int = 0
+    reasoning_tokens: int = 0
 
 
 @dataclass(frozen=True)
 class OpenAIResponse:
     output_json: dict[str, Any]
     response_id: str | None
+    usage: TokenUsage
+    request_latency_ms: float
 
 
 class OpenAIResponsesClient:
@@ -32,31 +38,37 @@ class OpenAIResponsesClient:
     def create_response(
         self,
         *,
-        model: str,
         input_payload: list[dict[str, Any]],
-        reasoning_effort: str,
         text_format: dict[str, Any],
         previous_response_id: str | None,
         store: bool,
     ) -> OpenAIResponse:
         kwargs: dict[str, Any] = {
-            "model": _safe_model(model),
+            "model": LLM_EXECUTION_POLICY.model,
             "input": input_payload,
-            "reasoning": {"effort": _safe_reasoning_effort(reasoning_effort)},
-            "text": {"format": text_format},
+            "reasoning": {"effort": LLM_EXECUTION_POLICY.reasoning_effort},
+            "text": {
+                "verbosity": LLM_EXECUTION_POLICY.text_verbosity,
+                "format": text_format,
+            },
             "store": store,
         }
         if previous_response_id:
             kwargs["previous_response_id"] = previous_response_id
+        started_at = perf_counter()
         response = self._client.responses.create(**kwargs)
+        latency_ms = (perf_counter() - started_at) * 1000
         output_text = getattr(response, "output_text", None)
         if not output_text:
             raise ValueError("OpenAI response did not include output_text")
         return OpenAIResponse(
-            output_json=json.loads(output_text), response_id=getattr(response, "id", None)
+            output_json=json.loads(output_text),
+            response_id=getattr(response, "id", None),
+            usage=_extract_usage(getattr(response, "usage", None)),
+            request_latency_ms=latency_ms,
         )
 
-    def connection_test(self, model: str) -> bool:
+    def connection_test(self) -> bool:
         test_schema = {
             "type": "json_schema",
             "name": "connection_test",
@@ -69,9 +81,7 @@ class OpenAIResponsesClient:
             },
         }
         response = self.create_response(
-            model=model,
             input_payload=[{"role": "user", "content": 'Return {"ok": true} as JSON.'}],
-            reasoning_effort="low",
             text_format=test_schema,
             previous_response_id=None,
             store=False,
@@ -88,13 +98,14 @@ def image_input_item(image_path: Path) -> dict[str, Any]:
     }
 
 
-def _safe_model(model: str) -> str:
-    return model if model in AVAILABLE_LLM_MODELS else DEFAULT_LLM_MODEL
-
-
-def _safe_reasoning_effort(reasoning_effort: str) -> str:
-    return (
-        reasoning_effort
-        if reasoning_effort in REASONING_EFFORTS
-        else DEFAULT_REASONING_EFFORT
+def _extract_usage(usage: Any) -> TokenUsage:
+    if usage is None:
+        return TokenUsage()
+    input_details = getattr(usage, "input_tokens_details", None)
+    output_details = getattr(usage, "output_tokens_details", None)
+    return TokenUsage(
+        input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
+        cached_input_tokens=int(getattr(input_details, "cached_tokens", 0) or 0),
+        output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
+        reasoning_tokens=int(getattr(output_details, "reasoning_tokens", 0) or 0),
     )

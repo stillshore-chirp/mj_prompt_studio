@@ -50,6 +50,7 @@ export interface LLMContext {
   last_agent: string | null;
   model: string;
   reasoning_effort: string;
+  text_verbosity: string;
   user_vocab_snapshot_id: string | null;
   project_style_profile_id: string | null;
 }
@@ -179,6 +180,7 @@ export interface LLMJob {
   agent_name: string;
   model: string;
   reasoning_effort: string;
+  text_verbosity: string;
   status: JobStatus;
   input_snapshot: JsonObject;
   output_json: JsonObject | null;
@@ -216,9 +218,7 @@ export interface RulesetDisplay {
   reference_modes: ReferenceModeSpec[];
 }
 
-export interface LLMFeatureProfile {
-  model: string;
-  reasoning_effort: string;
+export interface LLMFeaturePreferences {
   vocabulary_amount: string;
 }
 
@@ -227,10 +227,11 @@ export interface RuntimeSettingsPublic {
   response_storage: "normal" | "privacy";
   privacy_mode: boolean;
   api_key_configured: boolean;
-  feature_profiles: Record<string, LLMFeatureProfile>;
+  feature_preferences: Record<string, LLMFeaturePreferences>;
   feature_display_names: Record<string, string>;
-  available_models: string[];
-  reasoning_efforts: string[];
+  effective_model: string;
+  effective_reasoning_effort: string;
+  effective_text_verbosity: string;
   vocabulary_amounts: string[];
   vocabulary_amount_labels: Record<string, string>;
   ruleset: RulesetDisplay;

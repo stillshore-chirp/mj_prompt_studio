@@ -467,12 +467,12 @@ export function App() {
             })
             .catch((error: unknown) => setStatus(errorToMessage(error)))
         }
-        onProfiles={(profiles) =>
+        onPreferences={(preferences) =>
           api
-            .saveProfiles(profiles)
+            .saveFeaturePreferences(preferences)
             .then((response) => {
               setSettings(response.settings);
-              setStatus("Feature profiles を保存しました");
+              setStatus("語彙設定を保存しました");
             })
             .catch((error: unknown) => setStatus(errorToMessage(error)))
         }

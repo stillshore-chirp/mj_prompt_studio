@@ -4,6 +4,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from mj_prompt_studio.config import LLM_EXECUTION_POLICY
 from mj_prompt_studio.domain.matrix import (
     MatrixAxis,
     MatrixGenerator,
@@ -79,17 +80,14 @@ class PromptWorkflowService:
         result = self.orchestrator.run_agent(
             "IntentIntakeAgent",
             {"brief": brief, "ruleset_display_name": self.ruleset.display_name},
-            previous_response_id=document.llm_context.latest_response_id,
+            previous_response_id=_continuable_response_id(document),
         )
         document.user_brief = brief
         document.blocks = _blocks_from_llm(result.output_json.get("prompt_blocks", {}))
         document.parameters = _parameters_from_llm(
             result.output_json.get("suggested_parameters", {})
         )
-        document.llm_context.latest_response_id = result.response_id
-        document.llm_context.last_agent = result.agent_name
-        document.llm_context.model = result.model
-        document.llm_context.reasoning_effort = result.reasoning_effort
+        _record_llm_context(document, result)
         self.compile_document(document, source="ai_brief", diff_summary="AI Briefから構造化")
         return document, result
 
@@ -113,11 +111,14 @@ class PromptWorkflowService:
             "composition": document.blocks.composition,
             "validation": asdict(document.validation_report) if document.validation_report else {},
         }
-        return self.orchestrator.run_agent(
+        result = self.orchestrator.run_agent(
             "PromptDoctorAgent",
             payload,
-            previous_response_id=document.llm_context.latest_response_id,
+            previous_response_id=_continuable_response_id(document),
         )
+        _record_llm_context(document, result)
+        self.repository.save_prompt_document(document)
+        return result
 
     def request_parameter_advice(self, objective: str) -> AgentResult:
         return self.orchestrator.run_agent(
@@ -129,7 +130,7 @@ class PromptWorkflowService:
         return self.orchestrator.run_agent("VocabularyAgent", {"text": text})
 
     def request_compile_review(self, document: PromptDocument) -> AgentResult:
-        return self.orchestrator.run_agent(
+        result = self.orchestrator.run_agent(
             "PromptCompilerAgent",
             {
                 "compiled_prompt": document.compiled_prompt,
@@ -138,8 +139,11 @@ class PromptWorkflowService:
                 else {},
                 "ruleset": self.ruleset.display_name,
             },
-            previous_response_id=document.llm_context.latest_response_id,
+            previous_response_id=_continuable_response_id(document),
         )
+        _record_llm_context(document, result)
+        self.repository.save_prompt_document(document)
+        return result
 
     def apply_patch(self, document: PromptDocument, patch: PromptPatch) -> PromptDocument:
         if not patch.field_path.startswith("blocks."):
@@ -319,7 +323,7 @@ class ResultReviewWorkflowService:
         return review
 
     def final_audit(self, document: PromptDocument) -> AgentResult:
-        return self.orchestrator.run_agent(
+        result = self.orchestrator.run_agent(
             "FinalAuditorAgent",
             {
                 "prompt": document.compiled_prompt,
@@ -327,8 +331,11 @@ class ResultReviewWorkflowService:
                 if document.validation_report
                 else {},
             },
-            previous_response_id=document.llm_context.latest_response_id,
+            previous_response_id=_continuable_response_id(document),
         )
+        _record_llm_context(document, result)
+        self.repository.save_prompt_document(document)
+        return result
 
 
 class ExportService:
@@ -354,6 +361,20 @@ class ExportService:
         import json
 
         return json.dumps(document.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def _continuable_response_id(document: PromptDocument) -> str | None:
+    if document.llm_context.model != LLM_EXECUTION_POLICY.model:
+        return None
+    return document.llm_context.latest_response_id
+
+
+def _record_llm_context(document: PromptDocument, result: AgentResult) -> None:
+    document.llm_context.latest_response_id = result.response_id
+    document.llm_context.last_agent = result.agent_name
+    document.llm_context.model = result.model
+    document.llm_context.reasoning_effort = result.reasoning_effort
+    document.llm_context.text_verbosity = result.text_verbosity
 
 
 def _blocks_from_llm(data: Any) -> PromptBlocks:

@@ -7,7 +7,6 @@ from dataclasses import dataclass
 class AgentSpec:
     name: str
     responsibility: str
-    default_reasoning: str
 
 
 AGENT_NAMES = (

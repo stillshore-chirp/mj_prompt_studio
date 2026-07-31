@@ -8,8 +8,9 @@
 - Patchは適用前に差分確認を必須にする。
 - APIキー未設定時はMockLLMが同じschemaで応答する。
 - LLM Jobは `queued`、`running`、`succeeded`、`failed`、`cancelled` の状態を持ち、UIからキャンセルと再実行を操作できる。
-- SettingsでAgentごとにモデル、推論強度、語彙量を保存できる。コスト抑制のため、通常モデル以上は使わず、モデルは `gpt-5.4-mini` または `gpt-5.4-nano` だけを許可する。推論強度は `none`、`low`、`medium` だけを許可し、`high` 以上は使わない。既定は `gpt-5.4-mini`、`medium`、`standard`。
-- 環境変数、保存済み設定、低レベルOpenAI client呼び出しのいずれでも、不許可モデルや `high` 以上の推論強度は既定値へ丸める。
+- 実APIの全Agent、画像入力、再試行、接続テストは `config.py` の固定実行ポリシーを参照し、`gpt-5.6-luna`、reasoning effort `high`、text verbosity `low` を使う。
+- 呼び出し側はモデルと推論強度をOpenAI clientへ渡せない。`reasoning.mode`、`temperature`、別モデルへのフォールバックは送信・実装しない。
+- SettingsでAgentごとに保存できるのはモデル非依存の語彙量だけとする。旧機能別プロファイルは起動時に語彙量だけを残して移行する。
 - ログやJob payloadにはAPIキー、Token、Cookieを含めない。
 - React UIはAgentを直接呼ばず、`/api/agents/*` または機能別endpointからJobを作成する。
 - Job結果の永続化やPromptDocument更新はPython Application Service / Repositoryを通す。
@@ -31,7 +32,18 @@
 
 ## OpenAI Responses API
 
-実APIモードではOpenAI Python SDKのResponses APIを使い、`text.format` にJSON schemaを渡す。`Privacy mode` の場合は `store=false` とし、`previous_response_id` を送らない。
+実APIモードではOpenAI Python SDKのResponses APIを使い、低レベルadapterが次の共通payloadを構築する。
+
+```text
+model: gpt-5.6-luna
+reasoning.effort: high
+text.verbosity: low
+text.format: Agent別strict JSON Schema
+```
+
+`Privacy mode` の場合は `store=false` とし、`previous_response_id` を送らない。通常モードでも、PromptDocumentに保存されたモデルが `gpt-5.6-luna` と一致する場合だけ継続IDを送る。最初のLuna応答後にモデル、推論強度、応答詳細、response IDを更新する。
+
+usageからinput tokens、cached input tokens、output tokens、reasoning tokensを取得し、request latency、Agent名、画像入力数、schema成否、response ID有無とともに安全な計測情報として扱う。価格はコードへ埋め込まない。Jobは固定実効構成と再試行数を履歴へ記録する。
 
 ## Job API
 
@@ -51,6 +63,7 @@
 - `/api/jobs/{job_id}/cancel`
 - `/api/jobs/{job_id}/retry`
 - `/api/jobs/stream`
+- `/api/settings/feature-preferences`
 
 SSEが使えない環境でもReact clientは1秒pollingでJob状態を更新する。
 
@@ -60,16 +73,19 @@ CIではOpenAI実APIを呼ばない。納品前またはリリース前に、API
 
 1. `OPENAI_API_KEY` またはSettingsのSession API keyを設定する。
 2. `make run` でローカルAPIとReact UIを起動する。
-3. `Settings`で接続テストを実行し、成功状態になることを確認する。
-4. `Composer`で日本語briefを入力し、`AI Brief から構造化`を実行する。
-5. Jobsで `IntentIntakeAgent` が `succeeded` になり、Prompt BlocksとCompiled Promptが更新されることを確認する。
-6. Privacy modeを有効にした状態で同じ操作を行い、Responses API requestがresponse storageを使わない経路で動くことを確認する。
-
-2026-05-25時点の代表確認では、環境変数のAPIキーを使い、接続テストと `IntentIntakeAgent` のschema-valid実行が成功している。
+3. `Settings`で接続テストを実行する。
+4. Intent Intake、Vocabulary、Prompt Compiler、Prompt Doctor、Parameter Advisorを順に実行する。
+5. Reference Analyzerへ画像を入力する。
+6. Matrix Plannerを実行する。
+7. Result Reviewへ画像を入力する。
+8. Final Auditorを実行する。
+9. 通常モードでLuna応答の継続を確認する。
+10. 旧モデル由来response IDが切断されることを確認する。
+11. Privacy modeで保存と継続IDが無効になることを確認する。
+12. 各ケースのschema成否、token usage、latency、エラーをPRへ記録する。
 
 参考にした公式ドキュメント:
 
 - [Responses API Reference](https://platform.openai.com/docs/api-reference/responses)
 - [Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs)
-- [gpt-5.4-mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini)
-- [gpt-5.4-nano](https://developers.openai.com/api/docs/models/gpt-5.4-nano)
+- [GPT-5.6 Luna](https://developers.openai.com/api/docs/models/gpt-5.6-luna)

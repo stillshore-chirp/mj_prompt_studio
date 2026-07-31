@@ -218,24 +218,40 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
-      "LLMProfilesRequest": {
+      "LLMFeaturePreferencesPayload": {
         "additionalProperties": false,
         "properties": {
-          "profiles": {
+          "vocabulary_amount": {
+            "enum": [
+              "compact",
+              "standard",
+              "rich"
+            ],
+            "title": "Vocabulary Amount",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vocabulary_amount"
+        ],
+        "title": "LLMFeaturePreferencesPayload",
+        "type": "object"
+      },
+      "LLMFeaturePreferencesRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "preferences": {
             "additionalProperties": {
-              "additionalProperties": {
-                "type": "string"
-              },
-              "type": "object"
+              "$ref": "#/components/schemas/LLMFeaturePreferencesPayload"
             },
-            "title": "Profiles",
+            "title": "Preferences",
             "type": "object"
           }
         },
         "required": [
-          "profiles"
+          "preferences"
         ],
-        "title": "LLMProfilesRequest",
+        "title": "LLMFeaturePreferencesRequest",
         "type": "object"
       },
       "MatrixExportRequest": {
@@ -2226,14 +2242,14 @@
         "summary": "Connection Test"
       }
     },
-    "/api/settings/llm-profiles": {
+    "/api/settings/feature-preferences": {
       "put": {
-        "operationId": "update_llm_profiles_api_settings_llm_profiles_put",
+        "operationId": "update_llm_feature_preferences_api_settings_feature_preferences_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LLMProfilesRequest"
+                "$ref": "#/components/schemas/LLMFeaturePreferencesRequest"
               }
             }
           },
@@ -2245,7 +2261,7 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": true,
-                  "title": "Response Update Llm Profiles Api Settings Llm Profiles Put",
+                  "title": "Response Update Llm Feature Preferences Api Settings Feature Preferences Put",
                   "type": "object"
                 }
               }
@@ -2263,7 +2279,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Update Llm Profiles"
+        "summary": "Update Llm Feature Preferences"
       }
     },
     "/api/settings/persist-api-key": {
