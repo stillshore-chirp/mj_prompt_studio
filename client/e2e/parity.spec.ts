@@ -54,7 +54,7 @@ test("core local workflow parity", async ({ page }) => {
   await page.getByRole("button", { name: "Matrix Lab" }).click();
   await page.getByLabel("Objective").fill("スタイルと構図の比較");
   await page.getByRole("button", { name: /AI Plan/ }).click();
-  await expect(page.getByText("stylize")).toBeVisible();
+  await expect(page.getByText("stylize", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /Generate/ }).click();
   await expect(page.getByRole("cell", { name: /--s/ }).first()).toBeVisible();
   await page.getByRole("button", { name: /All/ }).click();
