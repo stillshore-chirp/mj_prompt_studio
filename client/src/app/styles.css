@@ -850,6 +850,13 @@ dt {
   padding: 8px;
 }
 
+.drop-zone p {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+
 .drop-zone input {
   min-width: 220px;
 }
@@ -868,8 +875,28 @@ dt {
   white-space: nowrap;
 }
 
-.file-button input {
-  display: none;
+.image-upload-control {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+
+.image-upload-control p {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin: 0;
+  max-width: 360px;
+}
+
+.visually-hidden {
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .swatches {
