@@ -65,6 +65,10 @@ type PendingConfirm =
       kind: "save-draft-and-continue";
       draft: ComposerPayload;
       navigation: PendingNavigation;
+    }
+  | {
+      kind: "discard-draft-and-continue";
+      navigation: Extract<PendingNavigation, { kind: "undo" } | { kind: "redo" }>;
     };
 
 type PendingNavigation =
@@ -403,6 +407,10 @@ export function App() {
   const requestNavigation = useCallback(
     (navigation: PendingNavigation) => {
       if (isComposerDirty && composerDraft) {
+        if (navigation.kind === "undo" || navigation.kind === "redo") {
+          setPendingConfirm({ kind: "discard-draft-and-continue", navigation });
+          return;
+        }
         setPendingConfirm({ kind: "save-draft-and-continue", draft: composerDraft, navigation });
         return;
       }
@@ -969,6 +977,18 @@ export function App() {
         .catch((error: unknown) => setStatus(errorToMessage(error)));
       return;
     }
+    if (confirm.kind === "discard-draft-and-continue") {
+      const historyRequest =
+        confirm.navigation.kind === "undo" ? api.undo(document.id) : api.redo(document.id);
+      historyRequest
+        .then((response) => {
+          updateDocument(response.document);
+          setPendingConfirm(null);
+          setStatus(confirm.navigation.kind === "undo" ? "Undo 完了" : "Redo 完了");
+        })
+        .catch((error: unknown) => setStatus(errorToMessage(error)));
+      return;
+    }
     if (confirm.kind === "patch") {
       api
         .applyPatch(document.id, confirm.patch)
@@ -1047,6 +1067,10 @@ function renderConfirmContent(confirm: PendingConfirm | null): ReactNode {
   if (confirm.kind === "save-draft-and-continue") {
     return <p>未保存のComposerとパラメータ編集を保存してから、選択した操作を続けます。キャンセルすると編集内容を保持します。</p>;
   }
+  if (confirm.kind === "discard-draft-and-continue") {
+    const action = confirm.navigation.kind === "undo" ? "Undo" : "Redo";
+    return <p>保存せずに未保存のComposerとパラメータ編集を破棄して、{action}を実行します。キャンセルすると編集内容を保持します。</p>;
+  }
   return <p>{confirm.reference.name}</p>;
 }
 
@@ -1074,6 +1098,14 @@ function getConfirmDialogDetails(confirm: PendingConfirm | null): {
       title: "未保存の変更を保存しますか？",
       description: "保存してから続行します。保存に失敗した場合はこの画面に留まり、入力内容は保持されます。",
       confirmLabel: "保存して続行"
+    };
+  }
+  if (confirm?.kind === "discard-draft-and-continue") {
+    const action = confirm.navigation.kind === "undo" ? "Undo" : "Redo";
+    return {
+      title: `未保存の変更を破棄して${action}しますか？`,
+      description: `保存していない入力を破棄して${action}を実行します。キャンセルすると入力内容は保持されます。`,
+      confirmLabel: `破棄して${action}`
     };
   }
   return {
