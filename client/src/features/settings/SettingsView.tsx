@@ -1,15 +1,16 @@
 import { KeyRound, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
 import type { LLMFeaturePreferences, RuntimeSettingsPublic } from "../../shared/types/api";
 
 interface SettingsViewProps {
   settings: RuntimeSettingsPublic;
-  onSessionKey: (apiKey: string) => void;
-  onPersistKey: (apiKey: string) => void;
-  onResponseStorage: (mode: "normal" | "privacy") => void;
+  onSessionKey: (apiKey: string) => Promise<void>;
+  onPersistKey: (apiKey: string) => Promise<{ persisted: boolean }>;
+  onResponseStorage: (mode: "normal" | "privacy") => Promise<void>;
   onPreferences: (preferences: Record<string, LLMFeaturePreferences>) => void;
-  onConnectionTest: () => void;
+  onConnectionTest: () => Promise<boolean>;
 }
 
 export function SettingsView({
@@ -23,6 +24,13 @@ export function SettingsView({
   const [apiKey, setApiKey] = useState("");
   const [preferences, setPreferences] = useState(settings.feature_preferences);
   const [responseStorage, setResponseStorage] = useState(settings.response_storage);
+  const [pendingResponseStorage, setPendingResponseStorage] = useState<"normal" | "privacy" | null>(null);
+  const [keyStatus, setKeyStatus] = useState<string | null>(null);
+  const [privacyStatus, setPrivacyStatus] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
+  const [isApplyingKey, setIsApplyingKey] = useState(false);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
 
   useEffect(() => {
     setPreferences(settings.feature_preferences);
@@ -39,6 +47,77 @@ export function SettingsView({
     });
   };
 
+  const hasApiKey = apiKey.trim().length > 0;
+  const isRealApiMode = settings.llm_mode === "real";
+
+  async function applyApiKey(kind: "session" | "keyring"): Promise<void> {
+    if (!hasApiKey || isApplyingKey) {
+      return;
+    }
+    setIsApplyingKey(true);
+    setKeyStatus(null);
+    try {
+      if (kind === "session") {
+        await onSessionKey(apiKey.trim());
+        setKeyStatus("このセッションにのみAPI keyを適用しました。入力欄は消去しました。");
+      } else {
+        const result = await onPersistKey(apiKey.trim());
+        setKeyStatus(
+          result.persisted
+            ? "OS資格情報ストアに保存し、このセッションへ適用しました。入力欄は消去しました。"
+            : "OS資格情報ストアを利用できないため、このセッションにのみ適用しました。入力欄は消去しました。"
+        );
+      }
+      setApiKey("");
+    } catch {
+      setKeyStatus("適用できませんでした。入力内容は保持しています。接続と設定を確認して再試行してください。");
+    } finally {
+      setIsApplyingKey(false);
+    }
+  }
+
+  async function confirmResponseStorage(): Promise<void> {
+    if (!pendingResponseStorage || isSavingPrivacy) {
+      return;
+    }
+    setIsSavingPrivacy(true);
+    setPrivacyStatus(null);
+    try {
+      await onResponseStorage(pendingResponseStorage);
+      setResponseStorage(pendingResponseStorage);
+      setPrivacyStatus(
+        pendingResponseStorage === "privacy"
+          ? "Privacy modeを保存しました。以後の実API呼び出しでは応答保存と前回応答IDの継続を使いません。"
+          : "通常の応答保存ポリシーを保存しました。"
+      );
+      setPendingResponseStorage(null);
+    } catch {
+      setPrivacyStatus("保存できませんでした。設定は変更していません。接続を確認して再試行してください。");
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  }
+
+  async function testConnection(): Promise<void> {
+    if (!isRealApiMode || !settings.api_key_configured || isTestingConnection) {
+      return;
+    }
+    setIsTestingConnection(true);
+    setConnectionStatus(null);
+    try {
+      const ok = await onConnectionTest();
+      setConnectionStatus(
+        ok
+          ? "実APIへの接続を確認しました。キーの値や応答内容は画面に表示しません。"
+          : "接続を確認できませんでした。API keyとネットワークを確認して再試行してください。"
+      );
+    } catch {
+      setConnectionStatus("接続を確認できませんでした。API keyとネットワークを確認して再試行してください。");
+    } finally {
+      setIsTestingConnection(false);
+    }
+  }
+
   return (
     <section className="workspace-pane" aria-label="Settings">
       <div className="section-header">
@@ -50,40 +129,67 @@ export function SettingsView({
 
       <section className="plain-panel">
         <h2>API Key</h2>
+        <label htmlFor="api-key">OpenAI API key</label>
+        <p id="api-key-help">API keyの値は画面に保存せず、適用後に入力欄から消去します。</p>
         <div className="inline-form">
           <input
+            id="api-key"
             type="password"
             value={apiKey}
             autoComplete="off"
+            aria-describedby="api-key-help"
             onChange={(event) => setApiKey(event.currentTarget.value)}
           />
-          <button type="button" className="secondary" onClick={() => onSessionKey(apiKey)}>
-            <KeyRound size={16} /> Session
+          <button
+            type="button"
+            className="secondary"
+            disabled={!hasApiKey || isApplyingKey}
+            onClick={() => void applyApiKey("session")}
+          >
+            <KeyRound size={16} /> このセッションだけで使用
           </button>
-          <button type="button" onClick={() => onPersistKey(apiKey)}>
-            <KeyRound size={16} /> Keyring
+          <button type="button" disabled={!hasApiKey || isApplyingKey} onClick={() => void applyApiKey("keyring")}>
+            <KeyRound size={16} /> OS資格情報ストアへ保存
           </button>
-          <button type="button" className="secondary" onClick={onConnectionTest}>
-            Test
+          <button
+            type="button"
+            className="secondary"
+            disabled={!isRealApiMode || !settings.api_key_configured || isTestingConnection}
+            onClick={() => void testConnection()}
+          >
+            実APIへの接続をテスト
           </button>
         </div>
-        <p>{settings.api_key_configured ? "API key configured" : "MockLLM mode"}</p>
+        <p>このセッションだけで使用: アプリを閉じるまでメモリ内で利用し、OS資格情報ストアやローカルDBには保存しません。</p>
+        <p>OS資格情報ストアへ保存: 利用可能な場合のみOSの資格情報ストアへ保存し、利用できない場合はこのセッションだけで使用します。</p>
+        <p>
+          {isRealApiMode
+            ? settings.api_key_configured
+              ? "実APIモードです。接続テストは現在のセッションの設定を使います。"
+              : "実APIモードですが、API keyは未設定です。"
+            : "Mock LLMモードです。外部APIへの接続・送信は行わず、接続テストは無効です。"}
+        </p>
+        {keyStatus ? <p role="status" aria-live="polite">{keyStatus}</p> : null}
+        {connectionStatus ? <p role="status" aria-live="polite">{connectionStatus}</p> : null}
       </section>
 
       <section className="plain-panel">
         <h2>Privacy</h2>
+        <p>
+          Privacy modeは今後の実API呼び出しで応答保存を無効にし、前回応答IDを使った継続を送信しません。設定はローカルに保存され、次回起動後も継続します。既存のローカルデータや送信済みの内容は削除しません。
+        </p>
         <label className="switch-row">
           <input
             type="checkbox"
             checked={responseStorage === "privacy"}
             onChange={(event) => {
               const mode = event.currentTarget.checked ? "privacy" : "normal";
-              setResponseStorage(mode);
-              onResponseStorage(mode);
+              setPendingResponseStorage(mode);
             }}
           />
-          <span>Privacy mode</span>
+          <span>Privacy modeを有効にする</span>
         </label>
+        {privacyStatus ? <p role="status" aria-live="polite">{privacyStatus}</p> : null}
       </section>
 
       <section className="plain-panel">
@@ -133,6 +239,20 @@ export function SettingsView({
           ))}
         </div>
       </section>
+      <ConfirmDialog
+        open={pendingResponseStorage !== null}
+        title={pendingResponseStorage === "privacy" ? "Privacy modeを有効にしますか？" : "通常の応答保存ポリシーに戻しますか？"}
+        description={
+          pendingResponseStorage === "privacy"
+            ? "以後の実API呼び出しで応答保存を無効にし、前回応答IDを送信しません。設定はローカルに保存されます。既存データは削除されません。"
+            : "以後の実API呼び出しで通常の応答保存ポリシーに戻します。設定はローカルに保存されます。"
+        }
+        confirmLabel={pendingResponseStorage === "privacy" ? "Privacy modeを有効にする" : "通常モードへ戻す"}
+        onConfirm={() => void confirmResponseStorage()}
+        onCancel={() => setPendingResponseStorage(null)}
+      >
+        <p>キャンセルすると設定は変更されません。</p>
+      </ConfirmDialog>
     </section>
   );
 }

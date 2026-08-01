@@ -638,33 +638,37 @@ export function App() {
     return (
       <SettingsView
         settings={currentSettings}
-        onSessionKey={(apiKey) =>
-          api
-            .setSessionApiKey(apiKey)
-            .then((response) => {
-              setSettings(response.settings);
-              setStatus("Session API key を適用しました");
-            })
-            .catch((error: unknown) => setStatus(errorToMessage(error)))
-        }
-        onPersistKey={(apiKey) =>
-          api
-            .persistApiKey(apiKey)
-            .then((response) => {
-              setSettings(response.settings);
-              setStatus(response.persisted ? "Keyring 保存済み" : "Session のみに適用しました");
-            })
-            .catch((error: unknown) => setStatus(errorToMessage(error)))
-        }
-        onResponseStorage={(mode) =>
-          api
-            .saveResponseStorage(mode)
-            .then((response) => {
-              setSettings(response.settings);
-              setStatus("Privacy 設定を保存しました");
-            })
-            .catch((error: unknown) => setStatus(errorToMessage(error)))
-        }
+        onSessionKey={async (apiKey) => {
+          try {
+            const response = await api.setSessionApiKey(apiKey);
+            setSettings(response.settings);
+            setStatus("Session API key を適用しました");
+          } catch (error) {
+            setStatus(errorToMessage(error));
+            throw error;
+          }
+        }}
+        onPersistKey={async (apiKey) => {
+          try {
+            const response = await api.persistApiKey(apiKey);
+            setSettings(response.settings);
+            setStatus(response.persisted ? "Keyring 保存済み" : "Session のみに適用しました");
+            return { persisted: response.persisted };
+          } catch (error) {
+            setStatus(errorToMessage(error));
+            throw error;
+          }
+        }}
+        onResponseStorage={async (mode) => {
+          try {
+            const response = await api.saveResponseStorage(mode);
+            setSettings(response.settings);
+            setStatus("Privacy 設定を保存しました");
+          } catch (error) {
+            setStatus(errorToMessage(error));
+            throw error;
+          }
+        }}
         onPreferences={(preferences) =>
           api
             .saveFeaturePreferences(preferences)
@@ -674,18 +678,20 @@ export function App() {
             })
             .catch((error: unknown) => setStatus(errorToMessage(error)))
         }
-        onConnectionTest={() =>
-          api
-            .connectionTest()
-            .then((response) =>
-              setStatus(
-                response.ok
-                  ? "Connection OK"
-                  : { kind: "error", message: "Connection failed" }
-              )
-            )
-            .catch((error: unknown) => setStatus(errorToMessage(error)))
-        }
+        onConnectionTest={async () => {
+          try {
+            const response = await api.connectionTest();
+            setStatus(
+              response.ok
+                ? "Connection OK"
+                : { kind: "error", message: "Connection failed" }
+            );
+            return response.ok;
+          } catch (error) {
+            setStatus(errorToMessage(error));
+            throw error;
+          }
+        }}
       />
     );
   }, [
