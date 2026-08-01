@@ -67,6 +67,9 @@ export function ComposerView({
   }, [document.id, document.user_brief, document.blocks]);
 
   const preview = useMemo(() => previewFromBlocks(blocks), [blocks]);
+  const hasComposerContent = Boolean(brief.trim() || preview.trim());
+  const hasBrief = Boolean(brief.trim());
+  const hasCompiledPrompt = Boolean(document.compiled_prompt.trim());
 
   useEffect(() => {
     const sourceText = preview.trim();
@@ -117,11 +120,21 @@ export function ComposerView({
           <button type="button" className="secondary" onClick={() => onSave(payload())}>
             <Save size={16} /> 保存
           </button>
-          <button type="button" onClick={() => onCompile(payload())}>
+          <button
+            type="button"
+            onClick={() => onCompile(payload())}
+            disabled={!hasComposerContent}
+            aria-describedby="compile-action-help"
+          >
             <Wand2 size={16} /> Compile
           </button>
         </div>
       </div>
+      <p id="compile-action-help" className="scope-note">
+        {hasComposerContent
+          ? "AI BriefまたはPrompt Blocksの入力をCompiled Promptにまとめます。"
+          : "AI BriefまたはPrompt Blocksを入力すると、Compileできます。"}
+      </p>
 
       <div className="composer-grid">
         <label className="field full">
@@ -132,9 +145,20 @@ export function ComposerView({
             rows={4}
           />
         </label>
-        <button type="button" className="inline-command" onClick={() => onBrief(brief)}>
+        <button
+          type="button"
+          className="inline-command"
+          onClick={() => onBrief(brief)}
+          disabled={!hasBrief}
+          aria-describedby="brief-action-help"
+        >
           <Sparkles size={16} /> AI Brief から構造化
         </button>
+        <p id="brief-action-help" className="scope-note">
+          {hasBrief
+            ? "入力したAI Briefをもとに、構造化のjobを作成します。"
+            : "AI Briefを入力すると、構造化のjobを作成できます。"}
+        </p>
 
         {blockOrder.map((field) => {
           const value = blocks[field];
@@ -185,11 +209,23 @@ export function ComposerView({
         <section className="plain-panel" aria-label="Compiled Prompt">
           <div className="panel-title-row">
             <h2>Compiled Prompt</h2>
-            <button type="button" className="icon-button" onClick={onCopyPrompt} title="Copy">
+            <button
+              type="button"
+              className="icon-button"
+              onClick={onCopyPrompt}
+              disabled={!hasCompiledPrompt}
+              aria-label="生成済みPromptをコピー"
+              aria-describedby="compiled-prompt-copy-help"
+            >
               <Clipboard size={16} />
             </button>
           </div>
           <p>{document.compiled_prompt || "未生成"}</p>
+          <p id="compiled-prompt-copy-help" className="scope-note">
+            {hasCompiledPrompt
+              ? "Compiled Promptをクリップボードへコピーできます。"
+              : "Compileすると、Compiled Promptをコピーできます。"}
+          </p>
         </section>
       </div>
     </section>
