@@ -28,7 +28,8 @@ Patch適用、参照削除、手動コピーの確認ダイアログを、キー
 - [x] dialogのkeyboard・focus・ARIAを実装
 - [x] Patch、削除、Manual Copyのcomponent testを追加
 - [x] UI/UX state matrix・前後証跡・反証レビューを記録
-- [ ] ローカル検証、PR、CI、review、mainへのマージを完了
+- [x] ローカル検証、PR、CI、reviewを完了
+- [ ] mainへのマージを完了
 
 ## 受け入れ条件
 
@@ -75,10 +76,10 @@ Patch適用、参照削除、手動コピーの確認ダイアログを、キー
 ## PR / CI / review 記録
 
 - Branch: `codex/fix-confirm-dialog-focus`
-- Commit: 未作成
-- PR: 未作成
-- Push CI: 未実行
-- PR CI: 未実行
-- Codex review: 未実行
-- 未解決 review thread: 未確認
+- Commit: `f378f411da574205cb3f1cadf29c0b747a4a2b6d`
+- PR: [#31](https://github.com/stillshore-chirp/mj_prompt_studio/pull/31)
+- Push CI: all success
+- PR CI: all success
+- Codex review: CI成功後に差分・状態遷移・a11y・回帰test・視覚証跡を確認。新規P0/P1/P2なし
+- 未解決 review thread: 0（GraphQL確認）
 - レビュー往復回数: 0

@@ -2,9 +2,9 @@
 
 ## 概要
 
-- 対象Issue / PR / 作業: [#12](https://github.com/stillshore-chirp/mj_prompt_studio/issues/12) / PR作成前 / 確認ダイアログのfocus管理
+- 対象Issue / PR / 作業: [#12](https://github.com/stillshore-chirp/mj_prompt_studio/issues/12) / [#31](https://github.com/stillshore-chirp/mj_prompt_studio/pull/31) / 確認ダイアログのfocus管理
 - 画面・component・状態: Patch適用、参照削除、Manual CopyのConfirmDialog。開く、Tab、Shift+Tab、Esc、キャンセル、確定、閉じる。
-- 判定: Pass（ローカル検証・隔離mock E2E・視覚証跡）/ PR・CI・reviewは未実施
+- 判定: Pass（ローカル検証・隔離mock E2E・視覚証跡・CI・Codex review）/ mainへのマージ待ち
 - P0 / P1 / P2件数: 既知P0を1件修正済み / 新規0件 / 新規0件
 
 ## ユーザー価値
@@ -44,7 +44,7 @@
 
 ## 証跡・検証
 
-- 変更前/変更後screenshot: 安全なmock fixtureで取得し、変更前の汎用的な確認と変更後の対象・影響・具体的な操作を目視確認した。PR本文へ添付する。ユーザー入力・画像・API keyは写さない。PNGにprofile metadataはない。
+- 変更前/変更後screenshot: 安全なmock fixtureで取得し、変更前の汎用的な確認と変更後の対象・影響・具体的な操作を目視確認し、PR本文へ添付した。ユーザー入力・画像・API keyは写さない。PNGにprofile metadataはない。
 - test / trace / 手動確認: `make client-lint`、`make client-typecheck`、`make client-test`（15 passed）、`make client-build`、Pythonのlint/typecheck/test/build（44 passed）、`make verify-governance`を通過。隔離mock環境で自動提案、確認dialog、既存core workflowのPlaywright E2E 3件が通過した。
 - 取得できなかった証跡と理由: 標準E2Eは既存local serverが標準portを使用中のため起動できなかった。利用者processを停止せず、別port・新規mockデータの同等E2Eで代替した。実OpenAI APIと実ユーザー評価は未実施。
 
