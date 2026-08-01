@@ -3,9 +3,9 @@ import { expect, test } from "@playwright/test";
 test("対象のない操作を止め、入力後に必要な操作だけ有効化する", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("button", { name: "Compile", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Compile (Alt+Shift+Enter)", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "AI Brief から構造化" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "生成済みPromptをコピー" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "コピー (Alt+Shift+C)" })).toBeDisabled();
   await expect(page.getByText("AI Briefを入力すると、構造化のjobを作成できます。")).toBeVisible();
 
   await page.getByRole("tab", { name: "Free Editor" }).click();
@@ -26,6 +26,6 @@ test("対象のない操作を止め、入力後に必要な操作だけ有効�
 
   await page.getByRole("tab", { name: "Composer" }).click();
   await page.getByLabel("AI Brief").fill("safe breakfast campaign brief");
-  await expect(page.getByRole("button", { name: "Compile", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Compile (Alt+Shift+Enter)", exact: true })).toBeEnabled();
   await expect(page.getByRole("button", { name: "AI Brief から構造化" })).toBeEnabled();
 });

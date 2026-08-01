@@ -199,3 +199,88 @@ describe("ComposerView auto suggestion", () => {
     );
   });
 });
+
+describe("ComposerView keyboard shortcuts", () => {
+  it("runs save, Compile, and copy from outside editable controls only when each action is available", () => {
+    const onSave = vi.fn();
+    const onCompile = vi.fn();
+    const onCopyPrompt = vi.fn();
+    const compiledDocument = {
+      ...document,
+      compiled_prompt: "compiled breakfast prompt"
+    };
+
+    render(
+      <ComposerView
+        document={compiledDocument}
+        onSave={onSave}
+        onCompile={onCompile}
+        onBrief={vi.fn()}
+        onFieldAssist={vi.fn()}
+        onAutoSuggest={vi.fn()}
+        autoSuggestion={null}
+        onCopyPrompt={onCopyPrompt}
+      />
+    );
+
+    fireEvent.keyDown(window, { code: "KeyS", altKey: true, shiftKey: true });
+    fireEvent.keyDown(window, { code: "KeyC", altKey: true, shiftKey: true });
+    fireEvent.keyDown(window, { code: "Enter", altKey: true, shiftKey: true });
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ user_brief: "" }));
+    expect(onCopyPrompt).toHaveBeenCalledOnce();
+    expect(onCompile).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("AI Brief"), { target: { value: "朝食キャンペーン" } });
+    fireEvent.keyDown(window, { code: "Enter", altKey: true, shiftKey: true });
+
+    expect(onCompile).toHaveBeenCalledWith(expect.objectContaining({ user_brief: "朝食キャンペーン" }));
+  });
+
+  it("does not run a shortcut while a textarea is being edited", () => {
+    const onSave = vi.fn();
+    const onCompile = vi.fn();
+    const onCopyPrompt = vi.fn();
+    const compiledDocument = {
+      ...document,
+      compiled_prompt: "compiled breakfast prompt"
+    };
+
+    render(
+      <ComposerView
+        document={compiledDocument}
+        onSave={onSave}
+        onCompile={onCompile}
+        onBrief={vi.fn()}
+        onFieldAssist={vi.fn()}
+        onAutoSuggest={vi.fn()}
+        autoSuggestion={null}
+        onCopyPrompt={onCopyPrompt}
+      />
+    );
+
+    const brief = screen.getByLabelText("AI Brief");
+    fireEvent.change(brief, { target: { value: "朝食キャンペーン" } });
+    fireEvent.keyDown(brief, { code: "KeyS", altKey: true, shiftKey: true });
+    fireEvent.keyDown(brief, { code: "Enter", altKey: true, shiftKey: true });
+    fireEvent.keyDown(brief, { code: "KeyC", altKey: true, shiftKey: true });
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onCompile).not.toHaveBeenCalled();
+    expect(onCopyPrompt).not.toHaveBeenCalled();
+  });
+
+  it("exposes visible shortcut guidance and keyboard metadata alongside buttons", () => {
+    renderComposer();
+
+    expect(screen.getByText(/入力欄以外で: Alt\+Shift\+S 保存/)).toBeVisible();
+    expect(screen.getByRole("button", { name: "保存 (Alt+Shift+S)" })).toHaveAttribute(
+      "aria-keyshortcuts",
+      "Alt+Shift+S"
+    );
+    expect(screen.getByRole("button", { name: "Compile (Alt+Shift+Enter)" })).toHaveAttribute(
+      "aria-keyshortcuts",
+      "Alt+Shift+Enter"
+    );
+  });
+});
