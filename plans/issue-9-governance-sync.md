@@ -81,6 +81,8 @@
 | 2026-08-01 | `make package` | PASS | sdist / wheel生成成功 |
 | 2026-08-01 | push CI run `30694240328` | PASS | Quality/package、macOS、Windowsがsuccess |
 | 2026-08-01 | pull_request CI run `30694269137` | PASS | Quality/package、macOS、Windowsがsuccess |
+| 2026-08-01 | pull_request CI run `30694389880` | FAIL | plan内のaction version表記を禁止表記検査が検出 |
+| 2026-08-01 | `python scripts/verify_ui_text.py` | PASS | action version表記を一般名へ修正後に再検証 |
 
 ## PR / CI / review 記録
 
@@ -93,4 +95,4 @@
 - 未解決review thread: 0件
 - Flat comment: 0件
 - レビュー往復回数: 0回（review未提出）
-- CI annotation: `actions/checkout@v4`、`actions/setup-node@v4`、`actions/setup-python@v5` のNode.js 20 deprecation。既存workflow action由来で本変更のcheck failureではない。
+- CI annotation: checkout、Node.js setup、Python setup actionのNode.js runtime deprecation。既存workflow action由来で本変更のcheck failureではない。
