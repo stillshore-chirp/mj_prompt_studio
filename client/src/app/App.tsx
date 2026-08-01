@@ -16,7 +16,11 @@ import {
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AIInspector } from "../features/ai-inspector/AIInspector";
-import { ComposerPayload, ComposerView } from "../features/composer/ComposerView";
+import {
+  AutoSuggestionState,
+  ComposerPayload,
+  ComposerView
+} from "../features/composer/ComposerView";
 import { ParameterInspector } from "../features/composer/ParameterInspector";
 import { FreeEditorView } from "../features/free-editor/FreeEditorView";
 import { JobsPanel } from "../features/jobs/JobsPanel";
@@ -58,6 +62,8 @@ type PendingConfirm =
   | { kind: "parameters"; payload: JsonObject }
   | { kind: "delete-reference"; reference: ReferenceAsset };
 
+type AutoSuggestionRequest = Pick<AutoSuggestionState, "revision" | "sourceText">;
+
 const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "composer", label: "Composer", icon: <PenLine size={15} /> },
   { id: "free-editor", label: "Free Editor", icon: <FilePenLine size={15} /> },
@@ -87,8 +93,10 @@ export function App() {
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   const [status, setStatus] = useState("起動中");
   const [manualCopy, setManualCopy] = useState<string | null>(null);
-  const [latestAutoSuggestionText, setLatestAutoSuggestionText] = useState("");
+  const [autoSuggestion, setAutoSuggestion] = useState<AutoSuggestionState | null>(null);
   const handledJobs = useRef<Set<string>>(new Set());
+  const latestAutoSuggestionRevision = useRef<number | null>(null);
+  const autoSuggestionRequests = useRef<Map<string, AutoSuggestionRequest>>(new Map());
 
   const loadWorkspace = useCallback(async () => {
     const next = await api.workspace();
@@ -106,28 +114,6 @@ export function App() {
     loadWorkspace().catch((error: unknown) => setStatus(errorToMessage(error)));
   }, [loadWorkspace]);
 
-  const refreshJobs = useCallback(async () => {
-    const response = await api.jobs();
-    setJobs(response.jobs);
-    response.jobs.forEach((job) => {
-      if (job.status === "succeeded" && !handledJobs.current.has(job.id)) {
-        handledJobs.current.add(job.id);
-        handleJobCompletion(job);
-      }
-      if (job.status === "failed" && !handledJobs.current.has(job.id)) {
-        handledJobs.current.add(job.id);
-        setStatus(job.error_message ?? "Job failed");
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      refreshJobs().catch((error: unknown) => setStatus(errorToMessage(error)));
-    }, 1000);
-    return () => window.clearInterval(timer);
-  }, [refreshJobs]);
-
   const savePayload = useCallback(
     (payload: ComposerPayload): ComposerPayload => ({
       ...payload,
@@ -136,19 +122,19 @@ export function App() {
     [parameters]
   );
 
-  const updateDocument = (next: PromptDocument) => {
+  const updateDocument = useCallback((next: PromptDocument) => {
     setDocument(next);
     setParameters(next.parameters);
     setWorkspace((current) => (current ? { ...current, document: next } : current));
-  };
+  }, []);
 
-  const handleJobCompletion = (job: LLMJob) => {
+  const handleJobCompletion = useCallback((job: LLMJob) => {
     const output = job.output_json;
     if (!output) {
       return;
     }
-    setAgentResult(output);
     if (job.agent_name === "IntentIntakeAgent") {
+      setAgentResult(output);
       const nextDocument = readObject(output.document);
       if (nextDocument) {
         updateDocument(nextDocument as unknown as PromptDocument);
@@ -162,30 +148,43 @@ export function App() {
     }
     if (job.agent_name === "VocabularyAgent") {
       if (output.target === "free_editor") {
+        setAgentResult(output);
         setFreeEditorResult({
           result: String(output.transformed ?? ""),
           detail: String(output.detail ?? "")
         });
         return;
       }
-      if (
-        output.target === "auto_suggestion" &&
-        String(output.source_text ?? "") !== latestAutoSuggestionText
-      ) {
+      if (output.target === "auto_suggestion") {
+        const request = autoSuggestionRequests.current.get(job.id);
+        if (
+          !request ||
+          request.revision !== latestAutoSuggestionRevision.current ||
+          String(output.source_text ?? "") !== request.sourceText
+        ) {
+          return;
+        }
+        setAgentResult(output);
+        setAutoSuggestion({ ...request, status: "succeeded" });
+        setPendingPatches(readPatches(output.patches));
         return;
       }
+      setAgentResult(output);
       setPendingPatches(readPatches(output.patches));
       return;
     }
     if (job.agent_name === "PromptDoctorAgent") {
+      setAgentResult(output);
       setPendingPatches(readPatches(output.patches));
       return;
     }
     if (job.agent_name === "ParameterAdvisorAgent") {
+      setAgentResult(output);
       setPendingConfirm({ kind: "parameters", payload: output });
       return;
     }
     if (job.agent_name === "MatrixPlannerAgent") {
+      setAgentResult(output);
       const plan = readObject(output.plan);
       if (plan) {
         setMatrixPlan(plan as unknown as MatrixPlan);
@@ -193,6 +192,7 @@ export function App() {
       return;
     }
     if (job.agent_name === "ResultReviewAgent") {
+      setAgentResult(output);
       const review = readObject(output.review);
       if (review) {
         setLatestReview(review as unknown as ResultReview);
@@ -201,15 +201,53 @@ export function App() {
       return;
     }
     if (job.agent_name === "FinalAuditorAgent") {
+      setAgentResult(output);
       setAuditResult(output);
       return;
     }
     if (job.agent_name === "ReferenceAnalyzerAgent") {
+      setAgentResult(output);
       loadWorkspace().catch(() => undefined);
     }
-  };
+  }, [loadWorkspace, updateDocument]);
 
-  const submitJob = async (work: () => Promise<{ job: LLMJob }>, message: string) => {
+  const refreshJobs = useCallback(async () => {
+    const response = await api.jobs();
+    setJobs(response.jobs);
+    response.jobs.forEach((job) => {
+      const autoSuggestionRequest = autoSuggestionRequests.current.get(job.id);
+      if (
+        autoSuggestionRequest &&
+        autoSuggestionRequest.revision === latestAutoSuggestionRevision.current &&
+        (job.status === "queued" || job.status === "running")
+      ) {
+        setAutoSuggestion({ ...autoSuggestionRequest, status: job.status });
+      }
+      if (job.status === "succeeded" && !handledJobs.current.has(job.id)) {
+        handledJobs.current.add(job.id);
+        handleJobCompletion(job);
+      }
+      if (job.status === "failed" && !handledJobs.current.has(job.id)) {
+        handledJobs.current.add(job.id);
+        if (
+          autoSuggestionRequest &&
+          autoSuggestionRequest.revision === latestAutoSuggestionRevision.current
+        ) {
+          setAutoSuggestion({ ...autoSuggestionRequest, status: "failed" });
+        }
+        setStatus(job.error_message ?? "Job failed");
+      }
+    });
+  }, [handleJobCompletion]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      refreshJobs().catch((error: unknown) => setStatus(errorToMessage(error)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [refreshJobs]);
+
+  const submitJob = useCallback(async (work: () => Promise<{ job: LLMJob }>, message: string) => {
     try {
       const response = await work();
       setJobs((current) => [response.job, ...current.filter((job) => job.id !== response.job.id)]);
@@ -217,7 +255,29 @@ export function App() {
     } catch (error) {
       setStatus(errorToMessage(error));
     }
-  };
+  }, []);
+
+  const requestAutoSuggestion = useCallback((sourceText: string, revision: number) => {
+    const request = { sourceText, revision };
+    latestAutoSuggestionRevision.current = revision;
+    setAutoSuggestion({ ...request, status: "queued" });
+
+    api
+      .vocabulary({ text: sourceText, mode: "auto", source_text: sourceText })
+      .then((response) => {
+        autoSuggestionRequests.current.set(response.job.id, request);
+        setJobs((current) => [response.job, ...current.filter((job) => job.id !== response.job.id)]);
+        if (latestAutoSuggestionRevision.current === revision) {
+          setStatus("AI補助へ送信しました。提案は確認してから適用できます。");
+        }
+      })
+      .catch((error: unknown) => {
+        if (latestAutoSuggestionRevision.current === revision) {
+          setAutoSuggestion({ ...request, status: "failed" });
+          setStatus(errorToMessage(error));
+        }
+      });
+  }, []);
 
   const currentDocument = document;
   const currentSettings = settings;
@@ -264,13 +324,8 @@ export function App() {
               "Field assist job を作成しました"
             )
           }
-          onAutoSuggest={(sourceText) => {
-            setLatestAutoSuggestionText(sourceText);
-            submitJob(
-              () => api.vocabulary({ text: sourceText, mode: "auto", source_text: sourceText }),
-              "Auto suggestion job を作成しました"
-            );
-          }}
+          onAutoSuggest={requestAutoSuggestion}
+          autoSuggestion={autoSuggestion}
           onCopyPrompt={() => handleCopy(currentDocument.compiled_prompt)}
         />
       );
@@ -486,21 +541,22 @@ export function App() {
     );
   }, [
     activeTab,
-    agentResult,
+    autoSuggestion,
     auditResult,
     comparisonLines,
     currentDocument,
     currentSettings,
     freeEditorResult,
     latestReview,
-    latestAutoSuggestionText,
     loadWorkspace,
     matrixPlan,
     matrixVariants,
     parameters,
     references,
+    requestAutoSuggestion,
     resultImages,
     savePayload,
+    submitJob,
     workspace
   ]);
 
