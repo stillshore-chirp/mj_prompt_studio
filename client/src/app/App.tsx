@@ -13,7 +13,7 @@ import {
   Sparkles,
   Undo2
 } from "lucide-react";
-import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { KeyboardEvent as ReactKeyboardEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AIInspector } from "../features/ai-inspector/AIInspector";
 import {
@@ -96,6 +96,8 @@ const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "result-review", label: "Result Review", icon: <ScanSearch size={15} /> },
   { id: "settings", label: "Settings", icon: <Settings size={15} /> }
 ];
+
+const tabId = (tab: TabId): string => `main-tab-${tab}`;
 
 export function App() {
   const [workspace, setWorkspace] = useState<WorkspaceResponse | null>(null);
@@ -805,6 +807,27 @@ export function App() {
   const confirmDialogDetails = getConfirmDialogDetails(pendingConfirm);
   const inspectorVisible = activeTab === "composer" || showInspectorOutsideComposer;
 
+  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, currentTab: TabId): void => {
+    const currentIndex = tabs.findIndex((tab) => tab.id === currentTab);
+    const targetIndex =
+      event.key === "ArrowRight"
+        ? (currentIndex + 1) % tabs.length
+        : event.key === "ArrowLeft"
+          ? (currentIndex - 1 + tabs.length) % tabs.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? tabs.length - 1
+              : -1;
+    if (targetIndex === -1) {
+      return;
+    }
+    event.preventDefault();
+    const target = tabs[targetIndex];
+    globalThis.document.getElementById(tabId(target.id))?.focus();
+    requestNavigation({ kind: "tab", tab: target.id });
+  };
+
   return (
     <div className={`app-shell ${inspectorVisible ? "" : "inspector-hidden"}`}>
       <header className="app-header">
@@ -864,9 +887,14 @@ export function App() {
               type="button"
               className={`nav-row ${project.id === workspace.project.id ? "active" : ""}`}
               key={project.id}
+              aria-current={project.id === workspace.project.id ? "page" : undefined}
+              aria-label={
+                project.id === workspace.project.id ? `${project.name}（現在のProject）` : project.name
+              }
               onClick={() => requestNavigation({ kind: "project", projectId: project.id })}
             >
-              <FolderOpen size={15} /> {project.name}
+              <FolderOpen size={15} /> <span>{project.name}</span>
+              {project.id === workspace.project.id && <span className="nav-current" aria-hidden="true">現在</span>}
             </button>
           ))}
         </section>
@@ -874,40 +902,55 @@ export function App() {
           <h2>Quick Actions</h2>
           <button
             type="button"
-            className="nav-row"
+            className={`nav-row ${activeTab === "composer" ? "active" : ""}`}
+            aria-current={activeTab === "composer" ? "page" : undefined}
             onClick={() => requestNavigation({ kind: "tab", tab: "composer" })}
           >
-            <Sparkles size={15} /> AI Brief
+            <Sparkles size={15} /> <span>AI Brief</span>
+            {activeTab === "composer" && <span className="nav-current" aria-hidden="true">現在</span>}
           </button>
           <button
             type="button"
-            className="nav-row"
+            className={`nav-row ${activeTab === "reference-library" ? "active" : ""}`}
+            aria-current={activeTab === "reference-library" ? "page" : undefined}
             onClick={() => requestNavigation({ kind: "tab", tab: "reference-library" })}
           >
-            <Library size={15} /> References
+            <Library size={15} /> <span>References</span>
+            {activeTab === "reference-library" && <span className="nav-current" aria-hidden="true">現在</span>}
           </button>
           <button
             type="button"
-            className="nav-row"
+            className={`nav-row ${activeTab === "settings" ? "active" : ""}`}
+            aria-current={activeTab === "settings" ? "page" : undefined}
             onClick={() => requestNavigation({ kind: "tab", tab: "settings" })}
           >
-            <Settings size={15} /> Settings
+            <Settings size={15} /> <span>Settings</span>
+            {activeTab === "settings" && <span className="nav-current" aria-hidden="true">現在</span>}
           </button>
         </section>
       </aside>
 
       <nav className="tab-bar" aria-label="Main tabs">
-        {tabs.map((tab) => (
+        <div role="tablist" aria-label="Main tabs" className="tab-list">
+          {tabs.map((tab) => (
           <button
             type="button"
             key={tab.id}
+            id={tabId(tab.id)}
+            role="tab"
+            aria-controls="main-workspace"
+            aria-selected={activeTab === tab.id}
+            tabIndex={activeTab === tab.id ? 0 : -1}
             className={activeTab === tab.id ? "active" : ""}
+            onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
             onClick={() => requestNavigation({ kind: "tab", tab: tab.id })}
           >
             {tab.icon}
             {tab.label}
+            {activeTab === tab.id && <span className="tab-current" aria-hidden="true">現在</span>}
           </button>
-        ))}
+          ))}
+        </div>
         {activeTab !== "composer" && (
           <button
             type="button"
@@ -920,7 +963,9 @@ export function App() {
         )}
       </nav>
 
-      <main className="main-panel">{content}</main>
+      <main id="main-workspace" className="main-panel" role="tabpanel" aria-labelledby={tabId(activeTab)}>
+        {content}
+      </main>
 
       {inspectorVisible && (
         <aside className="right-panel">
