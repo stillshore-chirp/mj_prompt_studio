@@ -24,7 +24,7 @@
 
 ## 品質確認
 
-- 視覚階層: Composerでは支援情報を残し、それ以外では主作業を常時優先する。Inspectorの機能は削除せず、現在の表示状態が分かるbuttonから再表示できる。
+- 視覚階層: Composerでは支援情報を残し、それ以外では主作業を常時優先する。Inspectorの機能は削除せず、現在の表示状態が分かるbuttonから再表示できる。文字拡大でconfirmation dialogがviewportを超える場合も、dialog内scrollで操作を失わない。
 - accessibility: 表示切替はnative buttonと`aria-pressed`で表し、重要領域の`aria-label`/`region`を変更していない。狭幅・拡大時にもkeyboard到達できることをE2Eで確認した。
 - copy: 「AIの状況を表示」「AIの状況を隠す」で状態と結果を明確にした。特定の画像生成サービスversion表記は追加していない。
 - 反証レビュー: Inspectorを単に非表示にすると支援機能が見つからなくなるため、非Composerのtab barに常設の切替buttonを置いた。760px以下では専用grid指定により、隠したInspector用の空きrowを残さない。

@@ -1346,7 +1346,9 @@ section[aria-label="Settings"] .profiles-grid {
   display: grid;
   gap: 14px;
   left: 50%;
+  max-height: calc(100dvh - 32px);
   max-width: min(680px, calc(100vw - 32px));
+  overflow: auto;
   padding: 18px;
   position: fixed;
   top: 50%;
