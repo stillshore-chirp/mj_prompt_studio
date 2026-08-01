@@ -1390,7 +1390,7 @@ section[aria-label="Settings"] .profiles-grid {
       "right"
       "bottom";
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto minmax(420px, auto) auto auto;
     min-height: 100dvh;
     min-width: 0;
     overflow: visible;
@@ -1403,10 +1403,13 @@ section[aria-label="Settings"] .profiles-grid {
   .right-panel {
     border-width: 1px 0 0;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow: visible;
   }
 
   .bottom-panel {
     grid-template-columns: 1fr;
+    min-height: 104px;
+    overflow: visible;
   }
 
   section[aria-label="Settings"],
@@ -1422,6 +1425,14 @@ section[aria-label="Settings"] .profiles-grid {
 }
 
 @media (max-width: 760px) {
+  .app-shell {
+    grid-template-rows: auto auto minmax(460px, auto) auto auto;
+  }
+
+  .main-panel {
+    min-height: 460px;
+  }
+
   .app-header,
   .section-header {
     align-items: stretch;
