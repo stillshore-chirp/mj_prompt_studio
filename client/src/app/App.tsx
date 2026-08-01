@@ -64,6 +64,13 @@ type PendingConfirm =
 
 type AutoSuggestionRequest = Pick<AutoSuggestionState, "revision" | "sourceText">;
 
+type StatusKind = "progress" | "success" | "error" | "neutral";
+
+interface StatusMessage {
+  kind: StatusKind;
+  message: string;
+}
+
 const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
   { id: "composer", label: "Composer", icon: <PenLine size={15} /> },
   { id: "free-editor", label: "Free Editor", icon: <FilePenLine size={15} /> },
@@ -91,7 +98,12 @@ export function App() {
   const [auditResult, setAuditResult] = useState<JsonObject | null>(null);
   const [freeEditorResult, setFreeEditorResult] = useState({ result: "", detail: "" });
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
-  const [status, setStatus] = useState("起動中");
+  const [status, setStatus] = useState<StatusMessage | string>({
+    kind: "progress",
+    message: "起動しています。ローカルデータを読み込んでいます。"
+  });
+  const [bootState, setBootState] = useState<"loading" | "ready" | "failed">("loading");
+  const [bootSettingsCheck, setBootSettingsCheck] = useState<StatusMessage | null>(null);
   const [manualCopy, setManualCopy] = useState<string | null>(null);
   const [autoSuggestion, setAutoSuggestion] = useState<AutoSuggestionState | null>(null);
   const manualCopyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -108,12 +120,23 @@ export function App() {
     setResultImages(next.result_images);
     setSettings(next.settings);
     setJobs(next.jobs);
-    setStatus("保存済み");
+    setBootState("ready");
+    setStatus({ kind: "success", message: "準備ができました。" });
   }, []);
 
-  useEffect(() => {
-    loadWorkspace().catch((error: unknown) => setStatus(errorToMessage(error)));
+  const retryWorkspace = useCallback(() => {
+    setBootState("loading");
+    setBootSettingsCheck(null);
+    setStatus({ kind: "progress", message: "再接続しています。ローカルデータを読み込んでいます。" });
+    loadWorkspace().catch((error: unknown) => {
+      setBootState("failed");
+      setStatus(errorToMessage(error));
+    });
   }, [loadWorkspace]);
+
+  useEffect(() => {
+    retryWorkspace();
+  }, [retryWorkspace]);
 
   const savePayload = useCallback(
     (payload: ComposerPayload): ComposerPayload => ({
@@ -227,6 +250,10 @@ export function App() {
       if (job.status === "succeeded" && !handledJobs.current.has(job.id)) {
         handledJobs.current.add(job.id);
         handleJobCompletion(job);
+        setStatus({
+          kind: "success",
+          message: `${job.agent_name} の処理が完了しました。結果は対象画面で確認できます。`
+        });
       }
       if (job.status === "failed" && !handledJobs.current.has(job.id)) {
         handledJobs.current.add(job.id);
@@ -236,7 +263,14 @@ export function App() {
         ) {
           setAutoSuggestion({ ...autoSuggestionRequest, status: "failed" });
         }
-        setStatus(job.error_message ?? "Job failed");
+        setStatus(jobFailureStatus(job.agent_name));
+      }
+      if (job.status === "cancelled" && !handledJobs.current.has(job.id)) {
+        handledJobs.current.add(job.id);
+        setStatus({
+          kind: "neutral",
+          message: `${job.agent_name} の処理を取り消しました。結果は適用されていません。必要なら元の操作をもう一度実行してください。`
+        });
       }
     });
   }, [handleJobCompletion]);
@@ -252,7 +286,7 @@ export function App() {
     try {
       const response = await work();
       setJobs((current) => [response.job, ...current.filter((job) => job.id !== response.job.id)]);
-      setStatus(message);
+      setStatus({ kind: "progress", message });
     } catch (error) {
       setStatus(errorToMessage(error));
     }
@@ -269,7 +303,10 @@ export function App() {
         autoSuggestionRequests.current.set(response.job.id, request);
         setJobs((current) => [response.job, ...current.filter((job) => job.id !== response.job.id)]);
         if (latestAutoSuggestionRevision.current === revision) {
-          setStatus("AI補助へ送信しました。提案は確認してから適用できます。");
+          setStatus({
+            kind: "progress",
+            message: "AI補助へ送信しました。提案は確認してから適用できます。"
+          });
         }
       })
       .catch((error: unknown) => {
@@ -360,7 +397,7 @@ export function App() {
           }
           onGenerate={() => {
             if (!matrixPlan) {
-              setStatus("先に Matrix plan を作成してください");
+              setStatus({ kind: "neutral", message: "先に Matrix plan を作成してください" });
               return;
             }
             api
@@ -372,7 +409,9 @@ export function App() {
               .catch((error: unknown) => setStatus(errorToMessage(error)));
           }}
           onCopySelected={(variant) =>
-            variant ? handleCopy(variant.prompt) : setStatus("Variant を選択してください")
+            variant
+              ? handleCopy(variant.prompt)
+              : setStatus({ kind: "neutral", message: "Variant を選択してください" })
           }
           onCopyAll={() => handleCopy(matrixVariants.map((variant) => variant.prompt).join("\n"))}
           onExportCsv={() =>
@@ -386,7 +425,7 @@ export function App() {
           }
           onExportMarkdown={() => {
             if (!matrixPlan) {
-              setStatus("Matrix plan がありません");
+              setStatus({ kind: "neutral", message: "Matrix plan がありません" });
               return;
             }
             api
@@ -535,7 +574,13 @@ export function App() {
         onConnectionTest={() =>
           api
             .connectionTest()
-            .then((response) => setStatus(response.ok ? "Connection OK" : "Connection failed"))
+            .then((response) =>
+              setStatus(
+                response.ok
+                  ? "Connection OK"
+                  : { kind: "error", message: "Connection failed" }
+              )
+            )
             .catch((error: unknown) => setStatus(errorToMessage(error)))
         }
       />
@@ -561,8 +606,57 @@ export function App() {
     workspace
   ]);
 
+  const statusMessage = toStatusMessage(status);
+
+  if (bootState === "failed") {
+    return (
+      <main className="boot-screen boot-recovery" aria-labelledby="boot-error-title">
+        <section>
+          <p className="eyebrow">MJ Prompt Studio</p>
+          <h1 id="boot-error-title">起動できませんでした</h1>
+          <p className="boot-error" role="alert">
+            {statusMessage.message}
+          </p>
+          <p>プロジェクトと保存済みの内容はまだ読み込まれていません。</p>
+          <div className="boot-actions">
+            <button type="button" onClick={retryWorkspace}>
+              再試行する
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() =>
+                api
+                  .settings()
+                  .then(() =>
+                    setBootSettingsCheck({
+                      kind: "success",
+                      message: "ローカルAPIへの接続を確認しました。再試行するとプロジェクトを読み込みます。"
+                    })
+                  )
+                  .catch((error: unknown) => setBootSettingsCheck(errorToMessage(error)))
+              }
+            >
+              接続設定を確認する
+            </button>
+          </div>
+          {bootSettingsCheck && (
+            <p className={`boot-check is-${bootSettingsCheck.kind}`} role="status" aria-live="polite">
+              {bootSettingsCheck.message}
+            </p>
+          )}
+        </section>
+      </main>
+    );
+  }
+
   if (!workspace || !document || !settings || !parameters) {
-    return <div className="boot-screen">MJ Prompt Studio</div>;
+    return (
+      <main className="boot-screen" role="status" aria-live="polite">
+        <strong>MJ Prompt Studio</strong>
+        <span>起動しています。ローカルデータを読み込んでいます。</span>
+      </main>
+    );
   }
 
   const confirmContent = renderConfirmContent(pendingConfirm);
@@ -715,7 +809,9 @@ export function App() {
       </aside>
 
       <footer className="bottom-panel">
-        <span>{status}</span>
+        <p className={`app-status is-${statusMessage.kind}`} role="status" aria-live="polite">
+          {statusMessage.message}
+        </p>
         <JobsPanel
           jobs={jobs}
           onRefresh={() => refreshJobs().catch((error: unknown) => setStatus(errorToMessage(error)))}
@@ -930,12 +1026,63 @@ function mergeParameters(base: PromptParameters, patch: JsonObject): PromptParam
   return next;
 }
 
-function errorToMessage(error: unknown): string {
-  if (error instanceof ApiClientError) {
-    return error.message;
+function toStatusMessage(status: StatusMessage | string): StatusMessage {
+  return typeof status === "string" ? { kind: "success", message: status } : status;
+}
+
+function jobFailureStatus(agentName: string): StatusMessage {
+  return {
+    kind: "error",
+    message: `${agentName} の処理を完了できませんでした。結果は適用されていません。入力や接続設定を確認して、再試行してください。`
+  };
+}
+
+function errorToMessage(error: unknown): StatusMessage {
+  const clientError = isApiClientError(error) ? error : null;
+  if (clientError?.kind === "network") {
+    return {
+      kind: "error",
+      message: "ローカルAPIに接続できません。ローカルAPIが起動しているか確認してから、再試行してください。"
+    };
   }
-  if (error instanceof Error) {
-    return error.message;
+  if (clientError?.kind === "schema") {
+    return {
+      kind: "error",
+      message: "ローカルAPIから受け取ったデータを確認できません。再試行しても続く場合は接続設定を確認してください。"
+    };
   }
-  return "予期しないエラーが発生しました。";
+  if (clientError?.kind === "http") {
+    if (clientError.status === 401 || clientError.status === 403) {
+      return {
+        kind: "error",
+        message: "この操作の認証または設定を確認してください。内容は変更されていません。"
+      };
+    }
+    if (clientError.status === 409) {
+      return {
+        kind: "error",
+        message: "現在の状態では操作を完了できません。画面を更新して内容を確認してから、再試行してください。"
+      };
+    }
+    return {
+      kind: "error",
+      message: "ローカルAPIがこの処理を完了できませんでした。内容は変更されていません。再試行してください。"
+    };
+  }
+  return {
+    kind: "error",
+    message: "処理を完了できませんでした。内容は変更されていません。再試行してください。"
+  };
+}
+
+function isApiClientError(
+  error: unknown
+): error is Pick<ApiClientError, "kind" | "status"> {
+  return (
+    error instanceof ApiClientError ||
+    (typeof error === "object" &&
+      error !== null &&
+      "kind" in error &&
+      (error.kind === "http" || error.kind === "network" || error.kind === "schema"))
+  );
 }
