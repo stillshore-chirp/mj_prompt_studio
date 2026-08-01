@@ -106,6 +106,42 @@ export function ComposerView({
   });
 
   useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (
+        !event.altKey ||
+        !event.shiftKey ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.repeat ||
+        isEditableShortcutTarget(event.target)
+      ) {
+        return;
+      }
+
+      if (event.code === "KeyS" || event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        onSave(payload());
+        return;
+      }
+      if ((event.code === "Enter" || event.key === "Enter") && hasComposerContent) {
+        event.preventDefault();
+        onCompile(payload());
+        return;
+      }
+      if (event.code === "KeyC" || event.key.toLowerCase() === "c") {
+        if (!hasCompiledPrompt) {
+          return;
+        }
+        event.preventDefault();
+        onCopyPrompt();
+      }
+    };
+
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [blocks, brief, document.notes, document.parameters, document.tags, hasCompiledPrompt, hasComposerContent, onCompile, onCopyPrompt, onSave]);
+
+  useEffect(() => {
     onDraftChange(payload());
   }, [blocks, brief, document.notes, document.parameters, document.tags, onDraftChange]);
 
@@ -117,16 +153,23 @@ export function ComposerView({
           <p className={`draft-status ${isDirty ? "is-dirty" : ""}`} role="status" aria-live="polite">
             {isDirty ? "未保存の変更" : "保存済み"}
           </p>
-          <button type="button" className="secondary" onClick={() => onSave(payload())}>
-            <Save size={16} /> 保存
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => onSave(payload())}
+            aria-describedby="composer-shortcuts-help"
+            aria-keyshortcuts="Alt+Shift+S"
+          >
+            <Save size={16} /> 保存 (Alt+Shift+S)
           </button>
           <button
             type="button"
             onClick={() => onCompile(payload())}
             disabled={!hasComposerContent}
-            aria-describedby="compile-action-help"
+            aria-describedby="compile-action-help composer-shortcuts-help"
+            aria-keyshortcuts="Alt+Shift+Enter"
           >
-            <Wand2 size={16} /> Compile
+            <Wand2 size={16} /> Compile (Alt+Shift+Enter)
           </button>
         </div>
       </div>
@@ -134,6 +177,9 @@ export function ComposerView({
         {hasComposerContent
           ? "AI BriefまたはPrompt Blocksの入力をCompiled Promptにまとめます。"
           : "AI BriefまたはPrompt Blocksを入力すると、Compileできます。"}
+      </p>
+      <p id="composer-shortcuts-help" className="scope-note">
+        入力欄以外で: Alt+Shift+S 保存 / Alt+Shift+Enter Compile / Alt+Shift+C コピー。入力欄の編集中には実行されません。
       </p>
 
       <div className="composer-grid">
@@ -211,13 +257,13 @@ export function ComposerView({
             <h2>Compiled Prompt</h2>
             <button
               type="button"
-              className="icon-button"
+              className="secondary"
               onClick={onCopyPrompt}
               disabled={!hasCompiledPrompt}
-              aria-label="生成済みPromptをコピー"
-              aria-describedby="compiled-prompt-copy-help"
+              aria-describedby="compiled-prompt-copy-help composer-shortcuts-help"
+              aria-keyshortcuts="Alt+Shift+C"
             >
-              <Clipboard size={16} />
+              <Clipboard size={16} /> コピー (Alt+Shift+C)
             </button>
           </div>
           <p>{document.compiled_prompt || "未生成"}</p>
@@ -230,6 +276,10 @@ export function ComposerView({
       </div>
     </section>
   );
+}
+
+function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, [contenteditable]"));
 }
 
 function getAutoSuggestionMessage(status: AutoSuggestionState["status"] | undefined): string {

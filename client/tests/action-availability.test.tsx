@@ -72,9 +72,9 @@ describe("empty action availability", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: "Compile" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Compile (Alt+Shift+Enter)" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "AI Brief から構造化" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "生成済みPromptをコピー" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "コピー (Alt+Shift+C)" })).toBeDisabled();
     expect(screen.getByText("AI Briefを入力すると、構造化のjobを作成できます。")).toBeVisible();
   });
 
