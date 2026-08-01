@@ -888,6 +888,11 @@ dt {
   max-width: 360px;
 }
 
+.scope-note {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .visually-hidden {
   height: 1px;
   margin: -1px;
