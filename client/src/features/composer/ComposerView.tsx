@@ -19,6 +19,9 @@ interface ComposerViewProps {
   onAutoSuggest: (sourceText: string, revision: number) => void;
   autoSuggestion: AutoSuggestionState | null;
   onCopyPrompt: () => void;
+  draft?: ComposerPayload | null;
+  isDirty?: boolean;
+  onDraftChange?: (payload: ComposerPayload) => void;
 }
 
 export interface ComposerPayload {
@@ -36,6 +39,7 @@ export interface AutoSuggestionState {
 }
 
 const assistModes = ["AI補完", "候補", "専門語化", "短縮", "説明"];
+const noopDraftChange = () => undefined;
 
 export function ComposerView({
   document,
@@ -45,16 +49,19 @@ export function ComposerView({
   onFieldAssist,
   onAutoSuggest,
   autoSuggestion,
-  onCopyPrompt
+  onCopyPrompt,
+  draft = null,
+  isDirty = false,
+  onDraftChange = noopDraftChange
 }: ComposerViewProps) {
-  const [brief, setBrief] = useState(document.user_brief);
-  const [blocks, setBlocks] = useState<PromptBlocks>(document.blocks);
+  const [brief, setBrief] = useState(draft?.user_brief ?? document.user_brief);
+  const [blocks, setBlocks] = useState<PromptBlocks>(draft?.blocks ?? document.blocks);
   const [autoSuggestionRevision, setAutoSuggestionRevision] = useState(0);
   const sentAutoSuggestionRevision = useRef<number | null>(null);
 
   useEffect(() => {
-    setBrief(document.user_brief);
-    setBlocks(document.blocks);
+    setBrief(draft?.user_brief ?? document.user_brief);
+    setBlocks(draft?.blocks ?? document.blocks);
     setAutoSuggestionRevision(0);
     sentAutoSuggestionRevision.current = null;
   }, [document.id, document.user_brief, document.blocks]);
@@ -95,11 +102,18 @@ export function ComposerView({
     tags: document.tags
   });
 
+  useEffect(() => {
+    onDraftChange(payload());
+  }, [blocks, brief, document.notes, document.parameters, document.tags, onDraftChange]);
+
   return (
     <section className="workspace-pane" aria-label="Composer">
       <div className="section-header">
         <h1>Composer</h1>
         <div className="toolbar-actions">
+          <p className={`draft-status ${isDirty ? "is-dirty" : ""}`} role="status" aria-live="polite">
+            {isDirty ? "未保存の変更" : "保存済み"}
+          </p>
           <button type="button" className="secondary" onClick={() => onSave(payload())}>
             <Save size={16} /> 保存
           </button>

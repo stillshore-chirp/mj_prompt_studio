@@ -172,4 +172,30 @@ describe("ComposerView auto suggestion", () => {
       screen.getByText("入力を止めると、最新のPrompt BlocksをAI補助へ送信します。提案は自動適用されません。")
     ).toHaveAttribute("role", "status");
   });
+
+  it("reports an unsaved Composer draft and exposes its state to assistive technology", () => {
+    const onDraftChange = vi.fn();
+    render(
+      <ComposerView
+        document={document}
+        onSave={vi.fn()}
+        onCompile={vi.fn()}
+        onBrief={vi.fn()}
+        onFieldAssist={vi.fn()}
+        onAutoSuggest={vi.fn()}
+        autoSuggestion={null}
+        onCopyPrompt={vi.fn()}
+        isDirty
+        onDraftChange={onDraftChange}
+      />
+    );
+    onDraftChange.mockClear();
+
+    fireEvent.change(screen.getByLabelText("Subject"), { target: { value: "保存前の編集" } });
+
+    expect(screen.getByText("未保存の変更")).toHaveAttribute("role", "status");
+    expect(onDraftChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ blocks: expect.objectContaining({ subject: "保存前の編集" }) })
+    );
+  });
 });
