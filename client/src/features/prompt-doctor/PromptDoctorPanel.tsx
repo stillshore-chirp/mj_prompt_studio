@@ -1,6 +1,7 @@
 import { Stethoscope } from "lucide-react";
 
 import type { PromptPatch, ValidationReport } from "../../shared/types/api";
+import { displayFieldName } from "../../shared/utils/user-facing";
 
 interface PromptDoctorPanelProps {
   validationReport: ValidationReport | null;
@@ -23,8 +24,8 @@ export function PromptDoctorPanel({
           type="button"
           className="icon-button"
           onClick={onRun}
-          title="Run Prompt Doctor"
-          aria-label="Run Prompt Doctor"
+          title="Prompt Doctorで確認する"
+          aria-label="Prompt Doctorで確認する"
         >
           <Stethoscope size={16} />
         </button>
@@ -32,10 +33,10 @@ export function PromptDoctorPanel({
       <ul className="compact-list">
         {(validationReport?.issues ?? []).map((issue) => (
           <li key={`${issue.code}-${issue.field_path ?? ""}`}>
-            <strong>{issue.severity}</strong> {issue.message}
+            <strong>{displaySeverity(issue.severity)}</strong> {issue.message}
           </li>
         ))}
-        {!validationReport?.issues.length && <li>Validation issue はありません。</li>}
+        {!validationReport?.issues.length && <li>見直しが必要な項目はありません。</li>}
       </ul>
       {patches.length > 0 && (
         <div className="patch-list">
@@ -48,7 +49,7 @@ export function PromptDoctorPanel({
             >
               <span>{patch.reason}</span>
               <small>
-                {patch.field_path} / confidence {Math.round(patch.confidence * 100)}%
+                {displayFieldName(patch.field_path)} / 提案の確からしさ {Math.round(patch.confidence * 100)}%
               </small>
             </button>
           ))}
@@ -56,4 +57,10 @@ export function PromptDoctorPanel({
       )}
     </section>
   );
+}
+
+function displaySeverity(severity: "error" | "warning" | "info"): string {
+  if (severity === "error") return "要修正";
+  if (severity === "warning") return "確認";
+  return "参考";
 }

@@ -47,6 +47,7 @@ import type {
   WorkspaceResponse
 } from "../shared/types/api";
 import { copyText, downloadText } from "../shared/utils/clipboard";
+import { displayAgentName, displayFieldName, displayPatch, displayValue } from "../shared/utils/user-facing";
 import "./styles.css";
 
 type TabId =
@@ -279,7 +280,7 @@ export function App() {
         handleJobCompletion(job);
         setStatus({
           kind: "success",
-          message: `${job.agent_name} の処理が完了しました。結果は対象画面で確認できます。`
+          message: `${displayAgentName(job.agent_name)}が完了しました。結果は対象画面で確認できます。`
         });
       }
       if (job.status === "failed" && !handledJobs.current.has(job.id)) {
@@ -296,7 +297,7 @@ export function App() {
         handledJobs.current.add(job.id);
         setStatus({
           kind: "neutral",
-          message: `${job.agent_name} の処理を取り消しました。結果は適用されていません。必要なら元の操作をもう一度実行してください。`
+          message: `${displayAgentName(job.agent_name)}を取り消しました。結果は適用されていません。必要なら元の操作をもう一度実行してください。`
         });
       }
     });
@@ -405,7 +406,7 @@ export function App() {
             setReferences([]);
             setResultImages([]);
             setComposerDraft(null);
-            setStatus("新規プロジェクトを作成しました");
+            setStatus("新しいプロジェクトを作成しました。Composerで制作意図を入力できます。");
           })
           .catch((error: unknown) => setStatus(errorToMessage(error)));
         return;
@@ -415,7 +416,7 @@ export function App() {
         .then((response) => {
           updateDocument(response.document);
           setComposerDraft(null);
-          setStatus(navigation.kind === "undo" ? "Undo 完了" : "Redo 完了");
+          setStatus(navigation.kind === "undo" ? "直前の保存済み変更を戻しました。" : "戻した変更を再適用しました。");
         })
         .catch((error: unknown) => setStatus(errorToMessage(error)));
     },
@@ -454,7 +455,7 @@ export function App() {
               .then((response) => {
                 updateDocument(response.document);
                 setComposerDraft(null);
-                setStatus("保存済み");
+                setStatus("Composerの入力内容を保存しました。");
               })
               .catch((error: unknown) => setStatus(errorToMessage(error)))
           }
@@ -463,7 +464,7 @@ export function App() {
               .compile(currentDocument.id, savePayload(payload))
               .then((response) => {
                 updateDocument(response.document);
-                setStatus("Compile 完了");
+                setStatus("入力内容からCompiled Promptを作成しました。内容を確認してコピーできます。");
                 return api.compileReview(response.document.id);
               })
               .then((response) => {
@@ -518,21 +519,21 @@ export function App() {
           }
           onGenerate={() => {
             if (!matrixPlan) {
-              setStatus({ kind: "neutral", message: "先に Matrix plan を作成してください" });
+              setStatus({ kind: "neutral", message: "先にAI Planを作成してください。計画をもとにvariantを生成します。" });
               return;
             }
             api
               .matrixGenerate(workspace.project.id, matrixPlan, currentDocument.compiled_prompt)
               .then((response) => {
                 setMatrixVariants(response.variants);
-                setStatus("Matrix variants を生成しました");
+                setStatus(`${response.variants.length}件の比較用variantを生成しました。選択してコピーまたは出力できます。`);
               })
               .catch((error: unknown) => setStatus(errorToMessage(error)));
           }}
           onCopySelected={(variant) =>
             variant
               ? handleCopy(variant.prompt, `Variant ${variant.index} をコピーしました`)
-              : setStatus({ kind: "neutral", message: "Variant を選択してください" })
+              : setStatus({ kind: "neutral", message: "コピーするvariantを1件選択してください。" })
           }
           onCopyAll={() =>
             handleCopy(
@@ -551,7 +552,7 @@ export function App() {
           }
           onExportMarkdown={() => {
             if (!matrixPlan) {
-              setStatus({ kind: "neutral", message: "Matrix plan がありません" });
+              setStatus({ kind: "neutral", message: "Matrix Markdownを出力するには、先にAI Planを作成してください。" });
               return;
             }
             api
@@ -574,7 +575,7 @@ export function App() {
               .uploadReference(workspace.project.id, file)
               .then((response) => {
                 setReferences((current) => [response.reference, ...current]);
-                setStatus("参照素材を取り込みました");
+                setStatus("参照素材を取り込みました。内容を確認してタグや分析を追加できます。");
               })
               .catch((error: unknown) => setStatus(errorToMessage(error)))
           }
@@ -593,7 +594,7 @@ export function App() {
                     reference.id === referenceId ? response.reference : reference
                   )
                 );
-                setStatus("Tags 保存済み");
+                setStatus("参照素材のタグを保存しました。次回もこの素材を探しやすくなります。");
               })
               .catch((error: unknown) => {
                 setStatus(errorToMessage(error));
@@ -629,7 +630,7 @@ export function App() {
               .uploadResult(currentDocument.id, file)
               .then((response) => {
                 setResultImages((current) => [response.result_image, ...current]);
-                setStatus("生成結果画像を取り込みました");
+                setStatus("生成結果画像を取り込みました。Result Reviewで確認できます。");
               })
               .catch((error: unknown) => setStatus(errorToMessage(error)))
           }
@@ -669,7 +670,7 @@ export function App() {
           try {
             const response = await api.setSessionApiKey(apiKey);
             setSettings(response.settings);
-            setStatus("Session API key を適用しました");
+            setStatus("API keyをこのセッションに適用しました。アプリを閉じると削除されます。");
           } catch (error) {
             setStatus(errorToMessage(error));
             throw error;
@@ -679,7 +680,7 @@ export function App() {
           try {
             const response = await api.persistApiKey(apiKey);
             setSettings(response.settings);
-            setStatus(response.persisted ? "Keyring 保存済み" : "Session のみに適用しました");
+            setStatus(response.persisted ? "API keyをOS資格情報ストアに保存しました。" : "OS資格情報ストアを使えないため、このセッションだけでAPI keyを使用します。");
             return { persisted: response.persisted };
           } catch (error) {
             setStatus(errorToMessage(error));
@@ -690,7 +691,7 @@ export function App() {
           try {
             const response = await api.saveResponseStorage(mode);
             setSettings(response.settings);
-            setStatus("Privacy 設定を保存しました");
+            setStatus("Privacy modeの設定を保存しました。以後の実API呼び出しに反映されます。");
           } catch (error) {
             setStatus(errorToMessage(error));
             throw error;
@@ -701,7 +702,7 @@ export function App() {
             .saveFeaturePreferences(preferences)
             .then((response) => {
               setSettings(response.settings);
-              setStatus("語彙設定を保存しました");
+              setStatus("AI支援の語彙設定を保存しました。次のAI支援から反映されます。");
             })
             .catch((error: unknown) => setStatus(errorToMessage(error)))
         }
@@ -711,7 +712,7 @@ export function App() {
             setStatus(
               response.ok
                 ? "Connection OK"
-                : { kind: "error", message: "Connection failed" }
+                : { kind: "error", message: "実APIへの接続を確認できませんでした。API keyとネットワークを確認して再試行してください。" }
             );
             return response.ok;
           } catch (error) {
@@ -843,7 +844,7 @@ export function App() {
                 .exportFile(document.id, "markdown_record", matrixPlan ?? undefined, matrixVariants)
                 .then((content) => {
                   downloadText(`${document.title}.md`, content, "text/markdown");
-                  setStatus("Export 完了");
+                  setStatus("制作記録をMarkdownで出力しました。ダウンロードしたファイルを確認できます。");
                 })
                 .catch((error: unknown) => setStatus(errorToMessage(error)))
             }
@@ -972,7 +973,7 @@ export function App() {
       </ConfirmDialog>
       <ConfirmDialog
         open={manualCopy !== null}
-        title="Manual Copy"
+        title="手動でコピー"
         description="コピーが自動でできなかったため、表示されたテキストを選択してコピーしてください。閉じても内容は変更されません。"
         confirmLabel="閉じる"
         initialFocusRef={manualCopyTextareaRef}
@@ -1005,7 +1006,7 @@ export function App() {
           updateDocument(response.document);
           setComposerDraft(null);
           setPendingConfirm(null);
-          setStatus("保存済み。続けて操作します。");
+          setStatus("Composerの入力内容を保存しました。続けて操作します。");
           executeNavigation(confirm.navigation);
         })
         .catch((error: unknown) => setStatus(errorToMessage(error)));
@@ -1018,7 +1019,7 @@ export function App() {
         .then((response) => {
           updateDocument(response.document);
           setPendingConfirm(null);
-          setStatus(confirm.navigation.kind === "undo" ? "Undo 完了" : "Redo 完了");
+          setStatus(confirm.navigation.kind === "undo" ? "直前の保存済み変更を戻しました。" : "戻した変更を再適用しました。");
         })
         .catch((error: unknown) => setStatus(errorToMessage(error)));
       return;
@@ -1029,7 +1030,7 @@ export function App() {
         .then((response) => {
           updateDocument(response.document);
           setPendingConfirm(null);
-          setStatus("Patch を適用しました");
+          setStatus(`${displayFieldName(confirm.patch.field_path)}へ提案した変更を適用しました。`);
         })
         .catch((error: unknown) => setStatus(errorToMessage(error)));
       return;
@@ -1047,7 +1048,7 @@ export function App() {
         .then((response) => {
           updateDocument(response.document);
           setPendingConfirm(null);
-          setStatus("Parameter Advisor 提案を適用しました");
+          setStatus("提案されたパラメータを適用し、Compiled Promptを更新しました。内容を確認できます。");
         })
         .catch((error: unknown) => setStatus(errorToMessage(error)));
       return;
@@ -1059,7 +1060,7 @@ export function App() {
           current.filter((reference) => reference.id !== confirm.reference.id)
         );
         setPendingConfirm(null);
-        setStatus("参照素材を削除しました");
+        setStatus("参照素材を削除しました。この操作は取り消せません。");
       })
       .catch((error: unknown) => setStatus(errorToMessage(error)));
   }
@@ -1070,33 +1071,44 @@ function renderConfirmContent(confirm: PendingConfirm | null): ReactNode {
     return null;
   }
   if (confirm.kind === "patch") {
+    const patch = displayPatch(confirm.patch);
     return (
       <dl className="confirm-grid">
         <div>
-          <dt>Reason</dt>
+          <dt>提案の理由</dt>
           <dd>{confirm.patch.reason}</dd>
         </div>
         <div>
-          <dt>Field</dt>
-          <dd>{confirm.patch.field_path}</dd>
+          <dt>変更する項目</dt>
+          <dd>{patch.field}</dd>
         </div>
         <div>
-          <dt>Old</dt>
-          <dd>{String(confirm.patch.old_value ?? "")}</dd>
+          <dt>現在の内容</dt>
+          <dd>{patch.oldValue}</dd>
         </div>
         <div>
-          <dt>New</dt>
-          <dd>{String(confirm.patch.new_value ?? "")}</dd>
+          <dt>提案する内容</dt>
+          <dd>{patch.newValue}</dd>
         </div>
         <div>
-          <dt>Confidence</dt>
+          <dt>提案の確からしさ</dt>
           <dd>{Math.round(confirm.patch.confidence * 100)}%</dd>
         </div>
       </dl>
     );
   }
   if (confirm.kind === "parameters") {
-    return <pre>{JSON.stringify(confirm.payload, null, 2)}</pre>;
+    const proposedParameters = readObject(confirm.payload.parameters) ?? {};
+    return (
+      <dl className="confirm-grid">
+        {Object.entries(proposedParameters).map(([name, value]) => (
+          <div key={name}>
+            <dt>{displayFieldName(name)}</dt>
+            <dd>{displayValue(value)}</dd>
+          </div>
+        ))}
+      </dl>
+    );
   }
   if (confirm.kind === "save-draft-and-continue") {
     return <p>未保存のComposerとパラメータ編集を保存してから、選択した操作を続けます。キャンセルすると編集内容を保持します。</p>;
@@ -1217,7 +1229,7 @@ function toStatusMessage(status: StatusMessage | string): StatusMessage {
 function jobFailureStatus(agentName: string): StatusMessage {
   return {
     kind: "error",
-    message: `${agentName} の処理を完了できませんでした。結果は適用されていません。入力や接続設定を確認して、再試行してください。`
+    message: `${displayAgentName(agentName)}を完了できませんでした。結果は適用されていません。入力や接続設定を確認して、再試行してください。`
   };
 }
 

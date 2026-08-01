@@ -1,6 +1,7 @@
 import { BrainCircuit } from "lucide-react";
 
 import type { JsonObject, PromptDocument } from "../../shared/types/api";
+import { displayAgentName } from "../../shared/utils/user-facing";
 
 interface AIInspectorProps {
   document: PromptDocument;
@@ -11,29 +12,29 @@ export function AIInspector({ document, agentResult }: AIInspectorProps) {
   const missingDecisions = readStringList(agentResult, "missing_decisions");
   const nextActions = readStringList(agentResult, "next_actions");
   return (
-    <section className="inspector-section" aria-label="AI Inspector">
+    <section className="inspector-section" aria-label="AIの状況">
       <div className="panel-title-row">
-        <h2>AI Inspector</h2>
+        <h2>AIの状況</h2>
         <BrainCircuit size={16} />
       </div>
       <dl className="meta-list">
         <div>
-          <dt>Last Agent</dt>
-          <dd>{document.llm_context.last_agent ?? "None"}</dd>
+          <dt>直近のAI支援</dt>
+          <dd>{displayAgentName(document.llm_context.last_agent)}</dd>
         </div>
         <div>
-          <dt>Model</dt>
+          <dt>使用中のモデル</dt>
           <dd>{document.llm_context.model}</dd>
         </div>
       </dl>
-      <h3>Missing Decisions</h3>
+      <h3>まだ決めること</h3>
       <ul className="compact-list">
         {missingDecisions.map((item) => (
           <li key={item}>{item}</li>
         ))}
         {missingDecisions.length === 0 && <li>なし</li>}
       </ul>
-      <h3>Next Actions</h3>
+      <h3>次にできること</h3>
       <ul className="compact-list">
         {nextActions.map((item) => (
           <li key={item}>{item}</li>

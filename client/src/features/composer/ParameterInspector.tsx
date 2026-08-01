@@ -24,15 +24,15 @@ export function ParameterInspector({
   };
 
   return (
-    <section className="inspector-section" aria-label="Parameter Advisor">
+    <section className="inspector-section" aria-label="パラメータ設定">
       <div className="panel-title-row">
-        <h2>Parameter Advisor</h2>
+        <h2>パラメータ設定</h2>
         <button
           type="button"
           className="icon-button"
           onClick={onAdvice}
-          title="AI advice"
-          aria-label="AI advice"
+          title="AIにパラメータを提案してもらう"
+          aria-label="AIにパラメータを提案してもらう"
         >
           <Sparkles size={16} />
         </button>

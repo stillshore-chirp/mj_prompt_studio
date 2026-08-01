@@ -21,7 +21,7 @@ function DialogScenario({ kind }: { kind: DialogKind }) {
       confirmLabel: "削除する"
     },
     "manual-copy": {
-      title: "Manual Copy",
+      title: "手動でコピー",
       description: "コピーが自動でできなかったため、表示されたテキストを選択してコピーしてください。閉じても内容は変更されません。",
       confirmLabel: "閉じる"
     }
@@ -95,14 +95,14 @@ describe("ConfirmDialog", () => {
     expect(opener).toHaveFocus();
   });
 
-  it("Manual Copyはテキストへfocusし、キャンセルで安全に復帰する", async () => {
+  it("手動コピーはテキストへfocusし、キャンセルで安全に復帰する", async () => {
     render(<DialogScenario kind="manual-copy" />);
 
     const opener = screen.getByRole("button", { name: "manual-copyを開く" });
     opener.focus();
     fireEvent.click(opener);
 
-    const dialog = screen.getByRole("dialog", { name: "Manual Copy" });
+    const dialog = screen.getByRole("dialog", { name: "手動でコピー" });
     const textarea = screen.getByRole("textbox", { name: "コピーするテキスト" });
     await waitFor(() => expect(textarea).toHaveFocus());
     expect(dialog).toHaveAccessibleDescription(

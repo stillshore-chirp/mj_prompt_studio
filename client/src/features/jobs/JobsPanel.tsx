@@ -1,6 +1,7 @@
 import { RefreshCw, RotateCcw, X } from "lucide-react";
 
 import type { LLMJob } from "../../shared/types/api";
+import { displayAgentName, displayExecutionDetails } from "../../shared/utils/user-facing";
 
 interface JobsPanelProps {
   jobs: LLMJob[];
@@ -11,15 +12,15 @@ interface JobsPanelProps {
 
 export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps) {
   return (
-    <section className="jobs-panel" aria-label="Jobs">
+    <section className="jobs-panel" aria-label="AI処理">
       <div className="panel-title-row">
-        <h2>Jobs</h2>
+        <h2>AI処理</h2>
         <button
           type="button"
           className="icon-button"
           onClick={onRefresh}
-          title="Jobsを更新"
-          aria-label="Jobsを更新"
+          title="AI処理の状態を更新"
+          aria-label="AI処理の状態を更新"
         >
           <RefreshCw size={15} />
         </button>
@@ -28,10 +29,10 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps
         {jobs.map((job) => (
           <article className={`job-row ${job.status}`} key={job.id}>
             <div>
-              <strong>{job.agent_name}</strong>
+              <strong>{displayAgentName(job.agent_name)}</strong>
               <span>{jobStatusDetails(job.status).label}</span>
               <small className="job-meta">
-                {job.model} · {job.reasoning_effort} · {job.text_verbosity} detail
+                {displayExecutionDetails(job.model, job.reasoning_effort, job.text_verbosity)}
               </small>
               <p className={`job-detail is-${job.status}`} role="status">
                 {jobStatusDetails(job.status).detail}
@@ -43,7 +44,7 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps
                   type="button"
                   className="icon-button"
                   title="処理を取り消す"
-                  aria-label={`${job.agent_name}の処理を取り消す`}
+                  aria-label={`${displayAgentName(job.agent_name)}を取り消す`}
                   onClick={() => onCancel(job.id)}
                 >
                   <X size={14} />
@@ -54,7 +55,7 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps
                   type="button"
                   className="icon-button"
                   title="処理を再試行する"
-                  aria-label={`${job.agent_name}の処理を再試行する`}
+                  aria-label={`${displayAgentName(job.agent_name)}を再試行する`}
                   onClick={() => onRetry(job.id)}
                 >
                   <RotateCcw size={14} />
@@ -63,7 +64,7 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps
             </div>
           </article>
         ))}
-        {jobs.length === 0 && <p>Job はありません。</p>}
+        {jobs.length === 0 && <p>実行中または履歴のAI処理はありません。</p>}
       </div>
     </section>
   );

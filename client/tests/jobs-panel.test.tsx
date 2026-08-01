@@ -48,7 +48,7 @@ describe("JobsPanel", () => {
       />
     );
 
-    expect(screen.getByText("gpt-5.6-luna · high · low detail")).toBeInTheDocument();
+    expect(screen.getByText("GPT-5.6 Luna・高い推論・簡潔な応答")).toBeInTheDocument();
   });
 });
 
@@ -95,11 +95,11 @@ describe("JobsPanel status feedback", () => {
       />
     );
 
-    screen.getByRole("button", { name: "VocabularyAgentの処理を取り消す" }).click();
-    screen.getByRole("button", { name: "VocabularyAgentの処理を再試行する" }).click();
+    screen.getByRole("button", { name: "表現の調整を取り消す" }).click();
+    screen.getByRole("button", { name: "表現の調整を再試行する" }).click();
 
     expect(onCancel).toHaveBeenCalledWith("queued_job");
     expect(onRetry).toHaveBeenCalledWith("failed_job");
-    expect(screen.getByRole("button", { name: "Jobsを更新" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "AI処理の状態を更新" })).toBeInTheDocument();
   });
 });

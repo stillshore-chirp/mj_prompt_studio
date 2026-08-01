@@ -55,8 +55,8 @@ export function FreeEditorView({ result, detail, onTransform }: FreeEditorViewPr
           : "Japanese SourceまたはEnglish Promptを入力すると、変換できます。"}
       </p>
       <section className="plain-panel">
-        <h2>Result</h2>
-        <textarea aria-label="Transform Result" value={result} readOnly rows={6} />
+        <h2>変換結果</h2>
+        <textarea aria-label="変換結果" value={result} readOnly rows={6} />
         {detail && <p>{detail}</p>}
       </section>
     </section>

@@ -4,7 +4,7 @@ test("keeps Patch confirmation keyboard focus inside the dialog and restores it 
   page
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Run Prompt Doctor" }).click();
+  await page.getByRole("button", { name: "Prompt Doctorで確認する" }).click();
 
   const patch = page.getByRole("button", { name: /構図の比較軸/ });
   await expect(patch).toBeVisible();
@@ -14,6 +14,9 @@ test("keeps Patch confirmation keyboard focus inside the dialog and restores it 
   const cancel = page.getByRole("button", { name: "キャンセル" });
   const confirm = page.getByRole("button", { name: "変更を適用" });
   await expect(dialog).toHaveAttribute("aria-modal", "true");
+  await expect(dialog.getByText("変更する項目")).toBeVisible();
+  await expect(dialog.getByText("構図", { exact: true })).toBeVisible();
+  await expect(dialog).not.toContainText("blocks.composition");
   await expect(cancel).toBeFocused();
 
   await page.keyboard.press("Shift+Tab");
