@@ -2,7 +2,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 test("sends one auto-suggestion Job for one user edit", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByLabel("Composer")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Composer" })).toBeVisible();
 
   const jobsBefore = await autoSuggestionJobCount(page);
   await page

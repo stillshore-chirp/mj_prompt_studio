@@ -35,25 +35,25 @@ test("core local workflow parity", async ({ page }) => {
   await page.getByRole("button", { name: "適用" }).click();
   await expect(page.getByText("提案されたパラメータを適用し、Compiled Promptを更新しました。内容を確認できます。")).toBeVisible();
 
-  await page.getByRole("button", { name: "Free Editor" }).click();
+  await page.getByRole("tab", { name: "Free Editor" }).click();
   await page.getByLabel("Japanese Source").fill("高級感のある朝食");
   await page.getByRole("button", { name: /英語Prompt化/ }).click();
   await expect(page.getByLabel("変換結果")).toHaveValue(/premium editorial/);
 
   const imagePath = writeImage("reference.png");
-  await page.getByRole("button", { name: "Reference Library" }).click();
+  await page.getByRole("tab", { name: "Reference Library" }).click();
   await page.getByLabel("Reference Library").locator('input[type="file"]').setInputFiles(imagePath);
   await expect(page.getByRole("button", { name: "Analyze reference" })).toBeVisible();
   await page.getByRole("button", { name: "Analyze reference" }).click();
   await expect(page.getByText("soft morning window light")).toBeVisible();
   await page.getByText("soft morning window light").click();
   await page.getByRole("button", { name: "適用" }).click();
-  await page.getByRole("button", { name: "Composer" }).click();
+  await page.getByRole("tab", { name: "Composer" }).click();
   await expect(page.getByRole("textbox", { name: "Style" })).toHaveValue(
     /soft morning window light/
   );
 
-  await page.getByRole("button", { name: "Matrix Lab" }).click();
+  await page.getByRole("tab", { name: "Matrix Lab" }).click();
   await page.getByLabel("Objective").fill("スタイルと構図の比較");
   await page.getByRole("button", { name: /AI Plan/ }).click();
   await expect(page.getByText("stylize", { exact: true })).toBeVisible();
@@ -66,18 +66,18 @@ test("core local workflow parity", async ({ page }) => {
   await page.getByRole("button", { name: /Markdown/ }).click();
   await page.getByRole("button", { name: "閉じる" }).click();
 
-  await page.getByRole("button", { name: "Result Review" }).click();
+  await page.getByRole("tab", { name: "Result Review" }).click();
   await page.getByLabel("Result Review").locator('input[type="file"]').setInputFiles(imagePath);
   await expect(page.getByText(/Source Prompt/)).toBeVisible();
   await page.getByRole("button", { name: /AI Review/ }).click();
   await expect(page.getByText(/全体に高品質/)).toBeVisible();
   await page.getByRole("button", { name: /Next Prompt/ }).click();
   await page.getByRole("button", { name: "適用" }).click();
-  await page.getByRole("button", { name: "Result Review" }).click();
+  await page.getByRole("tab", { name: "Result Review" }).click();
   await page.getByRole("button", { name: /Final Audit/ }).click();
   await expect(page.getByText(/コピー前の最終監査/)).toBeVisible();
 
-  await page.getByLabel("Main tabs").getByRole("button", { name: "Settings" }).click();
+  await page.getByLabel("Main tabs").getByRole("tab", { name: "Settings" }).click();
   const executionProfile = page.getByLabel("AI execution profile");
   await expect(executionProfile.getByText("GPT-5.6 Luna", { exact: true })).toBeVisible();
   await expect(executionProfile.getByText("High", { exact: true })).toBeVisible();
@@ -91,7 +91,7 @@ test("core local workflow parity", async ({ page }) => {
   await expect(page.getByText("Privacy modeの設定を保存しました。以後の実API呼び出しに反映されます。")).toBeVisible();
   await expect(privacyMode).toBeChecked();
   await page.reload();
-  await page.getByLabel("Main tabs").getByRole("button", { name: "Settings" }).click();
+  await page.getByLabel("Main tabs").getByRole("tab", { name: "Settings" }).click();
   await expect(page.getByLabel("Settings").getByLabel("Privacy modeを有効にする")).toBeChecked();
 });
 

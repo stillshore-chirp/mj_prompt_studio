@@ -7,7 +7,7 @@ test("keeps a dirty Composer draft when the user cancels tab navigation", async 
   await expect(page.getByText("未保存の変更", { exact: true })).toBeVisible();
 
   const tabs = page.getByRole("navigation", { name: "Main tabs" });
-  await tabs.getByRole("button", { name: "Settings" }).click();
+  await tabs.getByRole("tab", { name: "Settings" }).click();
 
   await expect(page.getByRole("dialog", { name: "未保存の変更を保存しますか？" })).toBeVisible();
   await page.getByRole("button", { name: "キャンセル" }).click();
@@ -20,7 +20,7 @@ test("saves a dirty Composer draft before continuing to another tab", async ({ p
   await page.getByRole("textbox", { name: "Subject" }).fill("safe draft fixture saved before navigation");
 
   const tabs = page.getByRole("navigation", { name: "Main tabs" });
-  await tabs.getByRole("button", { name: "Settings" }).click();
+  await tabs.getByRole("tab", { name: "Settings" }).click();
   await page.getByRole("button", { name: "保存して続行" }).click();
 
   await expect(page.getByRole("region", { name: "Settings" })).toBeVisible();
