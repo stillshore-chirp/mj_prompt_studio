@@ -27,7 +27,7 @@
 - [x] Task 3: 正本、skill、テンプレート、チェックリストを MJ Prompt Studio 向けに導入する。
 - [x] Task 4: 構造検証を実装し、Makefile と CI へ接続する。
 - [x] Task 5: 文書公開安全性、参照整合、差分、ローカル品質ゲートを検証する。
-- [ ] Task 6: 日本語で commit、push、Ready PR 作成、CI と review thread 収束まで確認する。
+- [x] Task 6: 日本語で commit、push、Ready PR 作成、CI と review thread 収束まで確認する。
 
 ## 受け入れ条件
 
@@ -37,7 +37,7 @@
 - [x] `scripts/verify-ai-governance.sh` が必要ファイル、必須ルール、重複防止構造、`AGENTS.md` サイズを検査する。
 - [x] CI がガバナンス検証を実行する。
 - [x] 文書、リンク、コマンド、公開安全性が確認される。
-- [ ] ローカル検証、push CI、PR CI、Codex review、未解決 review thread の確認が完了する。
+- [x] ローカル検証、push CI、PR CI、Codex review、未解決 review thread の確認が完了する。
 
 ## 検証コマンド
 
@@ -79,3 +79,18 @@
 | 2026-08-01 | client lint / typecheck / test / build | PASS | Vitest 4 files、6 tests passed |
 | 2026-08-01 | `make e2e` | PASS | sandbox bind拒否後、制限外でChromium 1 test passed |
 | 2026-08-01 | `make package` | PASS | sdist / wheel生成成功 |
+| 2026-08-01 | push CI run `30694240328` | PASS | Quality/package、macOS、Windowsがsuccess |
+| 2026-08-01 | pull_request CI run `30694269137` | PASS | Quality/package、macOS、Windowsがsuccess |
+
+## PR / CI / review 記録
+
+- Branch: `codex/sync-wordpack-governance`
+- 実装commit: `77f54027d8995204b764d1a26ec7345a157560c7`
+- PR: `https://github.com/stillshore-chirp/mj_prompt_studio/pull/10`（Ready、`MERGEABLE / CLEAN`）
+- Push CI: success（run `30694240328`）
+- PR CI: success（run `30694269137`）
+- Codex review: CI後に確認したがreview submissionなし。直近PR #7/#8にもintegration実績なし。
+- 未解決review thread: 0件
+- Flat comment: 0件
+- レビュー往復回数: 0回（review未提出）
+- CI annotation: `actions/checkout@v4`、`actions/setup-node@v4`、`actions/setup-python@v5` のNode.js 20 deprecation。既存workflow action由来で本変更のcheck failureではない。
