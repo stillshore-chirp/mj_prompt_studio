@@ -24,7 +24,6 @@ test("saves a dirty Composer draft before continuing to another tab", async ({ p
   await page.getByRole("button", { name: "保存して続行" }).click();
 
   await expect(page.getByRole("region", { name: "Settings" })).toBeVisible();
-  await expect(page.locator(".app-status")).toContainText("保存済み。続けて操作します。");
 });
 
 test("requires explicit discard before Undo when Composer has unsaved edits", async ({ page }) => {

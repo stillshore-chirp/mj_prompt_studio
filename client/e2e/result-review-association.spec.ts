@@ -17,9 +17,10 @@ test("選択中でない画像のAI Reviewを表示しない", async ({ page }) 
   await expect(page.getByText(/全体に高品質/)).toBeVisible();
 
   await page.getByLabel("Result Review").locator('input[type="file"]').setInputFiles(secondImage);
-  await page.getByRole("button", { name: /結果画像 2:/ }).click();
+  const resultItems = page.getByLabel("Result Review").locator(".asset-list-item");
+  await expect(resultItems.nth(0)).toBeVisible();
   await expect(page.getByText(/全体に高品質/)).toBeVisible();
-  await page.getByRole("button", { name: /結果画像 1:/ }).click();
+  await resultItems.nth(0).click();
   const unrelatedParameterDialog = page.getByRole("dialog", { name: "パラメータを適用しますか？" });
   if (await unrelatedParameterDialog.isVisible()) {
     await unrelatedParameterDialog.getByRole("button", { name: "キャンセル" }).click();

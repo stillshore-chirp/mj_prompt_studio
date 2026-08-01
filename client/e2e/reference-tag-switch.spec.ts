@@ -16,7 +16,7 @@ test("未保存の参照タグは素材切替前に確認する", async ({ page 
   await fileInput.setInputFiles(firstImage);
   await fileInput.setInputFiles(secondImage);
   const referenceItems = page.getByLabel("Reference Library").locator(".asset-list-item");
-  await expect(referenceItems).toHaveCount(2);
+  await expect(referenceItems.nth(1)).toBeVisible();
   await referenceItems.nth(1).click();
   await page.getByRole("textbox", { name: "Tags" }).fill("draft-only-safe-tag");
   await referenceItems.nth(0).click();

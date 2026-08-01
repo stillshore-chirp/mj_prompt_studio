@@ -1,5 +1,5 @@
 import { Clipboard, Download, Grid3X3, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { KeyboardEvent, useState } from "react";
 
 import type { MatrixPlan, MatrixVariant } from "../../shared/types/api";
 
@@ -27,6 +27,18 @@ export function MatrixLabView({
   const [objective, setObjective] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = variants.find((variant) => variant.id === selectedId) ?? null;
+  const hasVariants = variants.length > 0;
+
+  function toggleSelection(variantId: string): void {
+    setSelectedId((current) => (current === variantId ? null : variantId));
+  }
+
+  function selectWithKeyboard(event: KeyboardEvent<HTMLTableRowElement>, variantId: string): void {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleSelection(variantId);
+    }
+  }
 
   return (
     <section className="workspace-pane" aria-label="Matrix Lab">
@@ -59,23 +71,29 @@ export function MatrixLabView({
         </section>
       )}
       <div className="toolbar-actions">
-        <button type="button" className="secondary" onClick={() => onCopySelected(selected)}>
+        <button type="button" className="secondary" onClick={() => onCopySelected(selected)} disabled={!selected} aria-describedby="matrix-selection-status">
           <Clipboard size={16} /> Selected
         </button>
-        <button type="button" className="secondary" onClick={onCopyAll}>
+        <button type="button" className="secondary" onClick={onCopyAll} disabled={!hasVariants} aria-describedby="matrix-selection-status">
           <Clipboard size={16} /> All
         </button>
-        <button type="button" className="secondary" onClick={onExportCsv}>
+        <button type="button" className="secondary" onClick={onExportCsv} disabled={!hasVariants} aria-describedby="matrix-selection-status">
           <Download size={16} /> CSV
         </button>
-        <button type="button" className="secondary" onClick={onExportMarkdown}>
+        <button type="button" className="secondary" onClick={onExportMarkdown} disabled={!hasVariants} aria-describedby="matrix-selection-status">
           <Download size={16} /> Markdown
         </button>
       </div>
+      <p id="matrix-selection-status" className="scope-note" role="status" aria-live="polite">
+        {hasVariants
+          ? `${selected ? 1 : 0}件を選択中です。${selected ? "Selectedで選択中のvariantをコピーできます。" : "行を選択するとSelectedを使えます。"}`
+          : "variantがありません。AI Planを作成してGenerateすると、コピーと出力を使えます。"}
+      </p>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
+              <th scope="col">選択</th>
               <th>#</th>
               <th>Prompt</th>
               <th>Notes</th>
@@ -86,8 +104,12 @@ export function MatrixLabView({
               <tr
                 key={variant.id}
                 className={variant.id === selectedId ? "selected" : ""}
-                onClick={() => setSelectedId(variant.id)}
+                aria-selected={variant.id === selectedId}
+                tabIndex={0}
+                onClick={() => toggleSelection(variant.id)}
+                onKeyDown={(event) => selectWithKeyboard(event, variant.id)}
               >
+                <td><input type="checkbox" aria-label={`variant ${variant.index}を選択`} checked={variant.id === selectedId} onClick={(event) => event.stopPropagation()} onChange={() => toggleSelection(variant.id)} /></td>
                 <td>{variant.index}</td>
                 <td>{variant.prompt}</td>
                 <td>{variant.notes}</td>
