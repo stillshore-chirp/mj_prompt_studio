@@ -1,7 +1,8 @@
-import { ClipboardCheck, GitCompare, ImagePlus, Sparkles } from "lucide-react";
+import { ClipboardCheck, GitCompare, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { JsonObject, ResultImage, ResultReview } from "../../shared/types/api";
+import { ImageUploadControl } from "../../shared/components/ImageUploadControl";
 
 interface ResultReviewViewProps {
   resultImages: ResultImage[];
@@ -36,19 +37,11 @@ export function ResultReviewView({
     <section className="workspace-pane" aria-label="Result Review">
       <div className="section-header">
         <h1>Result Review</h1>
-        <label className="file-button">
-          <ImagePlus size={16} /> Import
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(event) => {
-              const file = event.currentTarget.files?.item(0);
-              if (file) {
-                onUpload(file);
-              }
-            }}
-          />
-        </label>
+        <ImageUploadControl
+          buttonLabel="生成結果の画像を選択して追加"
+          helpText="対応形式は画像ファイルです。選択した画像はこのプロジェクトのResult Reviewへ追加します。"
+          onUpload={onUpload}
+        />
       </div>
       <div className="library-grid">
         <div className="item-list">

@@ -1,7 +1,8 @@
-import { ImagePlus, Search, Sparkles, Trash2 } from "lucide-react";
+import { Search, Sparkles, Trash2 } from "lucide-react";
 import { DragEvent, useMemo, useState } from "react";
 
 import type { ReferenceAsset } from "../../shared/types/api";
+import { ImageUploadControl } from "../../shared/components/ImageUploadControl";
 
 interface ReferenceLibraryViewProps {
   references: ReferenceAsset[];
@@ -33,44 +34,43 @@ export function ReferenceLibraryView({
     );
   }, [query, references]);
 
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const file = event.dataTransfer.files.item(0);
-    if (file) {
-      onUpload(file);
+    if (!file || !file.type.startsWith("image/")) {
+      setUploadStatus("画像ファイルをドロップしてください。対応形式は画像ファイルです。");
+      return;
     }
+    setUploadStatus(`「${file.name}」を追加します。`);
+    onUpload(file);
   };
 
   return (
     <section className="workspace-pane" aria-label="Reference Library">
       <div className="section-header">
         <h1>Reference Library</h1>
-        <label className="file-button">
-          <ImagePlus size={16} /> Add
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(event) => {
-              const file = event.currentTarget.files?.item(0);
-              if (file) {
-                onUpload(file);
-              }
-            }}
-          />
-        </label>
+        <ImageUploadControl
+          buttonLabel="参照素材の画像を選択して追加"
+          helpText="対応形式は画像ファイルです。選択した画像は参照素材としてこのプロジェクトへ追加します。"
+          onUpload={onUpload}
+        />
       </div>
       <div
         className="drop-zone"
+        role="region"
+        aria-label="参照素材の画像をドロップして追加"
         onDragOver={(event) => event.preventDefault()}
         onDrop={handleDrop}
       >
-        <Search size={15} />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.currentTarget.value)}
-          placeholder="Search"
-        />
+        <p><Search size={15} /> 画像をここへドロップして追加できます。キーボードでは上の「参照素材の画像を選択して追加」を使えます。</p>
       </div>
+      {uploadStatus ? <p role="status" aria-live="polite">{uploadStatus}</p> : null}
+      <label className="field search-field">
+        <span>参照素材を検索</span>
+        <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="Search" />
+      </label>
       <div className="library-grid">
         <div className="item-list">
           {filtered.map((reference) => (
