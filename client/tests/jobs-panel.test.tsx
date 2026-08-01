@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { JobsPanel } from "../src/features/jobs/JobsPanel";
@@ -48,6 +48,8 @@ describe("JobsPanel", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "完了 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "詳細を表示" }));
     expect(screen.getByText("GPT-5.6 Luna・高い推論・簡潔な応答")).toBeInTheDocument();
   });
 });
@@ -71,7 +73,6 @@ describe("JobsPanel status feedback", () => {
 
     expect(screen.getByText("待機中")).toBeInTheDocument();
     expect(screen.getByText("実行中")).toBeInTheDocument();
-    expect(screen.getByText("完了")).toBeInTheDocument();
     expect(screen.getByText("失敗")).toBeInTheDocument();
     expect(screen.getByText("取消済み")).toBeInTheDocument();
     expect(
@@ -81,6 +82,8 @@ describe("JobsPanel status feedback", () => {
     expect(
       screen.getByText("処理を取り消しました。結果は適用されていません。必要なら元の操作をもう一度実行してください。")
     ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "完了 1" }));
+    expect(screen.getByText("完了")).toBeInTheDocument();
   });
 
   it("uses accessible cancel and retry controls for the matching states only", () => {
@@ -95,11 +98,69 @@ describe("JobsPanel status feedback", () => {
       />
     );
 
-    screen.getByRole("button", { name: "表現の調整を取り消す" }).click();
-    screen.getByRole("button", { name: "表現の調整を再試行する" }).click();
+    screen.getByRole("button", { name: "取り消す" }).click();
+    screen.getByRole("button", { name: "再試行する" }).click();
 
     expect(onCancel).toHaveBeenCalledWith("queued_job");
     expect(onRetry).toHaveBeenCalledWith("failed_job");
     expect(screen.getByRole("button", { name: "AI処理の状態を更新" })).toBeInTheDocument();
+  });
+
+  it("優先順位・絞り込み・段階的な完了履歴によって復帰対象を先に見せる", () => {
+    const succeeded = Array.from({ length: 7 }, (_, index) =>
+      createJob("succeeded", {
+        id: `completed_${index}`,
+        created_at: `2026-08-01T00:00:0${index}Z`
+      })
+    );
+    render(
+      <JobsPanel
+        jobs={[
+          ...succeeded,
+          createJob("cancelled", { id: "cancelled_job" }),
+          createJob("failed", { id: "failed_job" }),
+          createJob("queued", { id: "queued_job" }),
+          createJob("running", { id: "running_job" })
+        ]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+      />
+    );
+
+    const articles = screen.getAllByRole("article");
+    expect(articles.map((article) => article.getAttribute("aria-label"))).toEqual([
+      "表現の調整 実行中",
+      "表現の調整 待機中",
+      "表現の調整 失敗",
+      "表現の調整 取消済み"
+    ]);
+    expect(screen.queryByText("completed_0")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "完了 7" })).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "完了 7" }));
+    expect(screen.getAllByRole("article")).toHaveLength(5);
+    expect(screen.getByRole("button", { name: "完了済みをあと2件表示" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "完了済みをあと2件表示" }));
+    expect(screen.getAllByRole("article")).toHaveLength(7);
+  });
+
+  it("詳細で対象と安全な失敗概要を表示し、生のbackend errorを出さない", () => {
+    render(
+      <JobsPanel
+        jobs={[createJob("failed", { error_message: "internal provider trace must not be shown" })]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+      />
+    );
+
+    const detail = screen.getByRole("button", { name: "詳細を表示" });
+    fireEvent.click(detail);
+
+    expect(detail).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("入力中のテキスト")).toBeInTheDocument();
+    expect(screen.getByText("失敗の概要")).toBeInTheDocument();
+    expect(screen.queryByText("internal provider trace must not be shown")).not.toBeInTheDocument();
   });
 });

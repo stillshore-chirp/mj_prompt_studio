@@ -54,6 +54,6 @@ test("shows a failed Job's state, impact, and retry path without backend error d
   await expect(job).toContainText(
     "この処理を完了できませんでした。結果は適用されていません。入力や接続設定を確認して、再試行してください。"
   );
-  await expect(job.getByRole("button", { name: "Prompt Doctorの確認を再試行する" })).toBeVisible();
+  await expect(job.getByRole("button", { name: "再試行する" })).toBeVisible();
   await expect(page.getByText("internal provider trace must not be exposed")).toBeHidden();
 });
