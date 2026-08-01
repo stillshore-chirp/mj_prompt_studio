@@ -60,7 +60,23 @@ type TabId =
 type PendingConfirm =
   | { kind: "patch"; patch: PromptPatch }
   | { kind: "parameters"; payload: JsonObject }
-  | { kind: "delete-reference"; reference: ReferenceAsset };
+  | { kind: "delete-reference"; reference: ReferenceAsset }
+  | {
+      kind: "save-draft-and-continue";
+      draft: ComposerPayload;
+      navigation: PendingNavigation;
+    }
+  | {
+      kind: "discard-draft-and-continue";
+      navigation: Extract<PendingNavigation, { kind: "undo" } | { kind: "redo" }>;
+    };
+
+type PendingNavigation =
+  | { kind: "new"; name: string }
+  | { kind: "project"; projectId: string }
+  | { kind: "undo" }
+  | { kind: "redo" }
+  | { kind: "tab"; tab: TabId };
 
 type AutoSuggestionRequest = Pick<AutoSuggestionState, "revision" | "sourceText">;
 
@@ -105,6 +121,7 @@ export function App() {
   const [bootState, setBootState] = useState<"loading" | "ready" | "failed">("loading");
   const [bootSettingsCheck, setBootSettingsCheck] = useState<StatusMessage | null>(null);
   const [manualCopy, setManualCopy] = useState<string | null>(null);
+  const [composerDraft, setComposerDraft] = useState<ComposerPayload | null>(null);
   const [autoSuggestion, setAutoSuggestion] = useState<AutoSuggestionState | null>(null);
   const manualCopyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const handledJobs = useRef<Set<string>>(new Set());
@@ -149,6 +166,7 @@ export function App() {
   const updateDocument = useCallback((next: PromptDocument) => {
     setDocument(next);
     setParameters(next.parameters);
+    setComposerDraft(null);
     setWorkspace((current) => (current ? { ...current, document: next } : current));
   }, []);
 
@@ -319,6 +337,87 @@ export function App() {
 
   const currentDocument = document;
   const currentSettings = settings;
+  const isComposerDirty = isDraftDirty(composerDraft, currentDocument);
+
+  const updateDraftParameters = useCallback(
+    (next: PromptParameters) => {
+      setParameters(next);
+      setComposerDraft((current) => {
+        if (current) {
+          return { ...current, parameters: next };
+        }
+        if (!document) {
+          return null;
+        }
+        return {
+          user_brief: document.user_brief,
+          blocks: document.blocks,
+          parameters: next,
+          notes: document.notes,
+          tags: document.tags
+        };
+      });
+    },
+    [document]
+  );
+
+  const executeNavigation = useCallback(
+    (navigation: PendingNavigation) => {
+      if (!document || !workspace) {
+        return;
+      }
+      if (navigation.kind === "tab") {
+        setActiveTab(navigation.tab);
+        return;
+      }
+      if (navigation.kind === "project") {
+        api
+          .openProject(navigation.projectId)
+          .then(() => loadWorkspace())
+          .then(() => setComposerDraft(null))
+          .catch((error: unknown) => setStatus(errorToMessage(error)));
+        return;
+      }
+      if (navigation.kind === "new") {
+        api
+          .createProject(navigation.name, "Untitled Prompt")
+          .then((response) => {
+            setWorkspace({ ...workspace, project: response.project, document: response.document });
+            updateDocument(response.document);
+            setReferences([]);
+            setResultImages([]);
+            setComposerDraft(null);
+            setStatus("新規プロジェクトを作成しました");
+          })
+          .catch((error: unknown) => setStatus(errorToMessage(error)));
+        return;
+      }
+      const historyRequest = navigation.kind === "undo" ? api.undo(document.id) : api.redo(document.id);
+      historyRequest
+        .then((response) => {
+          updateDocument(response.document);
+          setComposerDraft(null);
+          setStatus(navigation.kind === "undo" ? "Undo 完了" : "Redo 完了");
+        })
+        .catch((error: unknown) => setStatus(errorToMessage(error)));
+    },
+    [document, loadWorkspace, updateDocument, workspace]
+  );
+
+  const requestNavigation = useCallback(
+    (navigation: PendingNavigation) => {
+      if (isComposerDirty && composerDraft) {
+        if (navigation.kind === "undo" || navigation.kind === "redo") {
+          setPendingConfirm({ kind: "discard-draft-and-continue", navigation });
+          return;
+        }
+        setPendingConfirm({ kind: "save-draft-and-continue", draft: composerDraft, navigation });
+        return;
+      }
+      executeNavigation(navigation);
+    },
+    [composerDraft, executeNavigation, isComposerDirty]
+  );
 
   const content = useMemo(() => {
     if (!workspace || !currentDocument || !currentSettings || !parameters) {
@@ -328,11 +427,15 @@ export function App() {
       return (
         <ComposerView
           document={{ ...currentDocument, parameters }}
+          draft={composerDraft}
+          isDirty={isComposerDirty}
+          onDraftChange={setComposerDraft}
           onSave={(payload) =>
             api
               .saveBlocks(currentDocument.id, savePayload(payload))
               .then((response) => {
                 updateDocument(response.document);
+                setComposerDraft(null);
                 setStatus("保存済み");
               })
               .catch((error: unknown) => setStatus(errorToMessage(error)))
@@ -590,6 +693,7 @@ export function App() {
     autoSuggestion,
     auditResult,
     comparisonLines,
+    composerDraft,
     currentDocument,
     currentSettings,
     freeEditorResult,
@@ -598,11 +702,13 @@ export function App() {
     matrixPlan,
     matrixVariants,
     parameters,
+    isComposerDirty,
     references,
     requestAutoSuggestion,
     resultImages,
     savePayload,
     submitJob,
+    updateDraftParameters,
     workspace
   ]);
 
@@ -676,16 +782,7 @@ export function App() {
             onClick={() => {
               const name = window.prompt("Project name", "New Prompt Project");
               if (name) {
-                api
-                  .createProject(name, "Untitled Prompt")
-                  .then((response) => {
-                    setWorkspace({ ...workspace, project: response.project, document: response.document });
-                    updateDocument(response.document);
-                    setReferences([]);
-                    setResultImages([]);
-                    setStatus("新規プロジェクトを作成しました");
-                  })
-                  .catch((error: unknown) => setStatus(errorToMessage(error)));
+                requestNavigation({ kind: "new", name });
               }
             }}
           >
@@ -694,24 +791,14 @@ export function App() {
           <button
             type="button"
             className="secondary"
-            onClick={() => {
-              api
-                .undo(document.id)
-                .then((response) => updateDocument(response.document))
-                .catch((error: unknown) => setStatus(errorToMessage(error)));
-            }}
+            onClick={() => requestNavigation({ kind: "undo" })}
           >
             <Undo2 size={16} /> Undo
           </button>
           <button
             type="button"
             className="secondary"
-            onClick={() => {
-              api
-                .redo(document.id)
-                .then((response) => updateDocument(response.document))
-                .catch((error: unknown) => setStatus(errorToMessage(error)));
-            }}
+            onClick={() => requestNavigation({ kind: "redo" })}
           >
             <RotateCcw size={16} /> Redo
           </button>
@@ -740,12 +827,7 @@ export function App() {
               type="button"
               className={`nav-row ${project.id === workspace.project.id ? "active" : ""}`}
               key={project.id}
-              onClick={() =>
-                api
-                  .openProject(project.id)
-                  .then(() => loadWorkspace())
-                  .catch((error: unknown) => setStatus(errorToMessage(error)))
-              }
+              onClick={() => requestNavigation({ kind: "project", projectId: project.id })}
             >
               <FolderOpen size={15} /> {project.name}
             </button>
@@ -753,17 +835,25 @@ export function App() {
         </section>
         <section>
           <h2>Quick Actions</h2>
-          <button type="button" className="nav-row" onClick={() => setActiveTab("composer")}>
+          <button
+            type="button"
+            className="nav-row"
+            onClick={() => requestNavigation({ kind: "tab", tab: "composer" })}
+          >
             <Sparkles size={15} /> AI Brief
           </button>
           <button
             type="button"
             className="nav-row"
-            onClick={() => setActiveTab("reference-library")}
+            onClick={() => requestNavigation({ kind: "tab", tab: "reference-library" })}
           >
             <Library size={15} /> References
           </button>
-          <button type="button" className="nav-row" onClick={() => setActiveTab("settings")}>
+          <button
+            type="button"
+            className="nav-row"
+            onClick={() => requestNavigation({ kind: "tab", tab: "settings" })}
+          >
             <Settings size={15} /> Settings
           </button>
         </section>
@@ -775,7 +865,7 @@ export function App() {
             type="button"
             key={tab.id}
             className={activeTab === tab.id ? "active" : ""}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => requestNavigation({ kind: "tab", tab: tab.id })}
           >
             {tab.icon}
             {tab.label}
@@ -790,7 +880,7 @@ export function App() {
         <ParameterInspector
           specs={settings.ruleset.parameters}
           parameters={parameters}
-          onChange={setParameters}
+          onChange={updateDraftParameters}
           onAdvice={() =>
             submitJob(
               () => api.parameterAdvisor(document.id, document.user_brief || document.compiled_prompt),
@@ -874,6 +964,31 @@ export function App() {
     if (!document || !parameters) {
       return;
     }
+    if (confirm.kind === "save-draft-and-continue") {
+      api
+        .saveBlocks(document.id, savePayload(confirm.draft))
+        .then((response) => {
+          updateDocument(response.document);
+          setComposerDraft(null);
+          setPendingConfirm(null);
+          setStatus("保存済み。続けて操作します。");
+          executeNavigation(confirm.navigation);
+        })
+        .catch((error: unknown) => setStatus(errorToMessage(error)));
+      return;
+    }
+    if (confirm.kind === "discard-draft-and-continue") {
+      const historyRequest =
+        confirm.navigation.kind === "undo" ? api.undo(document.id) : api.redo(document.id);
+      historyRequest
+        .then((response) => {
+          updateDocument(response.document);
+          setPendingConfirm(null);
+          setStatus(confirm.navigation.kind === "undo" ? "Undo 完了" : "Redo 完了");
+        })
+        .catch((error: unknown) => setStatus(errorToMessage(error)));
+      return;
+    }
     if (confirm.kind === "patch") {
       api
         .applyPatch(document.id, confirm.patch)
@@ -949,6 +1064,13 @@ function renderConfirmContent(confirm: PendingConfirm | null): ReactNode {
   if (confirm.kind === "parameters") {
     return <pre>{JSON.stringify(confirm.payload, null, 2)}</pre>;
   }
+  if (confirm.kind === "save-draft-and-continue") {
+    return <p>未保存のComposerとパラメータ編集を保存してから、選択した操作を続けます。キャンセルすると編集内容を保持します。</p>;
+  }
+  if (confirm.kind === "discard-draft-and-continue") {
+    const action = confirm.navigation.kind === "undo" ? "Undo" : "Redo";
+    return <p>保存せずに未保存のComposerとパラメータ編集を破棄して、{action}を実行します。キャンセルすると編集内容を保持します。</p>;
+  }
   return <p>{confirm.reference.name}</p>;
 }
 
@@ -969,6 +1091,21 @@ function getConfirmDialogDetails(confirm: PendingConfirm | null): {
       title: "パラメータを適用しますか？",
       description: "提案されたパラメータでPromptを更新します。内容を確認してから適用してください。",
       confirmLabel: "パラメータを適用"
+    };
+  }
+  if (confirm?.kind === "save-draft-and-continue") {
+    return {
+      title: "未保存の変更を保存しますか？",
+      description: "保存してから続行します。保存に失敗した場合はこの画面に留まり、入力内容は保持されます。",
+      confirmLabel: "保存して続行"
+    };
+  }
+  if (confirm?.kind === "discard-draft-and-continue") {
+    const action = confirm.navigation.kind === "undo" ? "Undo" : "Redo";
+    return {
+      title: `未保存の変更を破棄して${action}しますか？`,
+      description: `保存していない入力を破棄して${action}を実行します。キャンセルすると入力内容は保持されます。`,
+      confirmLabel: `破棄して${action}`
     };
   }
   return {
@@ -1024,6 +1161,19 @@ function mergeParameters(base: PromptParameters, patch: JsonObject): PromptParam
     }
   }
   return next;
+}
+
+function isDraftDirty(draft: ComposerPayload | null, document: PromptDocument | null): boolean {
+  if (!draft || !document) {
+    return false;
+  }
+  return (
+    draft.user_brief !== document.user_brief ||
+    JSON.stringify(draft.blocks) !== JSON.stringify(document.blocks) ||
+    JSON.stringify(draft.parameters) !== JSON.stringify(document.parameters) ||
+    draft.notes !== document.notes ||
+    JSON.stringify(draft.tags) !== JSON.stringify(document.tags)
+  );
 }
 
 function toStatusMessage(status: StatusMessage | string): StatusMessage {

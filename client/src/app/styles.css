@@ -362,6 +362,27 @@ svg {
   min-width: 0;
 }
 
+.draft-status {
+  align-items: center;
+  color: var(--text-muted);
+  display: inline-flex;
+  font-size: 12px;
+  margin: 0;
+}
+
+.draft-status.is-dirty {
+  color: #ffe08a;
+}
+
+.draft-status.is-dirty::before {
+  background: var(--warning);
+  border-radius: 50%;
+  content: "";
+  height: 8px;
+  margin-right: 6px;
+  width: 8px;
+}
+
 .app-header button {
   min-height: 30px;
   padding-inline: 10px;
