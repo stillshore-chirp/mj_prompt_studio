@@ -1,5 +1,5 @@
 import { ClipboardCheck, GitCompare, Sparkles } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { JsonObject, ResultImage, ResultReview } from "../../shared/types/api";
 import { ImageUploadControl } from "../../shared/components/ImageUploadControl";
@@ -30,6 +30,7 @@ export function ResultReviewView({
   onFinalAudit
 }: ResultReviewViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(resultImages[0]?.id ?? null);
+  const knownResultImageIds = useRef(new Set(resultImages.map((image) => image.id)));
   const selected = useMemo(
     () => resultImages.find((image) => image.id === selectedId) ?? resultImages[0],
     [resultImages, selectedId]
@@ -42,6 +43,14 @@ export function ResultReviewView({
       onSelectResult(selected.id);
     }
   }, [onSelectResult, selected]);
+
+  useEffect(() => {
+    const newlyAdded = resultImages.find((image) => !knownResultImageIds.current.has(image.id));
+    knownResultImageIds.current = new Set(resultImages.map((image) => image.id));
+    if (newlyAdded) {
+      setSelectedId(newlyAdded.id);
+    }
+  }, [resultImages]);
 
   return (
     <section className="workspace-pane" aria-label="Result Review">
@@ -61,6 +70,7 @@ export function ResultReviewView({
               className={`asset-list-item ${image.id === selected?.id ? "active" : ""}`}
               key={image.id}
               aria-label={`結果画像 ${index + 1}: ${formatResultImage(image)}`}
+              aria-pressed={image.id === selected?.id}
               onClick={() => setSelectedId(image.id)}
             >
               <img src={image.asset_url} alt="" />
