@@ -94,6 +94,7 @@ export function App() {
   const [status, setStatus] = useState("起動中");
   const [manualCopy, setManualCopy] = useState<string | null>(null);
   const [autoSuggestion, setAutoSuggestion] = useState<AutoSuggestionState | null>(null);
+  const manualCopyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const handledJobs = useRef<Set<string>>(new Set());
   const latestAutoSuggestionRevision = useRef<number | null>(null);
   const autoSuggestionRequests = useRef<Map<string, AutoSuggestionRequest>>(new Map());
@@ -565,6 +566,7 @@ export function App() {
   }
 
   const confirmContent = renderConfirmContent(pendingConfirm);
+  const confirmDialogDetails = getConfirmDialogDetails(pendingConfirm);
 
   return (
     <div className="app-shell">
@@ -735,7 +737,9 @@ export function App() {
 
       <ConfirmDialog
         open={pendingConfirm !== null}
-        title="確認"
+        title={confirmDialogDetails.title}
+        description={confirmDialogDetails.description}
+        confirmLabel={confirmDialogDetails.confirmLabel}
         onCancel={() => setPendingConfirm(null)}
         onConfirm={() => {
           if (!pendingConfirm) {
@@ -749,11 +753,13 @@ export function App() {
       <ConfirmDialog
         open={manualCopy !== null}
         title="Manual Copy"
+        description="コピーが自動でできなかったため、表示されたテキストを選択してコピーしてください。閉じても内容は変更されません。"
         confirmLabel="閉じる"
+        initialFocusRef={manualCopyTextareaRef}
         onConfirm={() => setManualCopy(null)}
         onCancel={() => setManualCopy(null)}
       >
-        <textarea value={manualCopy ?? ""} readOnly rows={8} />
+        <textarea ref={manualCopyTextareaRef} value={manualCopy ?? ""} readOnly rows={8} />
       </ConfirmDialog>
     </div>
   );
@@ -848,6 +854,32 @@ function renderConfirmContent(confirm: PendingConfirm | null): ReactNode {
     return <pre>{JSON.stringify(confirm.payload, null, 2)}</pre>;
   }
   return <p>{confirm.reference.name}</p>;
+}
+
+function getConfirmDialogDetails(confirm: PendingConfirm | null): {
+  title: string;
+  description: string;
+  confirmLabel: string;
+} {
+  if (confirm?.kind === "delete-reference") {
+    return {
+      title: "参照を削除しますか？",
+      description: `「${confirm.reference.name}」を削除します。この操作は取り消せません。`,
+      confirmLabel: "削除する"
+    };
+  }
+  if (confirm?.kind === "parameters") {
+    return {
+      title: "パラメータを適用しますか？",
+      description: "提案されたパラメータでPromptを更新します。内容を確認してから適用してください。",
+      confirmLabel: "パラメータを適用"
+    };
+  }
+  return {
+    title: "変更を適用しますか？",
+    description: "提案された変更で既存の入力内容を置き換える場合があります。内容を確認してから適用してください。",
+    confirmLabel: "変更を適用"
+  };
 }
 
 function readObject(value: JsonValue | undefined): JsonObject | null {
