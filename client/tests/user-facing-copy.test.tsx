@@ -6,6 +6,12 @@ import { PromptDoctorPanel } from "../src/features/prompt-doctor/PromptDoctorPan
 import type { PromptDocument } from "../src/shared/types/api";
 import { displayAgentName, displayFieldName, displayValue } from "../src/shared/utils/user-facing";
 
+const executionProfile = {
+  effective_model: "gpt-5.6-luna",
+  effective_reasoning_effort: "high",
+  effective_text_verbosity: "low"
+};
+
 const document = {
   llm_context: { last_agent: "ParameterAdvisorAgent", model: "gpt-5.6-luna" }
 } as PromptDocument;
@@ -20,7 +26,7 @@ describe("user-facing copy", () => {
   it("InspectorとPrompt Doctorは内部名を主要情報として表示しない", () => {
     render(
       <>
-        <AIInspector document={document} agentResult={null} />
+        <AIInspector document={document} agentResult={null} executionProfile={executionProfile} />
         <PromptDoctorPanel
           validationReport={null}
           patches={[
@@ -43,5 +49,28 @@ describe("user-facing copy", () => {
     expect(screen.getByText(/構図 \/ 提案の確からしさ 80%/)).toBeVisible();
     expect(screen.queryByText("blocks.composition")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Prompt Doctorで確認する" })).toBeVisible();
+  });
+
+  it("現在の固定構成と異なる保存済み履歴を区別して説明する", () => {
+    const legacyDocument = {
+      llm_context: {
+        last_agent: "PromptDoctorAgent",
+        model: "gpt-4.1",
+        reasoning_effort: "medium",
+        text_verbosity: "medium"
+      }
+    } as PromptDocument;
+
+    render(<AIInspector document={legacyDocument} agentResult={null} executionProfile={executionProfile} />);
+
+    expect(screen.getByText("現在の固定AI構成")).toBeVisible();
+    expect(screen.getByText("GPT-5.6 Luna・高い推論・簡潔な応答")).toBeVisible();
+    expect(screen.getByText("保存済みのAI実行履歴")).toBeVisible();
+    expect(screen.getByText("Prompt Doctorの確認")).toBeVisible();
+    expect(screen.getByText("gpt-4.1・medium・medium")).toBeVisible();
+    expect(
+      screen.getByText(/過去の実行記録で、現在の固定AI構成とは異なります。次のAI支援は現在の固定AI構成で実行され、ここに表示した履歴は変更されません。/)
+    ).toBeVisible();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
