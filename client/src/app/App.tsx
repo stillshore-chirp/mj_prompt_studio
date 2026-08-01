@@ -590,7 +590,10 @@ export function App() {
                 );
                 setStatus("Tags 保存済み");
               })
-              .catch((error: unknown) => setStatus(errorToMessage(error)))
+              .catch((error: unknown) => {
+                setStatus(errorToMessage(error));
+                throw error;
+              })
           }
           onDelete={(reference) => setPendingConfirm({ kind: "delete-reference", reference })}
           onVocabularyPatch={(vocabulary) =>
