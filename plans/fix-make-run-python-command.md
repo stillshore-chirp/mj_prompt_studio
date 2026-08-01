@@ -20,7 +20,7 @@
 - [x] 修正前の失敗条件を回帰テストで再現する。
 - [x] ランチャーを実行中の Python interpreter を API 起動にも利用する。
 - [x] lint / typecheck / test / build とローカル起動確認を完了する。
-- [ ] Ready PR を作成し、push / pull_request の checks を監視する。
+- [x] Ready PR を作成し、push / pull_request の checks を監視する。
 
 ## 受け入れ条件
 
@@ -58,3 +58,7 @@
 - `make build`: 成功。
 - `make run PYTHON='arch -arm64 .venv/bin/python' MJPS_DATA_DIR='/private/tmp/mjps-make-run-smoke'`: API と Vite の起動成功を確認後、Ctrl+C で停止。
 - README / docs: 公開される起動手順と仕様は変わらないため更新不要と判断。
+- Ready PR: https://github.com/stillshore-chirp/mj_prompt_studio/pull/8
+- 初回 push CI: 成功（https://github.com/stillshore-chirp/mj_prompt_studio/actions/runs/30685876846）。
+- 初回 pull_request CI: 成功（https://github.com/stillshore-chirp/mj_prompt_studio/actions/runs/30685895495）。
+- 非blocking annotation: GitHub Actions が Node.js 20 廃止予定を通知しているが、runner は Node.js 24 を強制利用しており全 job は成功。
