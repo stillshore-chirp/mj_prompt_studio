@@ -35,6 +35,8 @@
 
 ## 証跡・検証
 
+- 変更前screenshot: `/private/tmp/mjps-issue-25-before.jpg`（隔離mockデータのみ）
+- 変更後screenshot: `/private/tmp/mjps-issue-25-after.jpg`（隔離mockデータのみ）
 - test / trace / 手動確認: `make client-lint`、`make client-typecheck`、`make client-test`（34 tests）、`make client-build`、隔離Mock Playwright（15 tests）、初回空・検索なし・部分状態のfocus遷移component test。
 - 未実施: 実OpenAI API、実ユーザー評価は未実施。Mock UIと状態遷移のみを確認した。
 
