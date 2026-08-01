@@ -14,5 +14,4 @@ test("760px幅でも主作業と補助パネルへ到達でき、横overflowを�
   await page.getByRole("region", { name: "Jobs" }).scrollIntoViewIfNeeded();
   await expect(page.getByRole("region", { name: "Jobs" })).toBeVisible();
   expect(await page.locator("html").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-  await page.screenshot({ path: "/private/tmp/mjps-issue-20-narrow-after.png", fullPage: true });
 });
