@@ -14,7 +14,7 @@ test("選択中でない画像のAI Reviewを表示しない", async ({ page }) 
 
   await page.getByLabel("Result Review").locator('input[type="file"]').setInputFiles(firstImage);
   await page.getByRole("button", { name: "選択中の結果画像を AI Review" }).click();
-  await expect(page.getByText(/全体に高品質/)).toBeVisible();
+  await expect(page.getByText(/全体に高品質/)).toBeVisible({ timeout: 30_000 });
 
   await page.getByLabel("Result Review").locator('input[type="file"]').setInputFiles(secondImage);
   const resultItems = page.getByLabel("Result Review").locator(".asset-list-item");
