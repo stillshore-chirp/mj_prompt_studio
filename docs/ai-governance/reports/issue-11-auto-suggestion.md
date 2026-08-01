@@ -2,10 +2,10 @@
 
 ## 概要
 
-- 対象Issue / PR / 作業: [#11](https://github.com/stillshore-chirp/mj_prompt_studio/issues/11) / PR作成前 / Composerの自動提案Job連鎖停止
+- 対象Issue / PR / 作業: [#11](https://github.com/stillshore-chirp/mj_prompt_studio/issues/11) / [#30](https://github.com/stillshore-chirp/mj_prompt_studio/pull/30) / Composerの自動提案Job連鎖停止
 - 画面・component・状態: Composer、Live Preview、自動提案の待機・queued・running・succeeded・failed
-- 判定: Pass（ローカル検証・隔離mock E2E・視覚証跡）/ PR・CI・reviewは未実施
-- P0 / P1 / P2件数: 既知P0を1件修正中 / 新規0件 / 新規0件
+- 判定: Pass（ローカル検証・隔離mock E2E・視覚証跡・CI・Codex review）/ mainへのマージ待ち
+- P0 / P1 / P2件数: 既知P0を1件修正済み / 新規0件 / 新規0件
 
 ## ユーザー価値
 
@@ -47,7 +47,7 @@
 
 ## 証跡・検証
 
-- 変更前/変更後screenshot: 安全なmock fixtureで、変更前は同じ編集に対してJobが複数表示され、変更後は1件だけであることを目視確認した。PR本文へ添付する。ユーザーの入力・画像・API keyは写していない。
+- 変更前/変更後screenshot: 安全なmock fixtureで、変更前は同じ編集に対してJobが複数表示され、変更後は1件だけであることを目視確認し、PR本文へ添付した。ユーザーの入力・画像・API keyは写していない。
 - test / trace / 手動確認: `make client-test`（11 passed）、`make client-typecheck`、`make client-lint`、Pythonのlint/typecheck/test/build（44 passed）、client buildを通過。隔離mock環境で、自動提案回帰と既存core workflowのPlaywright E2E 2件が通過した。
 - 取得できなかった証跡と理由: 標準E2Eは既存local serverが標準portを使用中のため起動できなかった。別port・新規mockデータの同等E2Eで代替した。実OpenAI APIはテストで呼ばない方針のため未確認。
 

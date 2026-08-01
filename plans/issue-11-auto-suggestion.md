@@ -30,7 +30,8 @@ Composerで利用者が実際に編集した入力だけを、1回の待機後�
 - [x] ComposerとAppの送信・完了処理をrevision単位で保護
 - [x] component / application testを追加し、回帰を防止
 - [x] state matrix・アクセシビリティ・反証レビューを記録
-- [ ] ローカル検証、PR、CI、review、mainへのマージを完了
+- [x] ローカル検証、PR、CI、reviewを完了
+- [ ] mainへのマージを完了
 
 ## 受け入れ条件
 
@@ -78,10 +79,10 @@ Composerで利用者が実際に編集した入力だけを、1回の待機後�
 ## PR / CI / review 記録
 
 - Branch: `codex/fix-auto-suggestion-loop`
-- Commit: 未作成
-- PR: 未作成
-- Push CI: 未実行
-- PR CI: 未実行
-- Codex review: 未実行
-- 未解決 review thread: 未確認
+- Commit: `8238a7c205b8f55d2c455bdfb4fe32278edfa620`
+- PR: [#30](https://github.com/stillshore-chirp/mj_prompt_studio/pull/30)
+- Push CI: 4 / 4 success
+- PR CI: 3 / 3 success
+- Codex review: 差分・状態遷移・回帰test・視覚証跡を確認。新規P0/P1/P2なし
+- 未解決 review thread: 0（GraphQL確認）
 - レビュー往復回数: 0
