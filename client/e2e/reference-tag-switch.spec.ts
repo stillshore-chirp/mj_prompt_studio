@@ -15,9 +15,11 @@ test("未保存の参照タグは素材切替前に確認する", async ({ page 
 
   await fileInput.setInputFiles(firstImage);
   await fileInput.setInputFiles(secondImage);
-  await page.getByRole("button", { name: /first-safe-reference.png/ }).click();
+  const referenceItems = page.getByLabel("Reference Library").locator(".asset-list-item");
+  await expect(referenceItems).toHaveCount(2);
+  await referenceItems.nth(1).click();
   await page.getByRole("textbox", { name: "Tags" }).fill("draft-only-safe-tag");
-  await page.getByRole("button", { name: /second-safe-reference.png/ }).click();
+  await referenceItems.nth(0).click();
   await expect(page.getByRole("dialog", { name: "未保存のタグを破棄しますか？" })).toBeVisible();
   await page.getByRole("button", { name: "破棄して切り替える" }).click();
   await expect(page.getByRole("textbox", { name: "Tags" })).not.toHaveValue("draft-only-safe-tag");
