@@ -1,16 +1,25 @@
 import { BrainCircuit } from "lucide-react";
 
-import type { JsonObject, PromptDocument } from "../../shared/types/api";
-import { displayAgentName } from "../../shared/utils/user-facing";
+import type { JsonObject, PromptDocument, RuntimeSettingsPublic } from "../../shared/types/api";
+import { displayAgentName, displayExecutionDetails } from "../../shared/utils/user-facing";
 
 interface AIInspectorProps {
   document: PromptDocument;
   agentResult: JsonObject | null;
+  executionProfile: Pick<
+    RuntimeSettingsPublic,
+    "effective_model" | "effective_reasoning_effort" | "effective_text_verbosity"
+  >;
 }
 
-export function AIInspector({ document, agentResult }: AIInspectorProps) {
+export function AIInspector({ document, agentResult, executionProfile }: AIInspectorProps) {
   const missingDecisions = readStringList(agentResult, "missing_decisions");
   const nextActions = readStringList(agentResult, "next_actions");
+  const hasExecutionHistory = Boolean(document.llm_context.last_agent);
+  const historyMatchesCurrent =
+    document.llm_context.model === executionProfile.effective_model &&
+    document.llm_context.reasoning_effort === executionProfile.effective_reasoning_effort &&
+    document.llm_context.text_verbosity === executionProfile.effective_text_verbosity;
   return (
     <section className="inspector-section" aria-label="AIの状況">
       <div className="panel-title-row">
@@ -19,14 +28,45 @@ export function AIInspector({ document, agentResult }: AIInspectorProps) {
       </div>
       <dl className="meta-list">
         <div>
-          <dt>直近のAI支援</dt>
-          <dd>{displayAgentName(document.llm_context.last_agent)}</dd>
-        </div>
-        <div>
-          <dt>使用中のモデル</dt>
-          <dd>{document.llm_context.model}</dd>
+          <dt>現在の固定AI構成</dt>
+          <dd>
+            {displayExecutionDetails(
+              executionProfile.effective_model,
+              executionProfile.effective_reasoning_effort,
+              executionProfile.effective_text_verbosity
+            )}
+          </dd>
         </div>
       </dl>
+      <p className="scope-note">この構成は設定画面と共通です。ここから変更することはできません。</p>
+      <h3>保存済みのAI実行履歴</h3>
+      {hasExecutionHistory ? (
+        <>
+          <dl className="meta-list">
+            <div>
+              <dt>最後に実行したAI支援</dt>
+              <dd>{displayAgentName(document.llm_context.last_agent)}</dd>
+            </div>
+            <div>
+              <dt>実行時の構成</dt>
+              <dd>
+                {displayExecutionDetails(
+                  document.llm_context.model,
+                  document.llm_context.reasoning_effort,
+                  document.llm_context.text_verbosity
+                )}
+              </dd>
+            </div>
+          </dl>
+          <p className="scope-note">
+            {historyMatchesCurrent
+              ? "この履歴は現在の固定AI構成と一致しています。"
+              : "この履歴は過去の実行記録で、現在の固定AI構成とは異なります。次のAI支援は現在の固定AI構成で実行され、ここに表示した履歴は変更されません。"}
+          </p>
+        </>
+      ) : (
+        <p className="scope-note">まだ保存済みのAI実行履歴はありません。最初のAI支援を実行すると、実行時の構成をここで確認できます。</p>
+      )}
       <h3>まだ決めること</h3>
       <ul className="compact-list">
         {missingDecisions.map((item) => (

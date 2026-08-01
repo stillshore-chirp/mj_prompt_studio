@@ -911,7 +911,7 @@ export function App() {
       <main className="main-panel">{content}</main>
 
       <aside className="right-panel">
-        <AIInspector document={document} agentResult={agentResult} />
+        <AIInspector document={document} agentResult={agentResult} executionProfile={settings} />
         <ParameterInspector
           specs={settings.ruleset.parameters}
           parameters={parameters}
