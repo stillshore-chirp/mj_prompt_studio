@@ -109,7 +109,7 @@ export function App() {
   const [pendingPatches, setPendingPatches] = useState<PromptPatch[]>([]);
   const [matrixPlan, setMatrixPlan] = useState<MatrixPlan | null>(null);
   const [matrixVariants, setMatrixVariants] = useState<MatrixVariant[]>([]);
-  const [latestReview, setLatestReview] = useState<ResultReview | null>(null);
+  const [reviewsByResultId, setReviewsByResultId] = useState<Record<string, ResultReview[]>>({});
   const [comparisonLines, setComparisonLines] = useState<string[]>([]);
   const [auditResult, setAuditResult] = useState<JsonObject | null>(null);
   const [freeEditorResult, setFreeEditorResult] = useState({ result: "", detail: "" });
@@ -237,7 +237,16 @@ export function App() {
       setAgentResult(output);
       const review = readObject(output.review);
       if (review) {
-        setLatestReview(review as unknown as ResultReview);
+        const resultReview = review as unknown as ResultReview;
+        setReviewsByResultId((current) => ({
+          ...current,
+          [resultReview.result_image_id]: [
+            resultReview,
+            ...(current[resultReview.result_image_id] ?? []).filter(
+              (item) => item.id !== resultReview.id
+            )
+          ]
+        }));
       }
       loadWorkspace().catch(() => undefined);
       return;
@@ -308,6 +317,15 @@ export function App() {
     } catch (error) {
       setStatus(errorToMessage(error));
     }
+  }, []);
+
+  const loadResultReviews = useCallback((resultImageId: string) => {
+    api
+      .resultReviews(resultImageId)
+      .then((response) =>
+        setReviewsByResultId((current) => ({ ...current, [resultImageId]: response.reviews }))
+      )
+      .catch((error: unknown) => setStatus(errorToMessage(error)));
   }, []);
 
   const requestAutoSuggestion = useCallback((sourceText: string, revision: number) => {
@@ -595,7 +613,7 @@ export function App() {
       return (
         <ResultReviewView
           resultImages={resultImages}
-          latestReview={latestReview}
+          reviewsByResultId={reviewsByResultId}
           comparisonLines={comparisonLines}
           auditResult={auditResult}
           onUpload={(file) =>
@@ -610,6 +628,7 @@ export function App() {
           onReview={(resultImageId) =>
             submitJob(() => api.resultReview(resultImageId), "Result review job を作成しました")
           }
+          onSelectResult={loadResultReviews}
           onCompare={() =>
             api
               .compareResults(workspace.project.id)
@@ -703,12 +722,13 @@ export function App() {
     currentDocument,
     currentSettings,
     freeEditorResult,
-    latestReview,
+    reviewsByResultId,
     loadWorkspace,
     matrixPlan,
     matrixVariants,
     parameters,
     isComposerDirty,
+    loadResultReviews,
     references,
     requestAutoSuggestion,
     resultImages,

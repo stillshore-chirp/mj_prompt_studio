@@ -1,16 +1,17 @@
 import { ClipboardCheck, GitCompare, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { JsonObject, ResultImage, ResultReview } from "../../shared/types/api";
 import { ImageUploadControl } from "../../shared/components/ImageUploadControl";
 
 interface ResultReviewViewProps {
   resultImages: ResultImage[];
-  latestReview: ResultReview | null;
+  reviewsByResultId: Record<string, ResultReview[]>;
   comparisonLines: string[];
   auditResult: JsonObject | null;
   onUpload: (file: File) => void;
   onReview: (resultImageId: string) => void;
+  onSelectResult: (resultImageId: string) => void;
   onCompare: () => void;
   onNextPrompt: (candidate: string) => void;
   onFinalAudit: () => void;
@@ -18,11 +19,12 @@ interface ResultReviewViewProps {
 
 export function ResultReviewView({
   resultImages,
-  latestReview,
+  reviewsByResultId,
   comparisonLines,
   auditResult,
   onUpload,
   onReview,
+  onSelectResult,
   onCompare,
   onNextPrompt,
   onFinalAudit
@@ -32,6 +34,14 @@ export function ResultReviewView({
     () => resultImages.find((image) => image.id === selectedId) ?? resultImages[0],
     [resultImages, selectedId]
   );
+  const selectedReviews = selected ? reviewsByResultId[selected.id] ?? [] : [];
+  const latestReview = selectedReviews[0] ?? null;
+
+  useEffect(() => {
+    if (selected) {
+      onSelectResult(selected.id);
+    }
+  }, [onSelectResult, selected]);
 
   return (
     <section className="workspace-pane" aria-label="Result Review">
@@ -45,15 +55,16 @@ export function ResultReviewView({
       </div>
       <div className="library-grid">
         <div className="item-list">
-          {resultImages.map((image) => (
+          {resultImages.map((image, index) => (
             <button
               type="button"
               className={`asset-list-item ${image.id === selected?.id ? "active" : ""}`}
               key={image.id}
+              aria-label={`結果画像 ${index + 1}: ${formatResultImage(image)}`}
               onClick={() => setSelectedId(image.id)}
             >
               <img src={image.asset_url} alt="" />
-              <span>{new Date(image.created_at).toLocaleString()}</span>
+              <span>{formatResultImage(image)}</span>
             </button>
           ))}
         </div>
@@ -62,7 +73,7 @@ export function ResultReviewView({
             <img className="asset-preview" src={selected.asset_url} alt="" />
             <div className="toolbar-actions">
               <button type="button" onClick={() => onReview(selected.id)}>
-                <Sparkles size={16} /> AI Review
+                <Sparkles size={16} /> 選択中の結果画像を AI Review
               </button>
               <button type="button" className="secondary" onClick={onCompare}>
                 <GitCompare size={16} /> Compare
@@ -73,12 +84,14 @@ export function ResultReviewView({
             </div>
             <section className="plain-panel">
               <h2>Source Prompt</h2>
+              <p className="scope-note">対象: 選択中の結果画像（{formatResultImage(selected)}）</p>
               <p>{selected.prompt_snapshot}</p>
               <pre>{JSON.stringify(selected.parameters_snapshot, null, 2)}</pre>
             </section>
             {latestReview && (
               <section className="plain-panel">
-                <h2>AI Review</h2>
+                <h2>AI Review（選択中の結果画像）</h2>
+                <p className="scope-note">対象: {formatResultImage(selected)}。別の画像の評価は表示しません。</p>
                 <p>{latestReview.ai_summary}</p>
                 <div className="score-grid">
                   {Object.entries(latestReview.scores).map(([key, value]) => (
@@ -100,21 +113,33 @@ export function ResultReviewView({
                 </div>
               </section>
             )}
+            {!latestReview && (
+              <section className="plain-panel" aria-live="polite">
+                <h2>AI Review（選択中の結果画像）</h2>
+                <p>この画像には保存済みのAI Reviewがありません。上の「選択中の結果画像を AI Review」から再実行できます。</p>
+              </section>
+            )}
           </article>
         )}
       </div>
       {comparisonLines.length > 0 && (
         <section className="plain-panel">
           <h2>Comparison</h2>
+          <p className="scope-note">対象: 現在のプロジェクト内のすべての生成結果。選択中の1画像だけの評価ではありません。</p>
           <pre>{comparisonLines.join("\n")}</pre>
         </section>
       )}
       {auditResult && (
         <section className="plain-panel">
           <h2>Final Audit</h2>
+          <p className="scope-note">対象: 現在のPrompt文書全体。選択中の結果画像のAI Reviewではありません。</p>
           <pre>{JSON.stringify(auditResult, null, 2)}</pre>
         </section>
       )}
     </section>
   );
+}
+
+function formatResultImage(image: ResultImage): string {
+  return new Date(image.created_at).toLocaleString();
 }
