@@ -1,5 +1,5 @@
 import { Clipboard, Save, Sparkles, Wand2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { PromptBlocks, PromptDocument, PromptParameters } from "../../shared/types/api";
 import {
@@ -16,7 +16,8 @@ interface ComposerViewProps {
   onCompile: (payload: ComposerPayload) => void;
   onBrief: (brief: string) => void;
   onFieldAssist: (mode: string, field: keyof PromptBlocks, text: string) => void;
-  onAutoSuggest: (sourceText: string) => void;
+  onAutoSuggest: (sourceText: string, revision: number) => void;
+  autoSuggestion: AutoSuggestionState | null;
   onCopyPrompt: () => void;
 }
 
@@ -28,6 +29,12 @@ export interface ComposerPayload {
   tags: string[];
 }
 
+export interface AutoSuggestionState {
+  sourceText: string;
+  revision: number;
+  status: "queued" | "running" | "succeeded" | "failed";
+}
+
 const assistModes = ["AI補完", "候補", "専門語化", "短縮", "説明"];
 
 export function ComposerView({
@@ -37,25 +44,48 @@ export function ComposerView({
   onBrief,
   onFieldAssist,
   onAutoSuggest,
+  autoSuggestion,
   onCopyPrompt
 }: ComposerViewProps) {
   const [brief, setBrief] = useState(document.user_brief);
   const [blocks, setBlocks] = useState<PromptBlocks>(document.blocks);
+  const [autoSuggestionRevision, setAutoSuggestionRevision] = useState(0);
+  const sentAutoSuggestionRevision = useRef<number | null>(null);
 
   useEffect(() => {
     setBrief(document.user_brief);
     setBlocks(document.blocks);
+    setAutoSuggestionRevision(0);
+    sentAutoSuggestionRevision.current = null;
   }, [document.id, document.user_brief, document.blocks]);
 
   const preview = useMemo(() => previewFromBlocks(blocks), [blocks]);
 
   useEffect(() => {
-    if (preview.trim().length < 16) {
+    const sourceText = preview.trim();
+    if (
+      autoSuggestionRevision === 0 ||
+      sourceText.length < 16 ||
+      sentAutoSuggestionRevision.current === autoSuggestionRevision
+    ) {
       return;
     }
-    const timer = window.setTimeout(() => onAutoSuggest(preview), 1000);
+    const timer = window.setTimeout(() => {
+      if (sentAutoSuggestionRevision.current === autoSuggestionRevision) {
+        return;
+      }
+      sentAutoSuggestionRevision.current = autoSuggestionRevision;
+      onAutoSuggest(sourceText, autoSuggestionRevision);
+    }, 1000);
     return () => window.clearTimeout(timer);
-  }, [onAutoSuggest, preview]);
+  }, [autoSuggestionRevision, onAutoSuggest, preview]);
+
+  const isCurrentAutoSuggestion =
+    autoSuggestion?.revision === autoSuggestionRevision &&
+    autoSuggestion.sourceText === preview.trim();
+  const autoSuggestionMessage = getAutoSuggestionMessage(
+    isCurrentAutoSuggestion ? autoSuggestion?.status : undefined
+  );
 
   const payload = (): ComposerPayload => ({
     user_brief: brief,
@@ -107,6 +137,7 @@ export function ComposerView({
                         ? inputToTextList(event.currentTarget.value)
                         : event.currentTarget.value;
                     setBlocks({ ...blocks, [field]: nextValue });
+                    setAutoSuggestionRevision((current) => current + 1);
                   }}
                   rows={field === "notes" ? 3 : 2}
                 />
@@ -128,6 +159,10 @@ export function ComposerView({
         })}
       </div>
 
+      <p className="assist-status" role="status" aria-live="polite">
+        {autoSuggestionMessage}
+      </p>
+
       <div className="preview-columns">
         <section className="plain-panel" aria-label="Live Preview">
           <h2>Live Preview</h2>
@@ -145,4 +180,20 @@ export function ComposerView({
       </div>
     </section>
   );
+}
+
+function getAutoSuggestionMessage(status: AutoSuggestionState["status"] | undefined): string {
+  if (status === "queued") {
+    return "最新の入力をAI補助へ送信しました。提案は確認してから適用できます。";
+  }
+  if (status === "running") {
+    return "AI補助が最新の入力から提案を準備しています。提案は自動適用されません。";
+  }
+  if (status === "succeeded") {
+    return "最新の入力への提案を確認できます。提案は自動適用されません。";
+  }
+  if (status === "failed") {
+    return "AI補助の提案を準備できませんでした。入力を編集すると再試行できます。";
+  }
+  return "入力を止めると、最新のPrompt BlocksをAI補助へ送信します。提案は自動適用されません。";
 }
