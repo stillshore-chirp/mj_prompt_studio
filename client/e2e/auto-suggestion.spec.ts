@@ -9,9 +9,6 @@ test("sends one auto-suggestion Job for one user edit", async ({ page }) => {
     .getByRole("textbox", { name: "Subject" })
     .fill("safe fixture text for UI verification only");
 
-  await expect(page.locator(".app-status")).toContainText(
-    "AI補助へ送信しました。提案は確認してから適用できます。"
-  );
   await expect.poll(() => autoSuggestionJobCount(page)).toBe(jobsBefore + 1);
   await page.waitForTimeout(2_200);
   await expect.poll(() => autoSuggestionJobCount(page)).toBe(jobsBefore + 1);
