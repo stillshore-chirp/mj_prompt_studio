@@ -15,11 +15,10 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
-    python = os.environ.get("PYTHON", sys.executable)
     api_env = os.environ.copy()
     api_env.setdefault("MJPS_SERVER_PORT", "8765")
     api = subprocess.Popen(
-        [python, "-m", "mj_prompt_studio.server.main"],
+        [sys.executable, "-m", "mj_prompt_studio.server.main"],
         cwd=repo_root,
         env=api_env,
     )
