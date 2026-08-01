@@ -30,6 +30,7 @@ export function ResultReviewView({
   onFinalAudit
 }: ResultReviewViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(resultImages[0]?.id ?? null);
+  const uploadButtonRef = useRef<HTMLButtonElement>(null);
   const knownResultImageIds = useRef(new Set(resultImages.map((image) => image.id)));
   const selected = useMemo(
     () => resultImages.find((image) => image.id === selectedId) ?? resultImages[0],
@@ -60,6 +61,7 @@ export function ResultReviewView({
           buttonLabel="生成結果の画像を選択して追加"
           helpText="対応形式は画像ファイルです。選択した画像はこのプロジェクトのResult Reviewへ追加します。"
           onUpload={onUpload}
+          buttonRef={uploadButtonRef}
         />
       </div>
       <div className="library-grid">
@@ -77,6 +79,15 @@ export function ResultReviewView({
               <span>{formatResultImage(image)}</span>
             </button>
           ))}
+          {resultImages.length === 0 && (
+            <section className="plain-panel empty-state" aria-live="polite">
+              <h2>確認する生成結果画像がありません</h2>
+              <p>生成サービスで作成した画像を追加すると、この画面で画像ごとのAI Reviewと比較を行えます。</p>
+              <button type="button" className="secondary" onClick={() => uploadButtonRef.current?.focus()}>
+                生成結果の画像を追加する
+              </button>
+            </section>
+          )}
         </div>
         {selected && (
           <article className="asset-detail">
