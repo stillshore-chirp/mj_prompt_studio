@@ -485,7 +485,7 @@ export function App() {
           }
           onAutoSuggest={requestAutoSuggestion}
           autoSuggestion={autoSuggestion}
-          onCopyPrompt={() => handleCopy(currentDocument.compiled_prompt)}
+          onCopyPrompt={() => handleCopy(currentDocument.compiled_prompt, "Compiled Prompt をコピーしました")}
         />
       );
     }
@@ -531,16 +531,21 @@ export function App() {
           }}
           onCopySelected={(variant) =>
             variant
-              ? handleCopy(variant.prompt)
+              ? handleCopy(variant.prompt, `Variant ${variant.index} をコピーしました`)
               : setStatus({ kind: "neutral", message: "Variant を選択してください" })
           }
-          onCopyAll={() => handleCopy(matrixVariants.map((variant) => variant.prompt).join("\n"))}
+          onCopyAll={() =>
+            handleCopy(
+              matrixVariants.map((variant) => variant.prompt).join("\n"),
+              `${matrixVariants.length}件のMatrix variant をコピーしました`
+            )
+          }
           onExportCsv={() =>
             api
               .matrixCsv(matrixVariants)
               .then((csv) => {
                 downloadText("matrix_variants.csv", csv, "text/csv");
-                return handleCopy(csv);
+                return handleCopy(csv, "Matrix variants CSV をダウンロードしてコピーしました");
               })
               .catch((error: unknown) => setStatus(errorToMessage(error)))
           }
@@ -553,7 +558,7 @@ export function App() {
               .matrixMarkdown(matrixPlan, matrixVariants)
               .then((markdown) => {
                 downloadText("matrix_variants.md", markdown, "text/markdown");
-                return handleCopy(markdown);
+                return handleCopy(markdown, "Matrix variants Markdown をダウンロードしてコピーしました");
               })
               .catch((error: unknown) => setStatus(errorToMessage(error)));
           }}
@@ -979,10 +984,10 @@ export function App() {
     </div>
   );
 
-  function handleCopy(text: string): void {
+  function handleCopy(text: string, successMessage = "コピーしました"): void {
     copyText(text).then((ok) => {
       if (ok) {
-        setStatus("コピーしました");
+        setStatus(successMessage);
       } else {
         setManualCopy(text);
       }

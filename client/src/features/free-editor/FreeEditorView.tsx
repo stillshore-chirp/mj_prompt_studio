@@ -19,6 +19,7 @@ interface FreeEditorViewProps {
 export function FreeEditorView({ result, detail, onTransform }: FreeEditorViewProps) {
   const [source, setSource] = useState("");
   const [prompt, setPrompt] = useState("");
+  const hasSource = Boolean(source.trim() || prompt.trim());
 
   return (
     <section className="workspace-pane" aria-label="Free Editor">
@@ -37,11 +38,22 @@ export function FreeEditorView({ result, detail, onTransform }: FreeEditorViewPr
       </div>
       <div className="button-grid">
         {transformModes.map((mode) => (
-          <button type="button" key={mode} onClick={() => onTransform(mode, source, prompt)}>
+          <button
+            type="button"
+            key={mode}
+            onClick={() => onTransform(mode, source, prompt)}
+            disabled={!hasSource}
+            aria-describedby="free-editor-action-help"
+          >
             <WandSparkles size={16} /> {mode}
           </button>
         ))}
       </div>
+      <p id="free-editor-action-help" className="scope-note">
+        {hasSource
+          ? "Japanese SourceまたはEnglish Promptをもとに、変換jobを作成します。"
+          : "Japanese SourceまたはEnglish Promptを入力すると、変換できます。"}
+      </p>
       <section className="plain-panel">
         <h2>Result</h2>
         <textarea aria-label="Transform Result" value={result} readOnly rows={6} />

@@ -17,7 +17,7 @@ test("core local workflow parity", async ({ page }) => {
   await page
     .getByRole("textbox", { name: "Subject" })
     .fill("croissant and coffee on refined tableware");
-  await page.getByRole("button", { name: /Compile/ }).click();
+  await page.getByRole("button", { name: "Compile", exact: true }).click();
   await expect(page.getByLabel("Compiled Prompt")).toContainText("croissant and coffee");
 
   await page.getByRole("button", { name: "Run Prompt Doctor" }).click();

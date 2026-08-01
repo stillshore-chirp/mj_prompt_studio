@@ -28,6 +28,7 @@ export function MatrixLabView({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = variants.find((variant) => variant.id === selectedId) ?? null;
   const hasVariants = variants.length > 0;
+  const hasObjective = Boolean(objective.trim());
 
   function toggleSelection(variantId: string): void {
     setSelectedId((current) => (current === variantId ? null : variantId));
@@ -45,10 +46,21 @@ export function MatrixLabView({
       <div className="section-header">
         <h1>Matrix Lab</h1>
         <div className="toolbar-actions">
-          <button type="button" onClick={() => onPlan(objective)}>
+          <button
+            type="button"
+            onClick={() => onPlan(objective)}
+            disabled={!hasObjective}
+            aria-describedby="matrix-plan-action-help"
+          >
             <Sparkles size={16} /> AI Plan
           </button>
-          <button type="button" className="secondary" onClick={onGenerate} disabled={!plan}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={onGenerate}
+            disabled={!plan}
+            aria-describedby="matrix-generate-action-help"
+          >
             <Grid3X3 size={16} /> Generate
           </button>
         </div>
@@ -57,6 +69,16 @@ export function MatrixLabView({
         <span>Objective</span>
         <textarea value={objective} onChange={(event) => setObjective(event.currentTarget.value)} />
       </label>
+      <p id="matrix-plan-action-help" className="scope-note">
+        {hasObjective
+          ? "ObjectiveをもとにMatrix planのjobを作成します。"
+          : "Objectiveを入力すると、AI Planを作成できます。"}
+      </p>
+      <p id="matrix-generate-action-help" className="scope-note">
+        {plan
+          ? "現在のMatrix planからvariantを生成します。"
+          : "AI Planを作成すると、variantを生成できます。"}
+      </p>
       {plan && (
         <section className="plain-panel">
           <h2>{plan.objective}</h2>
