@@ -30,7 +30,7 @@
 - [x] boot/job statusと安全なerror正規化を実装
 - [x] failure/cancelledとlive regionの回帰testを追加
 - [x] UI/UX state matrix・前後証跡・反証レビューを記録
-- [ ] ローカル検証、PR、CI、review、mainへのマージを完了
+- [x] ローカル検証、PR、CI、review、mainへのマージを完了
 
 ## 受け入れ条件
 
@@ -77,10 +77,11 @@
 ## PR / CI / review 記録
 
 - Branch: `codex/fix-boot-job-feedback`
-- Commit: 未作成
-- PR: 未作成
-- Push CI: 未実行
-- PR CI: 未実行
-- Codex review: 未実行
-- 未解決 review thread: 未確認
+- Commit: `68cb874`（起動とJobの状態フィードバックを改善する）
+- PR: [#32](https://github.com/stillshore-chirp/mj_prompt_studio/pull/32) — 2026-08-01にmainへマージ（`266c428`）
+- Push CI: 成功（CI 3 jobs）
+- PR CI: 成功（CI 3 jobs）
+- main CI: 成功（CI 3 jobs）
+- Codex review: 独立CLI reviewは3経路で内部runtime errorにより結論を返せなかった。current agentの差分・state matrix・E2E・画面証跡の反証確認ではP0/P1なし。
+- GitHub review / 未解決 review thread: 0件 / 0件（GraphQL `reviewThreads`で確認）
 - レビュー往復回数: 0
