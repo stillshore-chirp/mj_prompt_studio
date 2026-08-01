@@ -8,7 +8,7 @@ const pngBase64 =
 
 test("選択中でない画像のAI Reviewを表示しない", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Result Review" }).click();
+  await page.getByRole("tab", { name: "Result Review" }).click();
   const firstImage = writeImage("first-safe.png");
   const secondImage = writeImage("second-safe.png");
 
