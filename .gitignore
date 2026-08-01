@@ -59,6 +59,8 @@ exports/
 screenshots/
 api_response_dumps/
 references/
+!docs/ai-governance/references/
+!docs/ai-governance/references/*.md
 results/
 *.mjps
 *.mjpson

@@ -19,6 +19,7 @@ Ubuntu上で以下を実行する。
 - `make package`
 - `make generate-openapi`
 - `python scripts/verify_ui_text.py`
+- `bash scripts/verify-ai-governance.sh`
 - ユーザー向け文書とUI文字列への禁止バージョン表記混入チェック
 
 LLMは `MJPS_LLM_MODE=mock` 固定で実行し、CIではOpenAI APIキーや外部API通信を必要としない。

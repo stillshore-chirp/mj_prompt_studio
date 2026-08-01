@@ -88,6 +88,9 @@ jobs:
       - name: Verify public text policy
         run: python scripts/verify_ui_text.py
 
+      - name: Verify AI governance
+        run: make verify-governance
+
       - name: Upload package artifacts
         uses: actions/upload-artifact@v4
         with:

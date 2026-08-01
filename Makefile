@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck test build package run run-api run-react run-desktop package-desktop client-install client-lint client-typecheck client-test client-build generate-openapi e2e clean
+.PHONY: format lint typecheck test build package run run-api run-react run-desktop package-desktop client-install client-lint client-typecheck client-test client-build generate-openapi e2e verify-governance clean
 
 PYTHON ?= $(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 
@@ -64,6 +64,9 @@ generate-openapi:
 
 e2e:
 	cd client && MJPS_E2E_PYTHON="$(PYTHON)" npm run e2e
+
+verify-governance:
+	bash scripts/verify-ai-governance.sh
 
 clean:
 	rm -rf build dist *.egg-info .pytest_cache .ruff_cache .mypy_cache htmlcov client/dist client/playwright-report client/test-results

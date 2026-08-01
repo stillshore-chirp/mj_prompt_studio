@@ -2,10 +2,13 @@
 
 ## 開始時
 
-1. `AGENTS.md`、直近git履歴、作業ツリー状態を確認する。
-2. `plans/TEMPLATE.md` をもとに `plans/<task-id>.md` を作成または更新する。
-3. 目的、非目標、対象範囲、受け入れ条件、検証コマンド、blocker、rollback方針を明示する。
-4. 既存の `Makefile`、`scripts/`、READMEから検証入口を確認する。
+1. `AGENTS.md`、直近git履歴、作業ツリー状態、GitHub CLI認証を確認する。
+2. 未確認差分を保護し、`main`を`origin/main`へfast-forwardして専用branchを作る。
+3. 既存Issueを検索し、必要ならIssue品質ゲートを満たすIssueを作成する。
+4. `plans/TEMPLATE.md` をもとに `plans/<task-id>.md` を作成または更新する。
+5. 目的、非目標、対象範囲、受け入れ条件、検証コマンド、blocker、rollback方針を明示する。
+6. UI/UX変更なら`docs/ai-governance/`とUI/UX review skillを読む。
+7. 既存の `Makefile`、`scripts/`、READMEから検証入口を確認する。
 
 ## 進行中
 
@@ -25,3 +28,5 @@
 2. 検証コマンドと結果をplanへ記録する。
 3. READMEとdocsが実装に追従していることを確認する。
 4. 不要ファイル、APIキー、DB、cache、log、画像アセットがgit追跡されていないことを確認する。
+5. 日本語commit、push、Ready PR、push/PR双方のCI、Codex review、未解決review threadを確認する。
+6. Issue、branch、PR URL、commit SHA、local verification、CI、code review、remaining risksを最終報告できる状態にする。
