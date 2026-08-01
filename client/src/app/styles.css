@@ -1184,6 +1184,12 @@ section[aria-label="Settings"] .profiles-grid {
   min-width: 0;
 }
 
+.modal-description {
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: -6px 0 0;
+}
+
 .modal-actions {
   display: flex;
   gap: 8px;
