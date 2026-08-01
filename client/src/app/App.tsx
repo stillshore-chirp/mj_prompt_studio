@@ -106,6 +106,7 @@ export function App() {
   const [jobs, setJobs] = useState<LLMJob[]>([]);
   const [settings, setSettings] = useState<RuntimeSettingsPublic | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("composer");
+  const [showInspectorOutsideComposer, setShowInspectorOutsideComposer] = useState(false);
   const [agentResult, setAgentResult] = useState<JsonObject | null>(null);
   const [pendingPatches, setPendingPatches] = useState<PromptPatch[]>([]);
   const [matrixPlan, setMatrixPlan] = useState<MatrixPlan | null>(null);
@@ -802,9 +803,10 @@ export function App() {
 
   const confirmContent = renderConfirmContent(pendingConfirm);
   const confirmDialogDetails = getConfirmDialogDetails(pendingConfirm);
+  const inspectorVisible = activeTab === "composer" || showInspectorOutsideComposer;
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${inspectorVisible ? "" : "inspector-hidden"}`}>
       <header className="app-header">
         <div>
           <strong>MJ Prompt Studio</strong>
@@ -906,32 +908,44 @@ export function App() {
             {tab.label}
           </button>
         ))}
+        {activeTab !== "composer" && (
+          <button
+            type="button"
+            className="inspector-toggle"
+            aria-pressed={showInspectorOutsideComposer}
+            onClick={() => setShowInspectorOutsideComposer((current) => !current)}
+          >
+            {showInspectorOutsideComposer ? "AIの状況を隠す" : "AIの状況を表示"}
+          </button>
+        )}
       </nav>
 
       <main className="main-panel">{content}</main>
 
-      <aside className="right-panel">
-        <AIInspector document={document} agentResult={agentResult} executionProfile={settings} />
-        <ParameterInspector
-          specs={settings.ruleset.parameters}
-          parameters={parameters}
-          onChange={updateDraftParameters}
-          onAdvice={() =>
-            submitJob(
-              () => api.parameterAdvisor(document.id, document.user_brief || document.compiled_prompt),
-              "Parameter advisor job を作成しました"
-            )
-          }
-        />
-        <PromptDoctorPanel
-          validationReport={document.validation_report}
-          patches={pendingPatches}
-          onRun={() =>
-            submitJob(() => api.promptDoctor(document.id), "Prompt Doctor job を作成しました")
-          }
-          onApplyPatch={(patch) => setPendingConfirm({ kind: "patch", patch })}
-        />
-      </aside>
+      {inspectorVisible && (
+        <aside className="right-panel">
+          <AIInspector document={document} agentResult={agentResult} executionProfile={settings} />
+          <ParameterInspector
+            specs={settings.ruleset.parameters}
+            parameters={parameters}
+            onChange={updateDraftParameters}
+            onAdvice={() =>
+              submitJob(
+                () => api.parameterAdvisor(document.id, document.user_brief || document.compiled_prompt),
+                "Parameter advisor job を作成しました"
+              )
+            }
+          />
+          <PromptDoctorPanel
+            validationReport={document.validation_report}
+            patches={pendingPatches}
+            onRun={() =>
+              submitJob(() => api.promptDoctor(document.id), "Prompt Doctor job を作成しました")
+            }
+            onApplyPatch={(patch) => setPendingConfirm({ kind: "patch", patch })}
+          />
+        </aside>
+      )}
 
       <footer className="bottom-panel">
         <p className={`app-status is-${statusMessage.kind}`} role="status" aria-live="polite">
