@@ -1,14 +1,15 @@
 import { Search, Sparkles, Trash2 } from "lucide-react";
-import { DragEvent, useMemo, useState } from "react";
+import { DragEvent, useEffect, useMemo, useState } from "react";
 
 import type { ReferenceAsset } from "../../shared/types/api";
+import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
 import { ImageUploadControl } from "../../shared/components/ImageUploadControl";
 
 interface ReferenceLibraryViewProps {
   references: ReferenceAsset[];
   onUpload: (file: File) => void;
   onAnalyze: (referenceId: string) => void;
-  onSaveTags: (referenceId: string, tags: string[]) => void;
+  onSaveTags: (referenceId: string, tags: string[]) => void | Promise<void>;
   onDelete: (reference: ReferenceAsset) => void;
   onVocabularyPatch: (vocabulary: string) => void;
 }
@@ -23,6 +24,8 @@ export function ReferenceLibraryView({
 }: ReferenceLibraryViewProps) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(references[0]?.id ?? null);
+  const [tagDraftDirty, setTagDraftDirty] = useState(false);
+  const [pendingSelectionId, setPendingSelectionId] = useState<string | null>(null);
   const selected = references.find((reference) => reference.id === selectedId) ?? references[0];
   const filtered = useMemo(() => {
     const normalized = query.toLowerCase();
@@ -45,6 +48,25 @@ export function ReferenceLibraryView({
     }
     setUploadStatus(`「${file.name}」を追加します。`);
     onUpload(file);
+  };
+
+  const selectReference = (referenceId: string) => {
+    if (referenceId === selected?.id) {
+      return;
+    }
+    if (tagDraftDirty) {
+      setPendingSelectionId(referenceId);
+      return;
+    }
+    setSelectedId(referenceId);
+  };
+
+  const discardTagDraftAndSelect = () => {
+    if (pendingSelectionId) {
+      setSelectedId(pendingSelectionId);
+    }
+    setPendingSelectionId(null);
+    setTagDraftDirty(false);
   };
 
   return (
@@ -78,7 +100,7 @@ export function ReferenceLibraryView({
               type="button"
               className={`asset-list-item ${reference.id === selected?.id ? "active" : ""}`}
               key={reference.id}
-              onClick={() => setSelectedId(reference.id)}
+              onClick={() => selectReference(reference.id)}
             >
               <img src={reference.asset_url} alt="" />
               <span>{reference.name}</span>
@@ -88,14 +110,26 @@ export function ReferenceLibraryView({
         </div>
         {selected && (
           <ReferenceDetail
+            key={selected.id}
             reference={selected}
             onAnalyze={onAnalyze}
             onSaveTags={onSaveTags}
             onDelete={onDelete}
             onVocabularyPatch={onVocabularyPatch}
+            onTagDraftDirtyChange={setTagDraftDirty}
           />
         )}
       </div>
+      <ConfirmDialog
+        open={pendingSelectionId !== null}
+        title="未保存のタグを破棄しますか？"
+        description="タグの編集内容はまだ保存されていません。破棄して別の参照素材へ切り替えるか、キャンセルして現在の素材に戻ります。"
+        confirmLabel="破棄して切り替える"
+        onCancel={() => setPendingSelectionId(null)}
+        onConfirm={discardTagDraftAndSelect}
+      >
+        <p>保存する場合は、現在の素材の「Tags 保存」を先に実行してください。</p>
+      </ConfirmDialog>
     </section>
   );
 }
@@ -103,9 +137,10 @@ export function ReferenceLibraryView({
 interface ReferenceDetailProps {
   reference: ReferenceAsset;
   onAnalyze: (referenceId: string) => void;
-  onSaveTags: (referenceId: string, tags: string[]) => void;
+  onSaveTags: (referenceId: string, tags: string[]) => void | Promise<void>;
   onDelete: (reference: ReferenceAsset) => void;
   onVocabularyPatch: (vocabulary: string) => void;
+  onTagDraftDirtyChange: (dirty: boolean) => void;
 }
 
 function ReferenceDetail({
@@ -113,9 +148,33 @@ function ReferenceDetail({
   onAnalyze,
   onSaveTags,
   onDelete,
-  onVocabularyPatch
+  onVocabularyPatch,
+  onTagDraftDirtyChange
 }: ReferenceDetailProps) {
   const [tagText, setTagText] = useState(reference.tags.join(", "));
+  const savedTagText = reference.tags.join(", ");
+
+  useEffect(() => {
+    onTagDraftDirtyChange(false);
+    return () => onTagDraftDirtyChange(false);
+  }, [onTagDraftDirtyChange]);
+
+  const updateTagText = (nextTagText: string) => {
+    setTagText(nextTagText);
+    onTagDraftDirtyChange(nextTagText !== savedTagText);
+  };
+
+  const saveTags = () => {
+    Promise.resolve(onSaveTags(
+      reference.id,
+      tagText
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    ))
+      .then(() => onTagDraftDirtyChange(false))
+      .catch(() => undefined);
+  };
   return (
     <article className="asset-detail">
       <img className="asset-preview" src={reference.asset_url} alt={reference.name} />
@@ -161,20 +220,12 @@ function ReferenceDetail({
       </div>
       <label className="field">
         <span>Tags</span>
-        <input value={tagText} onChange={(event) => setTagText(event.currentTarget.value)} />
+        <input value={tagText} onChange={(event) => updateTagText(event.currentTarget.value)} />
       </label>
       <button
         type="button"
         className="secondary"
-        onClick={() =>
-          onSaveTags(
-            reference.id,
-            tagText
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean)
-          )
-        }
+        onClick={saveTags}
       >
         Tags 保存
       </button>
