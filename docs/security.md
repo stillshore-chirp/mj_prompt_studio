@@ -1,5 +1,7 @@
 # Security and Privacy
 
+gitへ公開する文書、plan、Issue/PR本文、screenshot、検証log要約は、本文書に加えて `docs/security-publication-checklist.md` を確認する。
+
 ## APIキー
 
 - `OPENAI_API_KEY` は端末の環境変数またはOS資格情報ストアから読む。

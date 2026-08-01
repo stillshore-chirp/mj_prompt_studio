@@ -7,6 +7,15 @@ MJ Prompt Studioは、画像生成向けプロンプトの設計、語彙補助�
 - [Quick Start for Users](docs/quick-start.md): 初めて使うときの最短手順。
 - [ユーザーマニュアル](docs/user-manual.md): 目的別の利用手順。
 
+## 開発ガバナンス
+
+- [`AGENTS.md`](AGENTS.md): 作業開始、Issue-first、PR/CI/review、MJ Prompt Studio固有制約の入口。
+- [`docs/ai-governance/`](docs/ai-governance/00-index.md): UI/UX、アクセシビリティ、証跡、Issue品質、完了条件の詳細正本。
+- [`docs/security-publication-checklist.md`](docs/security-publication-checklist.md): 公開文書、PR、スクリーンショット、ログ要約の安全確認。
+- `make verify-governance`: ガバナンス構造と必須ゲートの検証。
+
+ここでいうAIガバナンスは、本リポジトリ内のAIエージェント支援開発の品質管理を指し、企業全体の法務・倫理・モデル監査を意味しません。
+
 ## セットアップ
 
 ```bash
