@@ -32,7 +32,7 @@ package: client-build
 	$(PYTHON) -m build
 
 run:
-	PYTHON="$(PYTHON)" $(PYTHON) scripts/run_local_app.py --client-command dev
+	$(PYTHON) scripts/run_local_app.py --client-command dev
 
 run-api:
 	$(PYTHON) -m mj_prompt_studio.server.main
