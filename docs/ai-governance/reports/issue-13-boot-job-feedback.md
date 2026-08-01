@@ -54,3 +54,10 @@
 |---|---|---|---|
 | 実OpenAI API | テストで実APIを呼ばないポリシー | 実API遅延・失敗時のmessage差 | 明示opt-inの実環境確認を別途実施 |
 | 実ユーザー評価 | まだ実施していない | copy理解度は未計測 | 後続のユーザー評価で確認 |
+| 独立Codex CLI review | 3経路で内部runtime errorにより結論が返らなかった | 独立レビューの機械的な追加確認なし | GitHub review 0件・GraphQL未解決thread 0件、current agentの差分/画面/テスト反証でP0/P1なしを確認 |
+
+## PR・CI・review 完了記録
+
+- PR: [#32](https://github.com/stillshore-chirp/mj_prompt_studio/pull/32) は2026-08-01にmainへマージされた。Issue #13は自動クローズされた。
+- CI: branch push、PR、main merge後の各CIは成功した。
+- Review: GitHub reviewは0件、GraphQL `reviewThreads`は0件。独立Codex CLI reviewは内部runtime errorで結論を返せなかったため、実行済みのstate matrix、前後/failed Job画面証跡、component/E2E、差分反証を代替証跡とする。
