@@ -82,13 +82,14 @@ test("core local workflow parity", async ({ page }) => {
   await page.getByLabel("語彙補助 vocabulary amount").selectOption("rich");
   await page.getByRole("button", { name: /語彙設定を保存/ }).click();
   await expect(page.getByText("語彙設定を保存しました")).toBeVisible();
-  const privacyMode = page.getByLabel("Settings").getByLabel("Privacy mode");
-  await privacyMode.setChecked(true);
+  const privacyMode = page.getByLabel("Settings").getByLabel("Privacy modeを有効にする");
+  await privacyMode.click();
+  await page.getByRole("button", { name: "Privacy modeを有効にする" }).click();
   await expect(page.getByText("Privacy 設定を保存しました")).toBeVisible();
   await expect(privacyMode).toBeChecked();
   await page.reload();
   await page.getByLabel("Main tabs").getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByLabel("Settings").getByLabel("Privacy mode")).toBeChecked();
+  await expect(page.getByLabel("Settings").getByLabel("Privacy modeを有効にする")).toBeChecked();
 });
 
 function writeImage(filename: string): string {

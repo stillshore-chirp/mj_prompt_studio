@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SettingsView } from "../src/features/settings/SettingsView";
@@ -75,5 +75,60 @@ describe("SettingsView", () => {
     expect(onPreferences).toHaveBeenCalledWith({
       VocabularyAgent: { vocabulary_amount: "rich" }
     });
+  });
+
+  it("labels the API key field, blocks blank values, and clears it after a session-only apply", async () => {
+    const onSessionKey = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SettingsView
+        settings={settings}
+        onSessionKey={onSessionKey}
+        onPersistKey={vi.fn()}
+        onResponseStorage={vi.fn()}
+        onPreferences={vi.fn()}
+        onConnectionTest={vi.fn()}
+      />
+    );
+
+    const apiKey = screen.getByLabelText("OpenAI API key");
+    const sessionButton = screen.getByRole("button", { name: "このセッションだけで使用" });
+    expect(apiKey).toHaveAttribute("aria-describedby", "api-key-help");
+    expect(sessionButton).toBeDisabled();
+
+    fireEvent.change(apiKey, { target: { value: "x" } });
+    fireEvent.click(sessionButton);
+
+    await waitFor(() => expect(onSessionKey).toHaveBeenCalledWith("x"));
+    await waitFor(() => expect(apiKey).toHaveValue(""));
+    expect(screen.getByText("このセッションにのみAPI keyを適用しました。入力欄は消去しました。")).toHaveAttribute("role", "status");
+  });
+
+  it("requires confirmation before persisting Privacy mode and keeps the setting unchanged on cancel", async () => {
+    const onResponseStorage = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SettingsView
+        settings={settings}
+        onSessionKey={vi.fn()}
+        onPersistKey={vi.fn()}
+        onResponseStorage={onResponseStorage}
+        onPreferences={vi.fn()}
+        onConnectionTest={vi.fn()}
+      />
+    );
+
+    const privacySwitch = screen.getByRole("checkbox", { name: "Privacy modeを有効にする" });
+    fireEvent.click(privacySwitch);
+    expect(screen.getByRole("dialog", { name: "Privacy modeを有効にしますか？" })).toBeInTheDocument();
+    expect(privacySwitch).not.toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: "キャンセル" }));
+    expect(onResponseStorage).not.toHaveBeenCalled();
+    expect(privacySwitch).not.toBeChecked();
+
+    fireEvent.click(privacySwitch);
+    fireEvent.click(screen.getByRole("button", { name: "Privacy modeを有効にする" }));
+    await waitFor(() => expect(onResponseStorage).toHaveBeenCalledWith("privacy"));
+    await waitFor(() => expect(privacySwitch).toBeChecked());
+    expect(screen.getByText(/以後の実API呼び出しでは応答保存と前回応答IDの継続を使いません。/)).toHaveAttribute("role", "status");
   });
 });
