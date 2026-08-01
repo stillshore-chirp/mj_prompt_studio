@@ -327,7 +327,15 @@ export function App() {
     api
       .resultReviews(resultImageId)
       .then((response) =>
-        setReviewsByResultId((current) => ({ ...current, [resultImageId]: response.reviews }))
+        setReviewsByResultId((current) => {
+          const existingReviews = current[resultImageId] ?? [];
+          // A request started before a completed review is persisted can return an empty list.
+          // Keep the completion payload already shown to the user until a non-empty refresh arrives.
+          if (response.reviews.length === 0 && existingReviews.length > 0) {
+            return current;
+          }
+          return { ...current, [resultImageId]: response.reviews };
+        })
       )
       .catch((error: unknown) => setStatus(errorToMessage(error)));
   }, []);
