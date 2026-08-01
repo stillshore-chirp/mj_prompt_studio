@@ -1,5 +1,5 @@
 import { Search, Sparkles, Trash2 } from "lucide-react";
-import { DragEvent, useEffect, useMemo, useState } from "react";
+import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ReferenceAsset } from "../../shared/types/api";
 import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
@@ -23,6 +23,8 @@ export function ReferenceLibraryView({
   onVocabularyPatch
 }: ReferenceLibraryViewProps) {
   const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const uploadButtonRef = useRef<HTMLButtonElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(references[0]?.id ?? null);
   const [tagDraftDirty, setTagDraftDirty] = useState(false);
   const [pendingSelectionId, setPendingSelectionId] = useState<string | null>(null);
@@ -77,6 +79,7 @@ export function ReferenceLibraryView({
           buttonLabel="参照素材の画像を選択して追加"
           helpText="対応形式は画像ファイルです。選択した画像は参照素材としてこのプロジェクトへ追加します。"
           onUpload={onUpload}
+          buttonRef={uploadButtonRef}
         />
       </div>
       <div
@@ -91,7 +94,7 @@ export function ReferenceLibraryView({
       {uploadStatus ? <p role="status" aria-live="polite">{uploadStatus}</p> : null}
       <label className="field search-field">
         <span>参照素材を検索</span>
-        <input value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="Search" />
+        <input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="Search" />
       </label>
       <div className="library-grid">
         <div className="item-list">
@@ -107,6 +110,32 @@ export function ReferenceLibraryView({
               <small>{reference.type}</small>
             </button>
           ))}
+          {references.length === 0 && (
+            <section className="plain-panel empty-state" aria-live="polite">
+              <h2>参照素材がありません</h2>
+              <p>画像を追加すると、制作の雰囲気や構図を確認し、AI分析で使える語彙を取り出せます。</p>
+              <p>上の「参照素材の画像を選択して追加」から画像を選ぶか、ドロップ領域へ画像ファイルを置いてください。</p>
+              <button type="button" className="secondary" onClick={() => uploadButtonRef.current?.focus()}>
+                参照素材の画像を追加する
+              </button>
+            </section>
+          )}
+          {references.length > 0 && filtered.length === 0 && (
+            <section className="plain-panel empty-state" role="status" aria-live="polite">
+              <h2>一致する参照素材がありません</h2>
+              <p>「{query}」に一致する名前・種類・タグはありません。素材は削除されていません。</p>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => {
+                  setQuery("");
+                  searchInputRef.current?.focus();
+                }}
+              >
+                検索をクリアして全件を表示
+              </button>
+            </section>
+          )}
         </div>
         {selected && (
           <ReferenceDetail

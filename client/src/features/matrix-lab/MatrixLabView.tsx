@@ -1,5 +1,5 @@
 import { Clipboard, Download, Grid3X3, Sparkles } from "lucide-react";
-import { KeyboardEvent, useState } from "react";
+import { KeyboardEvent, useRef, useState } from "react";
 
 import type { MatrixPlan, MatrixVariant } from "../../shared/types/api";
 
@@ -25,6 +25,8 @@ export function MatrixLabView({
   onExportMarkdown
 }: MatrixLabViewProps) {
   const [objective, setObjective] = useState("");
+  const objectiveRef = useRef<HTMLTextAreaElement>(null);
+  const generateButtonRef = useRef<HTMLButtonElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = variants.find((variant) => variant.id === selectedId) ?? null;
   const hasVariants = variants.length > 0;
@@ -57,6 +59,7 @@ export function MatrixLabView({
           <button
             type="button"
             className="secondary"
+            ref={generateButtonRef}
             onClick={onGenerate}
             disabled={!plan}
             aria-describedby="matrix-generate-action-help"
@@ -67,7 +70,7 @@ export function MatrixLabView({
       </div>
       <label className="field full">
         <span>Objective</span>
-        <textarea value={objective} onChange={(event) => setObjective(event.currentTarget.value)} />
+        <textarea ref={objectiveRef} value={objective} onChange={(event) => setObjective(event.currentTarget.value)} />
       </label>
       <p id="matrix-plan-action-help" className="scope-note">
         {hasObjective
@@ -90,6 +93,24 @@ export function MatrixLabView({
               </div>
             ))}
           </div>
+        </section>
+      )}
+      {!plan && (
+        <section className="plain-panel empty-state" aria-live="polite">
+          <h2>まだMatrix planがありません</h2>
+          <p>比較したい軸と目的を入力してAI Planを作ると、生成するvariantの方向性を確認できます。</p>
+          <button type="button" className="secondary" onClick={() => objectiveRef.current?.focus()}>
+            Objectiveを入力する
+          </button>
+        </section>
+      )}
+      {plan && !hasVariants && (
+        <section className="plain-panel empty-state" aria-live="polite">
+          <h2>まだvariantがありません</h2>
+          <p>Matrix planは作成済みです。Generateを実行すると、比較・コピー・出力できるvariantを作成します。</p>
+          <button type="button" className="secondary" onClick={() => generateButtonRef.current?.focus()}>
+            生成ボタンへ移動
+          </button>
         </section>
       )}
       <div className="toolbar-actions">

@@ -1,13 +1,14 @@
 import { ImagePlus } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { type Ref, useId, useRef, useState } from "react";
 
 interface ImageUploadControlProps {
   buttonLabel: string;
   helpText: string;
   onUpload: (file: File) => void;
+  buttonRef?: Ref<HTMLButtonElement>;
 }
 
-export function ImageUploadControl({ buttonLabel, helpText, onUpload }: ImageUploadControlProps) {
+export function ImageUploadControl({ buttonLabel, helpText, onUpload, buttonRef }: ImageUploadControlProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const helpId = useId();
   const statusId = useId();
@@ -28,6 +29,7 @@ export function ImageUploadControl({ buttonLabel, helpText, onUpload }: ImageUpl
   return (
     <div className="image-upload-control">
       <button
+        ref={buttonRef}
         type="button"
         className="file-button"
         aria-describedby={`${helpId} ${statusId}`}
