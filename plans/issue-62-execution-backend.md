@@ -79,18 +79,19 @@
 | 2026-08-02 | `make lint && make typecheck && make test && make build` | Pass | ruff、mypy、pytest 70件、compileall。実APIは未呼出し。 |
 | 2026-08-02 | `make client-lint && make client-typecheck && make client-test && make client-build` | Pass | ESLint、TypeScript、Vitest 15 files / 51 tests、Vite build。 |
 | 2026-08-02 | `make generate-openapi` | Pass | API contractを再生成して確認。 |
-| 2026-08-02 | `MJPS_E2E_API_PORT=18062 MJPS_E2E_CLIENT_PORT=18063 make e2e` | Pass | 隔離localhost、明示的Mock、Chromium 23件。sandbox port bind制限後に制限外で実行。 |
 | 2026-08-02 | `make client-lint && make client-typecheck && make client-test && make client-build` | Pass | SettingsのAPI key設定有無・安全な取得元表示を追加後、Vitest 15 files / 51 tests。 |
-| 2026-08-02 | `MJPS_E2E_API_PORT=18062 MJPS_E2E_CLIENT_PORT=18063 make e2e` | Pass | Settings実行プロファイルの更新後、隔離localhost、明示的Mock、Chromium 23件。 |
 | 2026-08-02 | `make verify-governance && git diff --check` | Pass | governance verificationとdiff whitespaceを確認。 |
 | 2026-08-02 | UI証跡の目視確認 | Pass | 変更前、明示的Mock、API key未設定の回復、Mock Jobを安全なfixtureで撮影。 |
+| 2026-08-02 | push CI `30749082551` | Fail | E2E 21/23。Mockを実モデルとして期待する古いparityと、未保存draftを保護するSettings復帰確認が失敗。 |
+| 2026-08-02 | `make client-lint && make client-typecheck && make client-test && make client-build` | Pass | CI failureのE2E期待値修正後、Vitest 15 files / 51 tests。 |
+| 2026-08-02 | `MJPS_E2E_API_PORT=18062 MJPS_E2E_CLIENT_PORT=18063 make e2e` | Pass | 隔離localhost、明示的Mock、Chromium 23件。sandbox port bind制限後に制限外で実行。 |
 
 ## PR / CI / review 記録
 
 - Branch: `codex/issue-62-execution-backend`
-- Commit:
-- PR:
-- Push CI:
+- Commit: `735bd574b9be025eb7fa45f515db7bc41bb2698a`（CI修正コミットは作成予定）
+- PR: `https://github.com/stillshore-chirp/mj_prompt_studio/pull/65`
+- Push CI: `30749082551` failed（E2E期待値を修正して再push予定）
 - PR CI:
 - Codex review:
 - 未解決 review thread:

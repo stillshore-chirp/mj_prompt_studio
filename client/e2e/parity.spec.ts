@@ -79,7 +79,8 @@ test("core local workflow parity", async ({ page }) => {
 
   await page.getByLabel("Main tabs").getByRole("tab", { name: /設定/ }).click();
   const executionProfile = page.getByLabel("AI execution profile");
-  await expect(executionProfile.getByText("GPT-5.6 Luna", { exact: true })).toBeVisible();
+  await expect(executionProfile.getByText("Mock（外部APIは呼びません）", { exact: true })).toBeVisible();
+  await expect(executionProfile.getByText("実行なし", { exact: true })).toBeVisible();
   await expect(executionProfile.getByText("High", { exact: true })).toBeVisible();
   await expect(executionProfile.getByText("Low", { exact: true })).toBeVisible();
   await page.getByLabel("語彙補助 vocabulary amount").selectOption("rich");

@@ -48,5 +48,7 @@ test("API key未設定でAI処理を実行すると、設定への回復導線�
   await expect(page.getByRole("button", { name: "設定を開く" })).toBeVisible();
 
   await page.getByRole("button", { name: "設定を開く" }).click();
+  await expect(page.getByRole("dialog", { name: "未保存の変更を保存しますか？" })).toBeVisible();
+  await page.getByRole("button", { name: "保存して続行" }).click();
   await expect(page.getByRole("heading", { name: /AI支援の設定を確認する/ })).toBeVisible();
 });
