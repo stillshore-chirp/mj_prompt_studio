@@ -11,6 +11,8 @@ interface SettingsViewProps {
   onPersistKey: (apiKey: string) => Promise<{ persisted: boolean }>;
   onLoadStoredKey: () => Promise<{ loaded: boolean }>;
   onResponseStorage: (mode: "normal" | "privacy") => Promise<void>;
+  onTextOutputOptions: (includeOptions: boolean) => Promise<void>;
+  onExclusionTerms: (terms: string[]) => Promise<void>;
   onPreferences: (preferences: Record<string, LLMFeaturePreferences>) => void;
   onConnectionTest: () => Promise<boolean>;
 }
@@ -23,12 +25,19 @@ export function SettingsView({
   onPersistKey,
   onLoadStoredKey,
   onResponseStorage,
+  onTextOutputOptions,
+  onExclusionTerms,
   onPreferences,
   onConnectionTest
 }: SettingsViewProps) {
   const [apiKey, setApiKey] = useState("");
   const [preferences, setPreferences] = useState(settings.feature_preferences);
   const [responseStorage, setResponseStorage] = useState(settings.response_storage);
+  const [includeOptions, setIncludeOptions] = useState(
+    settings.include_midjourney_options_in_text_output
+  );
+  const [termsText, setTermsText] = useState(settings.prompt_exclusion_terms.join("\n"));
+  const [newTerm, setNewTerm] = useState("");
   const [pendingResponseStorage, setPendingResponseStorage] = useState<"normal" | "privacy" | null>(null);
   const [keyStatus, setKeyStatus] = useState<string | null>(null);
   const [privacyStatus, setPrivacyStatus] = useState<string | null>(null);
@@ -36,6 +45,10 @@ export function SettingsView({
   const [apiKeyAction, setApiKeyAction] = useState<ApiKeyAction>(null);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isSavingTerms, setIsSavingTerms] = useState(false);
+  const [termsStatus, setTermsStatus] = useState<string | null>(null);
+  const [outputOptionsStatus, setOutputOptionsStatus] = useState<string | null>(null);
+  const [pendingClearTerms, setPendingClearTerms] = useState(false);
 
   useEffect(() => {
     setPreferences(settings.feature_preferences);
@@ -44,6 +57,14 @@ export function SettingsView({
   useEffect(() => {
     setResponseStorage(settings.response_storage);
   }, [settings.response_storage]);
+
+  useEffect(() => {
+    setIncludeOptions(settings.include_midjourney_options_in_text_output);
+  }, [settings.include_midjourney_options_in_text_output]);
+
+  useEffect(() => {
+    setTermsText(settings.prompt_exclusion_terms.join("\n"));
+  }, [settings.prompt_exclusion_terms]);
 
   const updateVocabularyAmount = (featureId: string, value: string) => {
     setPreferences({
@@ -147,14 +168,56 @@ export function SettingsView({
     }
   }
 
+  async function saveOutputOptions(nextValue: boolean): Promise<void> {
+    const previous = includeOptions;
+    setIncludeOptions(nextValue);
+    setOutputOptionsStatus(null);
+    try {
+      await onTextOutputOptions(nextValue);
+      setOutputOptionsStatus("テキストPrompt出力の設定を保存しました。");
+    } catch {
+      setIncludeOptions(previous);
+      setOutputOptionsStatus("保存できませんでした。設定は変更していません。再試行してください。");
+    }
+  }
+
+  const splitTerms = (): string[] =>
+    termsText
+      .split("\n")
+      .map((term) => term.trim())
+      .filter(Boolean);
+
+  function addTerm(): void {
+    const term = newTerm.trim();
+    if (!term) {
+      return;
+    }
+    setTermsText((current) => [current.trim(), term].filter(Boolean).join("\n"));
+    setNewTerm("");
+  }
+
+  async function saveTerms(nextTerms = splitTerms()): Promise<void> {
+    setIsSavingTerms(true);
+    setTermsStatus(null);
+    try {
+      await onExclusionTerms(nextTerms);
+      setTermsText(nextTerms.join("\n"));
+      setTermsStatus("除外語句を保存しました。次の創作系Prompt生成から反映されます。");
+    } catch {
+      setTermsStatus("保存できませんでした。入力内容を確認して再試行してください。");
+    } finally {
+      setIsSavingTerms(false);
+    }
+  }
+
   return (
     <section className="workspace-pane" aria-label="Settings">
       <ScreenGuide
         step="制作の準備（必要なとき）"
         title="AI支援の設定を確認する"
         featureName="Settings"
-        description="実AIを使う場合のAPI key、Privacy mode、語彙量を確認します。API keyがなくてもMock LLMで画面の流れを試せます。"
-        whenToUse="実AIを使い始めるとき、または保存・Privacyの設定を変えたいとき。プロンプト作成の前提ではありません。"
+        description="実AIを使う場合のAPI key、Privacy、テキストPrompt出力、除外語句、語彙量を確認します。API keyがなくてもMock LLMで画面の流れを試せます。"
+        whenToUse="実AIを使い始めるとき、または保存・出力・除外語句の設定を変えたいとき。プロンプト作成の前提ではありません。"
         actions={
           <button type="button" onClick={() => onPreferences(preferences)}>
           <Save size={16} /> 語彙設定を保存
@@ -239,6 +302,92 @@ export function SettingsView({
       </section>
 
       <section className="plain-panel">
+        <h2>テキストPrompt出力</h2>
+        <p>
+          コピーとテキストexport、Prompt Workshopの結果へ、構造化されたMidjourneyオプションを付けるかを一括で切り替えます。OFFにしてもPromptParametersやJSON snapshotは保持されます。
+        </p>
+        <label className="switch-row">
+          <input
+            type="checkbox"
+            checked={includeOptions}
+            onChange={(event) => void saveOutputOptions(event.currentTarget.checked)}
+          />
+          <span>テキストPrompt出力にMidjourneyオプションを付ける</span>
+        </label>
+        {outputOptionsStatus ? <p role="status" aria-live="polite">{outputOptionsStatus}</p> : null}
+      </section>
+
+      <section className="plain-panel" aria-labelledby="exclusion-terms-title">
+        <h2 id="exclusion-terms-title">Prompt除外語句</h2>
+        <p>
+          新しいPrompt生成、世界観整形、カオスミックス、LLMアレンジに適用します。文字数のみ調整と既存Promptの保存には適用しません。
+        </p>
+        <div className="inline-form">
+          <label className="field">
+            <span>語句を追加</span>
+            <input
+              value={newTerm}
+              maxLength={settings.prompt_exclusion_term_max_length}
+              onChange={(event) => setNewTerm(event.currentTarget.value)}
+            />
+          </label>
+          <button type="button" className="secondary" onClick={addTerm}>
+            追加
+          </button>
+        </div>
+        <label className="field" htmlFor="prompt-exclusion-terms">
+          <span>一括編集（1行1件）</span>
+          <textarea
+            id="prompt-exclusion-terms"
+            value={termsText}
+            rows={8}
+            maxLength={20000}
+            onChange={(event) => setTermsText(event.currentTarget.value)}
+          />
+        </label>
+        <p>
+          {splitTerms().length} / {settings.prompt_exclusion_term_limit}件。各語句は最大
+          {settings.prompt_exclusion_term_max_length}文字です。
+        </p>
+        {splitTerms().length > 0 ? (
+          <ul className="term-list" aria-label="現在の除外語句">
+            {splitTerms().map((term, index) => (
+              <li key={term + index}>
+                <span>{term}</span>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() =>
+                    setTermsText(
+                      splitTerms()
+                        .filter((_item, itemIndex) => itemIndex !== index)
+                        .join("\n")
+                    )
+                  }
+                >
+                  削除
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <div className="inline-form">
+          <button type="button" disabled={isSavingTerms} onClick={() => void saveTerms()}>
+            <Save size={16} /> 除外語句を保存
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={splitTerms().length === 0 || isSavingTerms}
+            onClick={() => setPendingClearTerms(true)}
+          >
+            全て消去
+          </button>
+        </div>
+        {termsStatus ? <p role="status" aria-live="polite">{termsStatus}</p> : null}
+      </section>
+
+      <section className="plain-panel">
         <h2>Generation Service Profile</h2>
         <p>{settings.ruleset.display_name}</p>
       </section>
@@ -298,6 +447,19 @@ export function SettingsView({
         onCancel={() => setPendingResponseStorage(null)}
       >
         <p>キャンセルすると設定は変更されません。</p>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={pendingClearTerms}
+        title="除外語句をすべて消去しますか？"
+        description="保存済みの除外語句をすべて削除します。以後のPrompt生成には適用されなくなります。"
+        confirmLabel="すべて消去する"
+        onConfirm={() => {
+          setPendingClearTerms(false);
+          void saveTerms([]);
+        }}
+        onCancel={() => setPendingClearTerms(false)}
+      >
+        <p>キャンセルすると除外語句は変更されません。</p>
       </ConfirmDialog>
     </section>
   );

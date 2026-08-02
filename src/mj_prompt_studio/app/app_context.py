@@ -5,6 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+from mj_prompt_studio.application.prompt_workshop_service import PromptWorkshopService
 from mj_prompt_studio.application.services import (
     ExportService,
     MatrixWorkflowService,
@@ -22,6 +23,10 @@ from mj_prompt_studio.config import (
     serialize_feature_preferences,
 )
 from mj_prompt_studio.domain.prompt_document import PromptDocument
+from mj_prompt_studio.domain.prompt_workshop import (
+    normalize_exclusion_terms_for_storage,
+    validate_exclusion_terms,
+)
 from mj_prompt_studio.infra.asset_store import AssetStore
 from mj_prompt_studio.infra.ruleset_loader import load_standard_ruleset
 from mj_prompt_studio.infra.secret_store import SecretStore
@@ -76,20 +81,65 @@ class AppContext:
 
     def _rebuild_services(self) -> None:
         self.prompt_service = PromptWorkflowService(
-            self.repository, self.ruleset, self.orchestrator
+            self.repository,
+            self.ruleset,
+            self.orchestrator,
+            include_midjourney_options=(
+                self.settings.include_midjourney_options_in_text_output
+            ),
         )
         self.reference_service = ReferenceWorkflowService(
             self.repository, self.asset_store, self.orchestrator
         )
-        self.matrix_service = MatrixWorkflowService(self.repository, self.orchestrator)
+        self.matrix_service = MatrixWorkflowService(
+            self.repository,
+            self.orchestrator,
+            include_midjourney_options=(
+                self.settings.include_midjourney_options_in_text_output
+            ),
+        )
+        self.workshop_service = PromptWorkshopService(
+            self.orchestrator,
+            self.ruleset,
+            include_midjourney_options=(
+                self.settings.include_midjourney_options_in_text_output
+            ),
+            exclusion_terms=self.settings.prompt_exclusion_terms,
+        )
         self.result_review_service = ResultReviewWorkflowService(
-            self.repository, self.asset_store, self.orchestrator
+            self.repository,
+            self.asset_store,
+            self.orchestrator,
+            self.ruleset,
+            include_midjourney_options=(
+                self.settings.include_midjourney_options_in_text_output
+            ),
         )
 
     def set_response_storage(self, response_storage: str) -> None:
         self.repository.set_setting("response_storage", response_storage)
         self.settings = replace(self.settings, response_storage=response_storage)
         self.orchestrator = LLMOrchestrator(self.settings, self.orchestrator.api_key)
+        self._rebuild_services()
+
+    def set_include_midjourney_options_in_text_output(self, include_options: bool) -> None:
+        self.repository.set_setting("include_midjourney_options_in_text_output", include_options)
+        self.settings = self.settings.with_prompt_output_preferences(
+            include_midjourney_options_in_text_output=include_options,
+            prompt_exclusion_terms=self.settings.prompt_exclusion_terms,
+        )
+        self._rebuild_services()
+        self._rerender_all_prompt_documents()
+
+    def set_prompt_exclusion_terms(self, terms: list[str]) -> None:
+        normalized = tuple(validate_exclusion_terms(terms))
+        self.repository.set_setting("prompt_exclusion_terms", list(normalized))
+        self.settings = self.settings.with_prompt_output_preferences(
+            include_midjourney_options_in_text_output=(
+                self.settings.include_midjourney_options_in_text_output
+            ),
+            prompt_exclusion_terms=normalized,
+        )
         self._rebuild_services()
 
     def ensure_workspace(self) -> tuple[ProjectRecord, PromptDocument]:
@@ -137,6 +187,15 @@ class AppContext:
             )
         except (TypeError, ValueError):
             stored_response_storage = settings.response_storage
+        try:
+            stored_include_options = self.repository.get_setting(
+                "include_midjourney_options_in_text_output",
+                settings.include_midjourney_options_in_text_output,
+            )
+            stored_exclusion_terms = self.repository.get_setting("prompt_exclusion_terms", [])
+        except (TypeError, ValueError):
+            stored_include_options = settings.include_midjourney_options_in_text_output
+            stored_exclusion_terms = []
         if isinstance(stored_response_storage, str) and stored_response_storage in {
             "normal",
             "privacy",
@@ -145,9 +204,26 @@ class AppContext:
         if not isinstance(stored_preferences, dict):
             stored_preferences = {}
         settings = settings.with_feature_preferences(stored_preferences)
+        settings = settings.with_prompt_output_preferences(
+            include_midjourney_options_in_text_output=(
+                stored_include_options if isinstance(stored_include_options, bool) else True
+            ),
+            prompt_exclusion_terms=tuple(
+                normalize_exclusion_terms_for_storage(stored_exclusion_terms)
+            ),
+        )
         self.repository.set_setting(
             LLM_FEATURE_PREFERENCES_SETTING_KEY,
             serialize_feature_preferences(settings.feature_preferences),
         )
         self.repository.delete_setting(LEGACY_LLM_FEATURE_PROFILES_SETTING_KEY)
         return settings
+
+    def _rerender_all_prompt_documents(self) -> None:
+        for project in self.repository.list_projects():
+            for document in self.repository.list_prompt_documents(project.id):
+                self.prompt_service.compile_document(
+                    document,
+                    source="output_policy",
+                    diff_summary="テキストPrompt出力設定を反映",
+                )

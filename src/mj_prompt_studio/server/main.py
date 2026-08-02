@@ -29,15 +29,21 @@ from mj_prompt_studio.server.schemas import (
     AgentRequest,
     APIKeyRequest,
     BlocksUpdateRequest,
+    ExclusionTermsRequest,
     ExportRequest,
     LLMFeaturePreferencesRequest,
     MatrixExportRequest,
     MatrixGenerateRequest,
     PatchApplyRequest,
     ProjectCreateRequest,
+    PromptArrangeRequest,
+    PromptGeneratorRequest,
+    PromptLengthAdjustRequest,
+    PromptTransformRequest,
     ReferenceTagsRequest,
     ResponseStorageRequest,
     ResultCompareRequest,
+    TextOutputOptionsRequest,
 )
 from mj_prompt_studio.server.serialization import (
     public_document,
@@ -271,6 +277,115 @@ def _register_routes(app: FastAPI) -> None:
 
         snapshot = {"mode": payload.mode, "field_name": payload.field_name, "source": "<redacted>"}
         return {"job": public_job(_submit_job(state, "VocabularyAgent", snapshot, work))}
+
+    @app.post("/api/agents/prompt-generator")
+    def prompt_generator(
+        payload: PromptGeneratorRequest, state: StateDep
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            return state.context.workshop_service.generate(
+                count=payload.count,
+                chaos_level=payload.chaos_level,
+                output_language=payload.output_language,
+                guidance=payload.guidance,
+                deduplicate=payload.deduplicate,
+            )
+
+        snapshot = {
+            "count": payload.count,
+            "chaos_level": payload.chaos_level,
+            "output_language": payload.output_language,
+            "guidance_provided": bool(payload.guidance.strip()),
+            "deduplicate": payload.deduplicate,
+            "exclusion_term_count": len(state.context.settings.prompt_exclusion_terms),
+        }
+        return {
+            "job": public_job(
+                _submit_job(state, "PromptGeneratorAgent", snapshot, work)
+            )
+        }
+
+    @app.post("/api/agents/prompt-transform")
+    def prompt_transform(
+        payload: PromptTransformRequest, state: StateDep
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            return state.context.workshop_service.transform(
+                mode=payload.mode,
+                source_prompt=payload.source_prompt,
+                output_language=payload.output_language,
+                max_characters=payload.max_characters,
+                additional_guidance=payload.additional_guidance,
+            )
+
+        snapshot = {
+            "mode": payload.mode,
+            "source_character_count": len(payload.source_prompt),
+            "output_language": payload.output_language,
+            "max_characters": payload.max_characters,
+            "guidance_provided": bool(payload.additional_guidance.strip()),
+            "exclusion_term_count": len(state.context.settings.prompt_exclusion_terms),
+        }
+        return {
+            "job": public_job(
+                _submit_job(state, "PromptTransformAgent", snapshot, work)
+            )
+        }
+
+    @app.post("/api/agents/prompt-length-adjust")
+    def prompt_length_adjust(
+        payload: PromptLengthAdjustRequest, state: StateDep
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            return state.context.workshop_service.adjust_length(
+                source_prompt=payload.source_prompt,
+                length_ratio=payload.length_ratio,
+                max_characters=payload.max_characters,
+            )
+
+        snapshot = {
+            "source_character_count": len(payload.source_prompt),
+            "length_ratio": payload.length_ratio,
+            "max_characters": payload.max_characters,
+        }
+        return {
+            "job": public_job(
+                _submit_job(state, "PromptLengthAdjustAgent", snapshot, work)
+            )
+        }
+
+    @app.get("/api/prompt-arrange-presets")
+    def prompt_arrange_presets(state: StateDep) -> dict[str, Any]:
+        return state.context.workshop_service.available_arrange_presets()
+
+    @app.post("/api/agents/prompt-arrange")
+    def prompt_arrange(
+        payload: PromptArrangeRequest, state: StateDep
+    ) -> dict[str, Any]:
+        def work() -> dict[str, Any]:
+            return state.context.workshop_service.arrange(
+                source_prompt=payload.source_prompt,
+                preset_id=payload.preset_id,
+                strength=payload.strength,
+                additional_guidance=payload.additional_guidance,
+                length_ratio=payload.length_ratio,
+                max_characters=payload.max_characters,
+                output_language=payload.output_language,
+            )
+
+        snapshot = {
+            "source_character_count": len(payload.source_prompt),
+            "preset_id": payload.preset_id,
+            "strength": payload.strength,
+            "length_ratio": payload.length_ratio,
+            "max_characters": payload.max_characters,
+            "output_language": payload.output_language,
+            "guidance_provided": bool(payload.additional_guidance.strip()),
+            "exclusion_term_count": len(state.context.settings.prompt_exclusion_terms),
+        }
+        return {
+            "job": public_job(_submit_job(state, "PromptArrangeAgent", snapshot, work))
+        }
 
     @app.post("/api/agents/compile-review")
     def compile_review(payload: AgentRequest, state: StateDep) -> dict[str, Any]:
@@ -570,6 +685,25 @@ def _register_routes(app: FastAPI) -> None:
         payload: ResponseStorageRequest, state: StateDep
     ) -> dict[str, Any]:
         state.context.set_response_storage(payload.response_storage)
+        return {"settings": public_settings(state.context)}
+
+    @app.put("/api/settings/text-output-options")
+    def update_text_output_options(
+        payload: TextOutputOptionsRequest, state: StateDep
+    ) -> dict[str, Any]:
+        state.context.set_include_midjourney_options_in_text_output(
+            payload.include_midjourney_options_in_text_output
+        )
+        return {"settings": public_settings(state.context)}
+
+    @app.put("/api/settings/exclusion-terms")
+    def update_exclusion_terms(
+        payload: ExclusionTermsRequest, state: StateDep
+    ) -> dict[str, Any]:
+        try:
+            state.context.set_prompt_exclusion_terms(payload.terms)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"settings": public_settings(state.context)}
 
     @app.post("/api/settings/session-api-key")

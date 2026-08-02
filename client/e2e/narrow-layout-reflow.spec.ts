@@ -7,7 +7,12 @@ test("760px幅でも主作業と補助パネルへ到達でき、横overflowを�
   await expect(main).toBeVisible();
   expect(await main.evaluate((element) => element.clientHeight)).toBeGreaterThanOrEqual(460);
   await expect(page.getByRole("textbox", { name: "Subject" })).toBeVisible();
-  await page.getByRole("tab", { name: /設定/ }).click();
+  await page.getByRole("tab", { name: /Prompt Workshop/ }).click();
+  await expect(page.getByRole("button", { name: "Prompt案を生成" })).toBeVisible();
+  expect(await page.locator("html").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  const settingsTab = page.getByRole("tab", { name: /設定/ });
+  await settingsTab.focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("region", { name: "Settings" })).toBeVisible();
   await page.getByRole("button", { name: "AIの状況を表示" }).click();
   await page.getByRole("region", { name: "AIの状況" }).scrollIntoViewIfNeeded();

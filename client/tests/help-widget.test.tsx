@@ -34,7 +34,7 @@ describe("HelpWidget", () => {
     fireEvent.click(screen.getByRole("button", { name: "使い方" }));
     fireEvent.click(screen.getByRole("button", { name: "この画面の使い方へ" }));
 
-    expect(screen.getByRole("tabpanel", { name: "ユーザーマニュアル" })).toHaveTextContent("Free Editor");
+    expect(screen.getByRole("tabpanel", { name: "ユーザーマニュアル" })).toHaveTextContent("Prompt Workshop");
     expect(scrollIntoView).toHaveBeenCalled();
   });
 

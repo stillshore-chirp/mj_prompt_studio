@@ -8,7 +8,7 @@ MJ Prompt Studioは、画像生成に使うプロンプトを考え、整え、�
 2. コピーしたPromptを画像生成サービスへ自分で貼り付け、画像を生成してローカルへ保存する。
 3. `生成結果を見直す`で画像を取り込み、次のPrompt候補を確認して改善を続ける。
 
-`既存Promptを整える`、`参考画像を使う`、`複数案を比較する`は、必要なときだけ制作を補助する画面です。
+`Prompt Workshop`、`参考画像を使う`、`複数案を比較する`は、必要なときだけ制作を補助する画面です。
 
 ## アプリ内ヘルプ
 
@@ -22,7 +22,7 @@ MJ Prompt Studioは、画像生成に使うプロンプトを考え、整え、�
 
 - Header: 新規プロジェクト、Undo/Redo、Export。
 - Left Panel: プロジェクト一覧、制作の流れ。必要な画面だけを順に選べます。
-- Main Tabs: `プロンプトを作る`、`既存Promptを整える`、`参考画像を使う`、`複数案を比較する`、`生成結果を見直す`、`設定`。各画面の先頭に目的と使う場面を表示します。
+- Main Tabs: `プロンプトを作る`、`Prompt Workshop`、`参考画像を使う`、`複数案を比較する`、`生成結果を見直す`、`設定`。各画面の先頭に目的と使う場面を表示します。
 - Right Panel: AI Inspector、Parameter Advisor、Prompt Doctor。
 - Bottom Panel: 保存状態とJobs。
 
@@ -76,9 +76,21 @@ AIが返すPatchは、reason、field_path、old_value、new_value、confidence�
 
 右側のPrompt DoctorはValidatorのissueとAI修正候補を表示します。Run Prompt Doctorを押すとJobが作成され、完了後にPatch候補が表示されます。Patchは確認ダイアログを通して適用します。
 
-## Free Editor
+## Prompt Workshop
 
-`Free Editor`では日本語メモや既存promptを6種の変換で整えます。変換はVocabularyAgent jobとして実行され、結果欄に反映されます。
+`Prompt Workshop`は、材料がないときの複数案生成と、既存Promptの整形を分けて扱います。すべてのAI操作はJobとして実行され、実行中・完了・失敗は下部のJobsで確認できます。
+
+- `ゼロからPromptを生成`: 件数（1〜30、初期値10）、カオス度、英語/日本語、任意ガイダンスで案を生成します。案ごとにコピーまたは作業中のPromptへ反映できます。
+- `世界観整形` / `カオスミックス`: 作業中のPromptの主題・主要語句を保ちながら、一枚の画像として読みやすく整えます。出力言語、上限、任意ガイダンスを指定できます。
+- `文字数のみ調整`: 意味・主題・画風を優先して保持する専用操作です。0.5 / 0.8 / 1 / 1.2 / 2倍と上限を選べ、除外語句は適用しません。
+- `LLMアレンジ`: `自動`またはカテゴリ付きプリセット、強度0〜3を選んで視覚表現を整えます。プリセットの指示本文は画面・Job履歴へ表示しません。
+- 結果はコピー、作業中のPromptへの反映、確認付きのComposer取り込みを使えます。従来の6種変換も下部に残しています。
+
+## テキストPrompt出力と除外語句
+
+`Settings` の `テキストPrompt出力` では、構造化されたオプションをテキストPromptへ付けるかを切り替えます。設定をOFFにしても、PromptParametersとJSON snapshotは保持されます。Composer、export、Matrix、Result Reviewの新しい候補、Prompt Workshopのテキスト結果に同じ設定が適用されます。
+
+`Prompt除外語句` は1行1件で追加・編集・削除できます。空白・大文字小文字・Unicode正規化の差分は重複としてまとめられ、最大200件、各100文字です。新規生成、世界観整形、カオスミックス、LLMアレンジにだけ適用し、文字数のみ調整や既存Promptの保存には適用しません。除外語句はJob入力snapshotや公開用の証跡へ文字列として残しません。
 
 ## Reference Library
 

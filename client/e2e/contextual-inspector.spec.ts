@@ -4,7 +4,7 @@ test("非Composer画面ではInspectorを必要時だけ表示できる", async 
   await page.goto("/");
   await expect(page.getByLabel("AIの状況")).toBeVisible();
 
-  await page.getByRole("tab", { name: /既存Promptを整える/ }).click();
+  await page.getByRole("tab", { name: /Prompt Workshop/ }).click();
   await expect(page.getByLabel("AIの状況")).not.toBeVisible();
 
   const showInspector = page.getByRole("button", { name: "AIの状況を表示" });

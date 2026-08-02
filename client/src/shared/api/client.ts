@@ -1,5 +1,6 @@
 import type {
   AgentJobResponse,
+  ArrangePreset,
   DocumentResponse,
   JsonObject,
   LLMFeaturePreferences,
@@ -232,6 +233,52 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ document_id: documentId })
     }),
+  promptGenerator: (payload: {
+    count: number;
+    chaos_level: number;
+    output_language: "en" | "ja";
+    guidance: string;
+    deduplicate: boolean;
+  }) =>
+    requestJson<AgentJobResponse>("/api/agents/prompt-generator", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  promptTransform: (payload: {
+    mode: "worldbuilding" | "chaos_mix";
+    source_prompt: string;
+    output_language: "source" | "en" | "ja";
+    max_characters: number | null;
+    additional_guidance: string;
+  }) =>
+    requestJson<AgentJobResponse>("/api/agents/prompt-transform", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  promptLengthAdjust: (payload: {
+    source_prompt: string;
+    length_ratio: number;
+    max_characters: number | null;
+  }) =>
+    requestJson<AgentJobResponse>("/api/agents/prompt-length-adjust", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  promptArrangePresets: () =>
+    requestJson<{ presets: ArrangePreset[]; warning: string | null }>("/api/prompt-arrange-presets"),
+  promptArrange: (payload: {
+    source_prompt: string;
+    preset_id: string;
+    strength: number;
+    additional_guidance: string;
+    length_ratio: number;
+    max_characters: number | null;
+    output_language: "source" | "en" | "ja";
+  }) =>
+    requestJson<AgentJobResponse>("/api/agents/prompt-arrange", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   settings: () => requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings"),
   saveFeaturePreferences: (preferences: Record<string, LLMFeaturePreferences>) =>
     requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings/feature-preferences", {
@@ -242,6 +289,16 @@ export const api = {
     requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings/response-storage", {
       method: "PUT",
       body: JSON.stringify({ response_storage: responseStorage })
+    }),
+  saveTextOutputOptions: (includeOptions: boolean) =>
+    requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings/text-output-options", {
+      method: "PUT",
+      body: JSON.stringify({ include_midjourney_options_in_text_output: includeOptions })
+    }),
+  saveExclusionTerms: (terms: string[]) =>
+    requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings/exclusion-terms", {
+      method: "PUT",
+      body: JSON.stringify({ terms })
     }),
   setSessionApiKey: (apiKey: string) =>
     requestJson<{ settings: RuntimeSettingsPublic }>("/api/settings/session-api-key", {

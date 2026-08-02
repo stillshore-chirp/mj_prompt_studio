@@ -31,6 +31,7 @@ import { SettingsView } from "../features/settings/SettingsView";
 import { api, ApiClientError } from "../shared/api/client";
 import { ConfirmDialog } from "../shared/components/ConfirmDialog";
 import type {
+  ArrangePreset,
   JsonObject,
   JsonValue,
   LLMJob,
@@ -39,6 +40,7 @@ import type {
   PromptDocument,
   PromptParameters,
   PromptPatch,
+  PromptWorkshopResult,
   ReferenceAsset,
   ResultImage,
   ResultReview,
@@ -89,7 +91,7 @@ interface StatusMessage {
 
 const tabs: { id: TabId; label: string; shortLabel: string; featureName: string; icon: ReactNode }[] = [
   { id: "composer", label: "プロンプトを作る", shortLabel: "作る", featureName: "Composer", icon: <PenLine size={15} /> },
-  { id: "free-editor", label: "既存Promptを整える", shortLabel: "整える", featureName: "Free Editor", icon: <FilePenLine size={15} /> },
+  { id: "free-editor", label: "Prompt Workshop", shortLabel: "Workshop", featureName: "Prompt Workshop", icon: <FilePenLine size={15} /> },
   { id: "reference-library", label: "参考画像を使う", shortLabel: "参考画像", featureName: "Reference Library", icon: <Images size={15} /> },
   { id: "matrix-lab", label: "複数案を比較する", shortLabel: "比較", featureName: "Matrix Lab", icon: <Grid3X3 size={15} /> },
   { id: "result-review", label: "生成結果を見直す", shortLabel: "見直す", featureName: "Result Review", icon: <ScanSearch size={15} /> },
@@ -118,6 +120,11 @@ export function App() {
   const [comparisonLines, setComparisonLines] = useState<string[]>([]);
   const [auditResult, setAuditResult] = useState<JsonObject | null>(null);
   const [freeEditorResult, setFreeEditorResult] = useState({ result: "", detail: "" });
+  const [workshopResults, setWorkshopResults] = useState<
+    Record<string, PromptWorkshopResult | undefined>
+  >({});
+  const [arrangePresets, setArrangePresets] = useState<ArrangePreset[]>([]);
+  const [arrangePresetWarning, setArrangePresetWarning] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   const [status, setStatus] = useState<StatusMessage | string>({
     kind: "progress",
@@ -142,6 +149,9 @@ export function App() {
     setResultImages(next.result_images);
     setSettings(next.settings);
     setJobs(next.jobs);
+    next.jobs
+      .filter((job) => ["succeeded", "failed", "cancelled"].includes(job.status))
+      .forEach((job) => handledJobs.current.add(job.id));
     setBootState("ready");
     setStatus({ kind: "success", message: "準備ができました。" });
   }, []);
@@ -159,6 +169,18 @@ export function App() {
   useEffect(() => {
     retryWorkspace();
   }, [retryWorkspace]);
+
+  useEffect(() => {
+    api
+      .promptArrangePresets()
+      .then((response) => {
+        setArrangePresets(response.presets);
+        setArrangePresetWarning(response.warning);
+      })
+      .catch(() => {
+        setArrangePresetWarning("アレンジプリセットを読み込めませんでした。再試行してください。");
+      });
+  }, []);
 
   const savePayload = useCallback(
     (payload: ComposerPayload): ComposerPayload => ({
@@ -218,6 +240,22 @@ export function App() {
       }
       setAgentResult(output);
       setPendingPatches(readPatches(output.patches));
+      return;
+    }
+    if (
+      job.agent_name === "PromptGeneratorAgent" ||
+      job.agent_name === "PromptTransformAgent" ||
+      job.agent_name === "PromptLengthAdjustAgent" ||
+      job.agent_name === "PromptArrangeAgent"
+    ) {
+      const operation = String(output.operation ?? "");
+      if (operation) {
+        setWorkshopResults((current) => ({
+          ...current,
+          [operation]: output as unknown as PromptWorkshopResult
+        }));
+      }
+      setAgentResult(output);
       return;
     }
     if (job.agent_name === "PromptDoctorAgent") {
@@ -503,10 +541,23 @@ export function App() {
       );
     }
     if (activeTab === "free-editor") {
+      const workshopBusy = jobs.some(
+        (job) =>
+          [
+            "PromptGeneratorAgent",
+            "PromptTransformAgent",
+            "PromptLengthAdjustAgent",
+            "PromptArrangeAgent"
+          ].includes(job.agent_name) && (job.status === "queued" || job.status === "running")
+      );
       return (
         <FreeEditorView
           result={freeEditorResult.result}
           detail={freeEditorResult.detail}
+          workshopResults={workshopResults}
+          presets={arrangePresets}
+          presetWarning={arrangePresetWarning}
+          isBusy={workshopBusy}
           onTransform={(mode, source, prompt) =>
             submitJob(
               () =>
@@ -515,8 +566,76 @@ export function App() {
                   mode: "free_editor",
                   field_name: mode
                 }),
-              "Free Editor job を作成しました"
+              "Prompt Workshop job を作成しました"
             )
+          }
+          onGenerate={(payload) =>
+            submitJob(
+              () =>
+                api.promptGenerator({
+                  count: payload.count,
+                  chaos_level: payload.chaosLevel,
+                  output_language: payload.outputLanguage,
+                  guidance: payload.guidance,
+                  deduplicate: payload.deduplicate
+                }),
+              "Prompt Generator job を作成しました"
+            )
+          }
+          onPromptTransform={(payload) =>
+            submitJob(
+              () =>
+                api.promptTransform({
+                  mode: payload.mode,
+                  source_prompt: payload.sourcePrompt,
+                  output_language: payload.outputLanguage,
+                  max_characters: payload.maxCharacters,
+                  additional_guidance: payload.additionalGuidance
+                }),
+              "Prompt Transform job を作成しました"
+            )
+          }
+          onLengthAdjust={(payload) =>
+            submitJob(
+              () =>
+                api.promptLengthAdjust({
+                  source_prompt: payload.sourcePrompt,
+                  length_ratio: payload.lengthRatio,
+                  max_characters: payload.maxCharacters
+                }),
+              "文字数調整 job を作成しました"
+            )
+          }
+          onArrange={(payload) =>
+            submitJob(
+              () =>
+                api.promptArrange({
+                  source_prompt: payload.sourcePrompt,
+                  preset_id: payload.presetId,
+                  strength: payload.strength,
+                  additional_guidance: payload.additionalGuidance,
+                  length_ratio: payload.lengthRatio,
+                  max_characters: payload.maxCharacters,
+                  output_language: payload.outputLanguage
+                }),
+              "LLMアレンジ job を作成しました"
+            )
+          }
+          onCopy={(text, message) => {
+            void handleCopy(text, message);
+          }}
+          onUseInComposer={(text) =>
+            setPendingConfirm({
+              kind: "patch",
+              patch: {
+                field_path: "blocks.notes",
+                old_value: currentDocument.blocks.notes,
+                new_value: text,
+                reason: "Prompt Workshopの結果をComposerへ取り込む",
+                confidence: 1,
+                requires_user_confirmation: true
+              }
+            })
           }
         />
       );
@@ -724,6 +843,28 @@ export function App() {
             throw error;
           }
         }}
+        onTextOutputOptions={async (includeOptions) => {
+          try {
+            const response = await api.saveTextOutputOptions(includeOptions);
+            setSettings(response.settings);
+            const workspaceResponse = await api.workspace();
+            updateDocument(workspaceResponse.document);
+            setStatus("テキストPrompt出力のオプション設定を保存しました。現在の表示にも反映されています。");
+          } catch (error) {
+            setStatus(errorToMessage(error));
+            throw error;
+          }
+        }}
+        onExclusionTerms={async (terms) => {
+          try {
+            const response = await api.saveExclusionTerms(terms);
+            setSettings(response.settings);
+            setStatus("Prompt除外語句を保存しました。次の創作系Prompt生成から反映されます。");
+          } catch (error) {
+            setStatus(errorToMessage(error));
+            throw error;
+          }
+        }}
         onPreferences={(preferences) =>
           api
             .saveFeaturePreferences(preferences)
@@ -758,6 +899,7 @@ export function App() {
     currentDocument,
     currentSettings,
     freeEditorResult,
+    jobs,
     reviewsByResultId,
     loadWorkspace,
     matrixPlan,
@@ -771,6 +913,9 @@ export function App() {
     savePayload,
     submitJob,
     updateDraftParameters,
+    workshopResults,
+    arrangePresets,
+    arrangePresetWarning,
     workspace
   ]);
 

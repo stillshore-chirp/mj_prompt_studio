@@ -47,6 +47,10 @@ LLM_FEATURE_DISPLAY_NAMES = {
     "MatrixPlannerAgent": "Matrix Lab",
     "ResultReviewAgent": "Result Review",
     "FinalAuditorAgent": "Final Audit",
+    "PromptGeneratorAgent": "Prompt Generator",
+    "PromptTransformAgent": "Prompt Transform",
+    "PromptLengthAdjustAgent": "文字数調整",
+    "PromptArrangeAgent": "LLMアレンジ",
 }
 
 
@@ -94,6 +98,8 @@ class RuntimeSettings:
     max_parallel_jobs: int = 3
     timeout_seconds: int = 120
     retry_count: int = 2
+    include_midjourney_options_in_text_output: bool = True
+    prompt_exclusion_terms: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -115,6 +121,18 @@ class RuntimeSettings:
         return replace(
             self,
             feature_preferences=normalize_feature_preferences(preferences),
+        )
+
+    def with_prompt_output_preferences(
+        self,
+        *,
+        include_midjourney_options_in_text_output: bool,
+        prompt_exclusion_terms: tuple[str, ...],
+    ) -> RuntimeSettings:
+        return replace(
+            self,
+            include_midjourney_options_in_text_output=include_midjourney_options_in_text_output,
+            prompt_exclusion_terms=prompt_exclusion_terms,
         )
 
 

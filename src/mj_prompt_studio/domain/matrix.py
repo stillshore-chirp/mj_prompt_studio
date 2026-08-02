@@ -98,7 +98,13 @@ class MatrixVariant:
 
 
 class MatrixGenerator:
-    def generate(self, plan: MatrixPlan, base_prompt: str) -> list[MatrixVariant]:
+    def generate(
+        self,
+        plan: MatrixPlan,
+        base_prompt: str,
+        *,
+        include_midjourney_options: bool = True,
+    ) -> list[MatrixVariant]:
         if not plan.axes:
             return [
                 MatrixVariant(
@@ -118,7 +124,11 @@ class MatrixGenerator:
                 axis.name: combination[axis_index] for axis_index, axis in enumerate(plan.axes)
             }
             parameters = {**plan.fixed_conditions, **variable_parameters}
-            suffix = " ".join(_render_parameter(name, value) for name, value in parameters.items())
+            suffix = (
+                " ".join(_render_parameter(name, value) for name, value in parameters.items())
+                if include_midjourney_options
+                else ""
+            )
             variants.append(
                 MatrixVariant(
                     id=f"{plan.id}_{index:03d}",

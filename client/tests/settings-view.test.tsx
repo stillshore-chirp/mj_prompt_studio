@@ -7,6 +7,10 @@ import type { RuntimeSettingsPublic } from "../src/shared/types/api";
 const settings: RuntimeSettingsPublic = {
   llm_mode: "mock",
   response_storage: "normal",
+  include_midjourney_options_in_text_output: true,
+  prompt_exclusion_terms: [],
+  prompt_exclusion_term_limit: 200,
+  prompt_exclusion_term_max_length: 100,
   privacy_mode: false,
   api_key_configured: false,
   feature_preferences: {
@@ -40,6 +44,8 @@ describe("SettingsView", () => {
         onPersistKey={vi.fn()}
         onLoadStoredKey={vi.fn()}
         onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
         onPreferences={vi.fn()}
         onConnectionTest={vi.fn()}
       />
@@ -64,6 +70,8 @@ describe("SettingsView", () => {
         onPersistKey={vi.fn()}
         onLoadStoredKey={vi.fn()}
         onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
         onPreferences={onPreferences}
         onConnectionTest={vi.fn()}
       />
@@ -89,6 +97,8 @@ describe("SettingsView", () => {
         onPersistKey={vi.fn()}
         onLoadStoredKey={vi.fn()}
         onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
         onPreferences={vi.fn()}
         onConnectionTest={vi.fn()}
       />
@@ -116,6 +126,8 @@ describe("SettingsView", () => {
         onPersistKey={vi.fn()}
         onLoadStoredKey={onLoadStoredKey}
         onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
         onPreferences={vi.fn()}
         onConnectionTest={vi.fn()}
       />
@@ -142,6 +154,8 @@ describe("SettingsView", () => {
         onPersistKey={vi.fn()}
         onLoadStoredKey={onLoadStoredKey}
         onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
         onPreferences={vi.fn()}
         onConnectionTest={vi.fn()}
       />
@@ -165,6 +179,8 @@ describe("SettingsView", () => {
         onPersistKey={vi.fn()}
         onLoadStoredKey={onLoadStoredKey}
         onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
         onPreferences={vi.fn()}
         onConnectionTest={vi.fn()}
       />
@@ -193,6 +209,8 @@ describe("SettingsView", () => {
         onPersistKey={vi.fn()}
         onLoadStoredKey={vi.fn()}
         onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
         onPreferences={vi.fn()}
         onConnectionTest={vi.fn()}
       />
@@ -218,6 +236,8 @@ describe("SettingsView", () => {
         onPersistKey={vi.fn()}
         onLoadStoredKey={vi.fn()}
         onResponseStorage={onResponseStorage}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
         onPreferences={vi.fn()}
         onConnectionTest={vi.fn()}
       />
@@ -237,5 +257,55 @@ describe("SettingsView", () => {
     await waitFor(() => expect(onResponseStorage).toHaveBeenCalledWith("privacy"));
     await waitFor(() => expect(privacySwitch).toBeChecked());
     expect(screen.getByText(/以後の実API呼び出しでは応答保存と前回応答IDの継続を使いません。/)).toHaveAttribute("role", "status");
+  });
+
+  it("saves the unified text-output setting", async () => {
+    const onTextOutputOptions = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SettingsView
+        settings={settings}
+        onSessionKey={vi.fn()}
+        onPersistKey={vi.fn()}
+        onLoadStoredKey={vi.fn()}
+        onResponseStorage={vi.fn()}
+        onTextOutputOptions={onTextOutputOptions}
+        onExclusionTerms={vi.fn()}
+        onPreferences={vi.fn()}
+        onConnectionTest={vi.fn()}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "テキストPrompt出力にMidjourneyオプションを付ける"
+      })
+    );
+
+    await waitFor(() => expect(onTextOutputOptions).toHaveBeenCalledWith(false));
+    expect(screen.getByText("テキストPrompt出力の設定を保存しました。")).toHaveAttribute("role", "status");
+  });
+
+  it("requires confirmation before clearing exclusion terms", async () => {
+    const onExclusionTerms = vi.fn().mockResolvedValue(undefined);
+    render(
+      <SettingsView
+        settings={{ ...settings, prompt_exclusion_terms: ["glass"] }}
+        onSessionKey={vi.fn()}
+        onPersistKey={vi.fn()}
+        onLoadStoredKey={vi.fn()}
+        onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={onExclusionTerms}
+        onPreferences={vi.fn()}
+        onConnectionTest={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "全て消去" }));
+    expect(screen.getByRole("dialog", { name: "除外語句をすべて消去しますか？" })).toBeInTheDocument();
+    expect(onExclusionTerms).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "すべて消去する" }));
+    await waitFor(() => expect(onExclusionTerms).toHaveBeenCalledWith([]));
   });
 });

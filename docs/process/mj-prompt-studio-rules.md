@@ -161,7 +161,7 @@
 ### UI 実装ルール
 
 - PySide6 の MainWindow は、メインワークスペース、左ナビゲーション、右 Inspector、下部 Console / Suggestions の構成を基本にする。
-- 画面は `Composer`、`Free Editor`、`Matrix Lab`、`Reference Library`、`Result Review` を主要タブとして扱う。
+- 画面は `Composer`、`Prompt Workshop`、`Matrix Lab`、`Reference Library`、`Result Review` を主要タブとして扱う。
 - Widget は見た目の責務に寄せ、業務判断は Presenter / ViewModel / Application Service へ逃がす。
 - Signal / Slot の接続が複雑化したら、Action 層または Controller 層を作る。
 - UI 文言はハードコードせず、可能な範囲で文字列リソースへ集約する。

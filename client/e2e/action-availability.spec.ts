@@ -8,12 +8,12 @@ test("対象のない操作を止め、入力後に必要な操作だけ有効�
   await expect(page.getByRole("button", { name: "コピー (Alt+Shift+C)" })).toBeDisabled();
   await expect(page.getByText("AI Briefを入力すると、構造化のjobを作成できます。")).toBeVisible();
 
-  await page.getByRole("tab", { name: /既存Promptを整える/ }).click();
+  await page.getByRole("tab", { name: /Prompt Workshop/ }).click();
   await expect(page.getByRole("button", { name: "英語Prompt化" })).toBeDisabled();
   await expect(
-    page.getByText("Japanese SourceまたはEnglish Promptを入力すると、変換できます。")
+    page.getByText("文字数のみ調整は除外語句を適用せず、意味保持を優先します。その他の創作系操作にはSettingsの除外語句が適用されます。")
   ).toBeVisible();
-  await page.getByLabel("English Prompt").fill("safe hotel breakfast campaign");
+  await page.getByLabel("作業中のPrompt").fill("safe hotel breakfast campaign");
   await expect(page.getByRole("button", { name: "英語Prompt化" })).toBeEnabled();
 
   await page.getByRole("tab", { name: /複数案を比較する/ }).click();

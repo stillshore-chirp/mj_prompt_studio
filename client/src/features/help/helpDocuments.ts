@@ -40,7 +40,7 @@ export const helpDocuments: HelpDocument[] = [
 
 const contextTargets: Record<HelpContext, { documentId: HelpDocumentId; heading: string }> = {
   composer: { documentId: "quick-start", heading: "2. 最初のプロンプトを作る" },
-  "free-editor": { documentId: "user-manual", heading: "Free Editor" },
+  "free-editor": { documentId: "user-manual", heading: "Prompt Workshop" },
   "matrix-lab": { documentId: "user-manual", heading: "Matrix Lab" },
   "reference-library": { documentId: "user-manual", heading: "Reference Library" },
   "result-review": { documentId: "user-manual", heading: "Result Review" },

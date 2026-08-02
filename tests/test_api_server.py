@@ -109,6 +109,74 @@ def test_settings_response_storage_persists_across_contexts(tmp_path: Path) -> N
         assert settings["privacy_mode"] is True
 
 
+def test_prompt_workshop_endpoints_use_safe_job_snapshots_and_public_presets(
+    tmp_path: Path,
+) -> None:
+    with _client(tmp_path) as client:
+        saved = client.put(
+            "/api/settings/exclusion-terms",
+            json={"terms": ["  confidential term  ", "CONFIDENTIAL TERM"]},
+        )
+        assert saved.status_code == 200
+        assert saved.json()["settings"]["prompt_exclusion_terms"] == ["confidential term"]
+
+        presets = client.get("/api/prompt-arrange-presets")
+        assert presets.status_code == 200
+        assert presets.json()["presets"][0]["id"] == "auto"
+        assert all("guidance" not in item for item in presets.json()["presets"])
+
+        response = client.post(
+            "/api/agents/prompt-transform",
+            json={
+                "mode": "worldbuilding",
+                "source_prompt": "paper sculpture in soft light",
+                "output_language": "en",
+                "max_characters": None,
+                "additional_guidance": "",
+            },
+        )
+        assert response.status_code == 200
+        created_job = response.json()["job"]
+        assert created_job["input_snapshot"]["source_character_count"] == len(
+            "paper sculpture in soft light"
+        )
+        assert "paper sculpture" not in str(created_job["input_snapshot"])
+        assert "confidential term" not in response.text
+
+        job = _wait_for_job(client, created_job["id"])
+        assert job["status"] == "succeeded"
+        assert job["output_json"]["operation"] == "worldbuilding"
+        assert "confidential term" not in str(job["output_json"])
+
+
+def test_prompt_workshop_api_validates_length_options(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        invalid = client.post(
+            "/api/agents/prompt-length-adjust",
+            json={
+                "source_prompt": "paper sculpture",
+                "length_ratio": 1.5,
+                "max_characters": 120,
+            },
+        )
+        assert invalid.status_code == 422
+
+        generated = client.post(
+            "/api/agents/prompt-generator",
+            json={
+                "count": 2,
+                "chaos_level": 2,
+                "output_language": "ja",
+                "guidance": "",
+                "deduplicate": False,
+            },
+        )
+        assert generated.status_code == 200
+        job = _wait_for_job(client, generated.json()["job"]["id"])
+        assert job["status"] == "succeeded"
+        assert job["output_json"]["generated_count"] == 2
+
+
 def test_load_persisted_api_key_applies_without_returning_secret(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -202,6 +270,13 @@ def test_openapi_schema_contains_react_contract_endpoints(tmp_path: Path) -> Non
     assert "/api/projects/{project_id}/references/upload" in paths
     assert "/api/jobs/{job_id}" in paths
     assert "/api/settings/feature-preferences" in paths
+    assert "/api/settings/text-output-options" in paths
+    assert "/api/settings/exclusion-terms" in paths
+    assert "/api/agents/prompt-generator" in paths
+    assert "/api/agents/prompt-transform" in paths
+    assert "/api/agents/prompt-length-adjust" in paths
+    assert "/api/agents/prompt-arrange" in paths
+    assert "/api/prompt-arrange-presets" in paths
     assert "/api/settings/load-persisted-api-key" in paths
     assert "/api/settings/llm-profiles" not in paths
 

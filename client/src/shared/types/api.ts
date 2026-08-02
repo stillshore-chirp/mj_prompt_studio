@@ -225,6 +225,10 @@ export interface LLMFeaturePreferences {
 export interface RuntimeSettingsPublic {
   llm_mode: string;
   response_storage: "normal" | "privacy";
+  include_midjourney_options_in_text_output: boolean;
+  prompt_exclusion_terms: string[];
+  prompt_exclusion_term_limit: number;
+  prompt_exclusion_term_max_length: number;
   privacy_mode: boolean;
   api_key_configured: boolean;
   feature_preferences: Record<string, LLMFeaturePreferences>;
@@ -235,6 +239,46 @@ export interface RuntimeSettingsPublic {
   vocabulary_amounts: string[];
   vocabulary_amount_labels: Record<string, string>;
   ruleset: RulesetDisplay;
+}
+
+export interface ArrangePreset {
+  id: string;
+  label_ja: string;
+  category: string;
+  hybridization_profile: string | null;
+}
+
+export interface PromptWorkshopPrompt {
+  text: string;
+  language: "en" | "ja";
+}
+
+export interface PromptWorkshopResult {
+  target: "prompt_workshop";
+  operation: string;
+  prompt?: string;
+  body?: string;
+  prompts?: PromptWorkshopPrompt[];
+  requested_count?: number;
+  generated_count?: number;
+  excluded_count?: number;
+  status?: string;
+  source_body_count?: number;
+  result_body_count?: number;
+  preserved_anchors?: string[];
+  preserved_anchor_count?: number;
+  warnings?: string[];
+  omitted_elements?: string[];
+  preset_id?: string;
+  preset_label?: string;
+  strength?: number;
+  length_ratio?: number;
+  original_body_count?: number;
+  target_count?: number;
+  result_count?: number;
+  max_characters?: number | null;
+  quality_repair_attempts?: number;
+  exclusion_terms_applied?: boolean;
 }
 
 export interface StoredApiKeyLoadResponse {
