@@ -111,6 +111,7 @@ export function App() {
   const [references, setReferences] = useState<ReferenceAsset[]>([]);
   const [resultImages, setResultImages] = useState<ResultImage[]>([]);
   const [jobs, setJobs] = useState<LLMJob[]>([]);
+  const [retryingJobIds, setRetryingJobIds] = useState<Set<string>>(new Set());
   const [settings, setSettings] = useState<RuntimeSettingsPublic | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("composer");
   const [showInspectorOutsideComposer, setShowInspectorOutsideComposer] = useState(false);
@@ -139,6 +140,7 @@ export function App() {
   const [autoSuggestion, setAutoSuggestion] = useState<AutoSuggestionState | null>(null);
   const manualCopyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const handledJobs = useRef<Set<string>>(new Set());
+  const retryRequestsInFlight = useRef<Set<string>>(new Set());
   const latestAutoSuggestionRevision = useRef<number | null>(null);
   const autoSuggestionRequests = useRef<Map<string, AutoSuggestionRequest>>(new Map());
 
@@ -1178,8 +1180,13 @@ export function App() {
               .catch((error: unknown) => setStatus(errorToMessage(error)))
           }
           onRetry={(jobId) => {
+            if (retryRequestsInFlight.current.has(jobId)) {
+              return;
+            }
+            retryRequestsInFlight.current.add(jobId);
+            setRetryingJobIds((current) => new Set(current).add(jobId));
             handledJobs.current.delete(jobId);
-            api
+            return api
               .retryJob(jobId)
               .then((response) => {
                 setStatus({
@@ -1188,9 +1195,18 @@ export function App() {
                 });
                 return refreshJobs();
               })
-              .catch((error: unknown) => setStatus(errorToMessage(error)));
+              .catch((error: unknown) => setStatus(errorToMessage(error)))
+              .finally(() => {
+                retryRequestsInFlight.current.delete(jobId);
+                setRetryingJobIds((current) => {
+                  const next = new Set(current);
+                  next.delete(jobId);
+                  return next;
+                });
+              });
           }}
           onOpenSettings={() => requestNavigation({ kind: "tab", tab: "settings" })}
+          retryingJobIds={retryingJobIds}
         />
       </footer>
 

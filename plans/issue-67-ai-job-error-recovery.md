@@ -103,6 +103,7 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 | 2026-08-03 | `make generate-openapi && make lint && make typecheck && make test && make build && make client-lint && make client-typecheck && make client-test && make client-build && bash scripts/verify-ai-governance.sh && git diff --check` | Pass | Python 89件、client 59件、production build、OpenAPI、ガバナンス・空白検査。安全な診断field、旧履歴、copy fallbackを含む。実APIは未使用。 |
 | 2026-08-03 | 別ポートの `make e2e` | Pass | mock専用Chromium E2E 27件。旧履歴の再試行抑止、新規診断詳細、狭幅、文字拡大を含む。ユーザー起動中アプリには未干渉。 |
 | 2026-08-03 | Codex review P1 / P2修正後のclient検証 | Pass | 公開文言検査、lint、型検査、Vitest 61件、production build。応答保存分類の優先と再試行1回上限を含む。 |
+| 2026-08-03 | Codex再レビューP1修正後の全検証 | Pass | Python 91件、client 62件、Chromium E2E 28件、build、公開文言検査。client/server双方の重複再試行防止を含む。 |
 
 ## PR / CI / review 記録
 

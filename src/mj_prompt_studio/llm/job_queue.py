@@ -99,26 +99,29 @@ class LLMJobQueue:
         return job
 
     def retry(self, job_id: str) -> LLMJob:
-        job = self.get(job_id)
-        if job is None:
-            raise KeyError(job_id)
         with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                raise KeyError(job_id)
+            if job.status != "failed":
+                raise ValueError("Job can only be retried after failure")
+            if job.failure_code == "structured_output_invalid" and job.retry_count >= 1:
+                raise ValueError("Job retry limit reached")
             work = self._work_items.get(job_id)
-        if work is None:
-            raise ValueError(f"Job cannot be retried because work is not retained: {job_id}")
-        job.retry_count += 1
-        job.status = "queued"
-        job.error_message = None
-        job.failure_code = None
-        job.failure_stage = None
-        job.provider_status_code = None
-        job.provider_error_code = None
-        job.finished_at = None
-        job.response_id_kind = None
-        future = self._executor.submit(self._run, job.id, work)
-        future.add_done_callback(lambda completed: self._complete(job.id, completed))
-        with self._lock:
+            if work is None:
+                raise ValueError(f"Job cannot be retried because work is not retained: {job_id}")
+            job.retry_count += 1
+            job.status = "queued"
+            job.error_message = None
+            job.failure_code = None
+            job.failure_stage = None
+            job.provider_status_code = None
+            job.provider_error_code = None
+            job.finished_at = None
+            job.response_id_kind = None
+            future = self._executor.submit(self._run, job.id, work)
             self._futures[job.id] = future
+        future.add_done_callback(lambda completed: self._complete(job.id, completed))
         self._notify(job)
         return job
 

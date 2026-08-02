@@ -1,5 +1,7 @@
 from threading import Event
 
+import pytest
+
 from mj_prompt_studio.llm.job_queue import LLMJobQueue
 from mj_prompt_studio.llm.orchestrator import LLMOutputValidationError
 
@@ -39,6 +41,8 @@ def test_job_queue_retries_retained_work() -> None:
 
     def work():
         calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("safe retry fixture")
         return {"count": calls["count"]}
 
     first = queue.submit(
@@ -57,6 +61,59 @@ def test_job_queue_retries_retained_work() -> None:
     assert first.reasoning_effort == "high"
     assert first.text_verbosity == "low"
     assert first.retry_count == 1
+    queue.shutdown()
+
+
+def test_job_queue_rejects_a_second_retry_while_the_first_is_running() -> None:
+    done = Event()
+    release_retry = Event()
+    calls = {"count": 0}
+    queue = LLMJobQueue(max_workers=1)
+
+    def work() -> dict[str, bool]:
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("safe retry fixture")
+        assert release_retry.wait(3)
+        return {"ok": True}
+
+    job = queue.submit(
+        agent_name="VocabularyAgent",
+        input_snapshot={},
+        work=work,
+        callback=lambda _job: done.set(),
+    )
+    assert done.wait(3)
+    done.clear()
+
+    queue.retry(job.id)
+    with pytest.raises(ValueError, match="only be retried after failure"):
+        queue.retry(job.id)
+
+    release_retry.set()
+    assert done.wait(3)
+    assert job.retry_count == 1
+    queue.shutdown()
+
+
+def test_job_queue_enforces_one_retry_for_structured_output_failure() -> None:
+    done = Event()
+    queue = LLMJobQueue(max_workers=1)
+
+    job = queue.submit(
+        agent_name="PromptTransformAgent",
+        input_snapshot={},
+        work=lambda: (_ for _ in ()).throw(LLMOutputValidationError()),
+        callback=lambda _job: done.set(),
+    )
+    assert done.wait(3)
+    done.clear()
+    queue.retry(job.id)
+    assert done.wait(3)
+
+    with pytest.raises(ValueError, match="retry limit reached"):
+        queue.retry(job.id)
+    assert job.retry_count == 1
     queue.shutdown()
 
 

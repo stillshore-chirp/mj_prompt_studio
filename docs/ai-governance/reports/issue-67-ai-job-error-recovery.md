@@ -5,7 +5,7 @@
 - 対象Issue / PR / 作業: #67 / #68と追加修正PR / LLM failure boundary、JobsPanel、Settings、App status
 - 画面・component・状態: ComposerのAI Brief構造化を含む全AI Job、接続テスト、Jobs footer、失敗詳細、再試行、Settings導線、狭幅
 - 判定: Pass（追加修正のローカル実装・視覚証跡。PR CI・reviewは完了ゲートとして別途監視）
-- P0 / P1 / P2件数: 1 / 1 / 1（すべて追加修正・回帰検証済み）
+- P0 / P1 / P2件数: 1 / 2 / 1（すべて追加修正・回帰検証済み）
 
 ## ユーザー価値
 
@@ -50,6 +50,7 @@
 | P0 | PR #68後の実画面・codeなし失敗 | 詳細を開いても原因、失敗段階、HTTP状態がなく、根拠なく設定確認と再試行を勧めていた | 利用者が原因を調査できず、同じ失敗を繰り返す | 新規失敗へ安全な診断fieldを追加。旧履歴は復元不能と明示して再試行を抑止し、安全な診断コピーを追加 | 追加修正・視覚確認済み |
 | P1 | providerコード特例 | 応答保存拒否に`invalid_value`等が付くとPrivacy mode案内を上書きし得た | Settingsで回復できる失敗をアプリ側問題として誤案内する | providerコード特例を`api_request_invalid`と`unexpected`だけへ限定 | Codex review後に修正・client test済み |
 | P2 | 1回だけの再試行 | 構造化応答の再失敗後も再試行ボタンが残っていた | 同じ有料リクエストを繰り返せる | `retry_count >= 1`で再試行を抑止し診断確認へ切替 | Codex review後に修正・client test済み |
+| P1 | 再試行の同時送信 | 更新前のJob snapshotだけで判定し、ダブルクリックやAPI同時呼出しをserverが拒否していなかった | 同じ有料処理の重複、結果適用の競合、上限超過 | clientの通信中guard・disabledと、server lock内のfailed状態・上限検証を追加 | Codex再レビュー後に修正・unit / E2E済み |
 
 ## 証跡・検証
 
@@ -61,4 +62,4 @@
 - test / trace / 手動確認: Python unit/API fake、client unit、mock E2E 25件、React production build、Strict Structured Outputsの全Agent送信前schema検証を実行。実API・実ユーザー入力・実画像は使っていない。
 - 失敗分類の根拠: OpenAI公式の[Error codes](https://developers.openai.com/api/docs/guides/error-codes#api-errors)に従い、HTTP 429では`error.code`/`error.type`を用いて利用枠・請求上限と一時的なリクエスト制限を分離する。
 - 取得できなかった証跡と理由: 既に失敗した実API Jobのprovider原文は、旧実装が記録していないため復元不能。新実装は以後の失敗を安全な分類で記録する。実APIの個別原因と実利用時の利用上限・権限は、API keyを使う明示的な手動確認が必要。
-- 追加修正の確認済み自動検証: Python 89件、client 61件、mock Chromium E2E 27件。新規失敗の段階・HTTP状態・allowlist済みproviderコード、旧履歴の再試行抑止、安全なコピーとClipboard失敗時の手動コピー、分類優先順位、再試行上限、狭幅・文字拡大を含む。実APIは未使用。
+- 追加修正の確認済み自動検証: Python 91件、client 62件、mock Chromium E2E 28件。新規失敗の段階・HTTP状態・allowlist済みproviderコード、旧履歴の再試行抑止、安全なコピーとClipboard失敗時の手動コピー、分類優先順位、再試行上限・同時送信防止、狭幅・文字拡大を含む。実APIは未使用。

@@ -17,6 +17,7 @@ interface JobsPanelProps {
   onRefresh: () => void;
   onCancel: (jobId: string) => void;
   onRetry: (jobId: string) => void;
+  retryingJobIds?: ReadonlySet<string>;
   onOpenSettings: () => void;
 }
 
@@ -24,7 +25,14 @@ type JobFilter = "attention" | "all" | "processing" | "failed" | "cancelled" | "
 
 const completedPreviewLimit = 5;
 
-export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }: JobsPanelProps) {
+export function JobsPanel({
+  jobs,
+  onRefresh,
+  onCancel,
+  onRetry,
+  onOpenSettings,
+  retryingJobIds = new Set()
+}: JobsPanelProps) {
   const [filter, setFilter] = useState<JobFilter>("attention");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
@@ -106,6 +114,7 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }
             : null;
           const status = jobStatusDetails(job.status, failure);
           const expanded = expandedJobId === job.id;
+          const retrying = retryingJobIds.has(job.id);
           const detailsId = `job-details-${job.id}`;
           const agentName = displayAgentName(job.agent_name);
           return (
@@ -239,9 +248,10 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }
                   <button
                     type="button"
                     className="tiny"
+                    disabled={retrying}
                     onClick={() => onRetry(job.id)}
                   >
-                    <RotateCcw size={14} /> 再試行する
+                    <RotateCcw size={14} /> {retrying ? "再試行中" : "再試行する"}
                   </button>
                 )}
               </div>

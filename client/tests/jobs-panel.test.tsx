@@ -166,6 +166,23 @@ describe("JobsPanel status feedback", () => {
     expect(screen.getByRole("button", { name: "AI処理の状態を更新" })).toBeInTheDocument();
   });
 
+  it("再試行リクエスト中はボタンを無効化する", () => {
+    render(
+      <JobsPanel
+        jobs={[
+          createJob("failed", { id: "retrying_job", failure_code: "network_unavailable" })
+        ]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
+        retryingJobIds={new Set(["retrying_job"])}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "再試行中" })).toBeDisabled();
+  });
+
   it("診断情報がない旧履歴では原因を復元できないと伝え、再試行を出さない", () => {
     render(
       <JobsPanel

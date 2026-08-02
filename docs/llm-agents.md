@@ -81,6 +81,8 @@ usageからinput tokens、cached input tokens、output tokens、reasoning tokens
 
 SSEが使えない環境でもReact clientは1秒pollingでJob状態を更新する。
 
+Jobの再試行はserverのJob Queueがロック内で現在状態を確認し、`failed`以外を拒否する。`structured_output_invalid`は同じJobにつき1回までとし、同時リクエストと上限超過をHTTP 409で拒否する。clientも再試行リクエスト中のJobを即時に無効化する。
+
 ## 実API手動検証
 
 CIではOpenAI実APIを呼ばない。納品前またはリリース前に、APIキーを設定した環境で次を確認する。

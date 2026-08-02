@@ -114,6 +114,34 @@ test("新しい失敗では安全な診断情報と正しい再試行判断を�
   }
 });
 
+test("再試行のダブルクリックで同じJobを重複送信しない", async ({ page }) => {
+  let retryRequests = 0;
+  const failedJob = {
+    ...job("job_double_retry", "failed", "PromptDoctorAgent"),
+    failure_code: "network_unavailable",
+    failure_stage: "request"
+  };
+  await page.route("**/api/jobs", async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({ jobs: [failedJob] }) });
+  });
+  await page.route("**/api/jobs/job_double_retry/retry", async (route) => {
+    retryRequests += 1;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ job: { ...failedJob, status: "queued", retry_count: 1 } })
+    });
+  });
+
+  await page.goto("/");
+  const retryButton = page.getByRole("article", { name: /Prompt Doctorの確認 失敗/ })
+    .getByRole("button", { name: "再試行する" });
+  await retryButton.dblclick();
+  await expect(page.getByRole("button", { name: "再試行中" })).toBeDisabled();
+  await page.waitForTimeout(500);
+  expect(retryRequests).toBe(1);
+});
+
 function job(id: string, status: "queued" | "running" | "succeeded" | "failed" | "cancelled", agentName = "VocabularyAgent") {
   return {
     id,
