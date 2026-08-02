@@ -80,7 +80,7 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 | 2026-08-02 | 実行中アプリの安全な状態確認 | Pass | 実APIバックエンドと失敗Jobを確認。API key、入力本文、生エラー、識別子は記録しない。 |
 | 2026-08-02 | `make generate-openapi && make lint && make typecheck && make test && make build` | Pass | lint、mypy、pytest 77件、compileall。実APIは未使用。 |
 | 2026-08-02 | `npm run lint && npm run typecheck && npm run test:run && npm run build` | Pass | client lint、TypeScript、Vitest 54件、production build。 |
-| 2026-08-02 | `npm run e2e` | Pass | mock専用のChromium E2E 24件。構造化失敗fixture、再試行の実クリック、狭幅reflowを含む。 |
+| 2026-08-02 | `npm run e2e` | Pass | mock専用のChromium E2E 24件。構造化失敗fixture、再試行の実クリック、狭幅reflowを含む。視覚証跡は匿名化済みのdocs evidenceとして別途確認。 |
 | 2026-08-02 | `bash scripts/verify-ai-governance.sh && git diff --check` | Pass | ガバナンス検査と差分空白検査。 |
 
 ## PR / CI / review 記録

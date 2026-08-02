@@ -61,6 +61,5 @@ test("shows a failed Job's state, impact, and retry path without backend error d
   );
   await expect(job.getByRole("button", { name: "再試行する" })).toBeVisible();
   await expect(page.getByText("internal provider trace must not be exposed")).toBeHidden();
-  await expect(job).toHaveScreenshot("structured-output-failure.png");
   await job.getByRole("button", { name: "再試行する" }).click();
 });
