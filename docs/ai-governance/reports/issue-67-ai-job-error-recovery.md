@@ -22,7 +22,7 @@
 | 利用枠・請求上限 | 原因、未適用、OpenAI Platformでの利用枠・請求状態確認、再試行 | 待機だけでは回復しない | 利用枠または請求状態を確認する | 更新後に同じJobを明示再試行 | `role=status`、native button | provider fake / client test | Pass |
 | 一時的なリクエスト制限・実API一時障害 | 原因、未適用、待機案内。再試行ボタンは出さない | 直ちに繰り返すべきではない | 少し待つ | 元操作を再実行 | visible copy、ボタン不在 | client test | Pass |
 | ネットワーク | 原因、未適用、ネットワーク確認と再試行 | 接続を確認してから復帰する | 再試行する | 入力を保持 | `role=status`、native button | unit / E2E fixture | Pass |
-| 応答保存・構造化schema・構造化応答 | 原因、未適用、Privacy modeまたはアプリ更新の案内 | 接続テストだけでは判定できない失敗 | Settingsまたは更新後に再試行 | 入力を保持 | 詳細に原因 / 次にできること | provider fake / snapshot | Pass |
+| 応答保存・構造化schema・構造化応答 | 原因、未適用、Privacy modeまたはアプリ更新の案内 | 接続テストだけでは判定できない失敗 | Settingsまたは更新後に再試行 | 入力を保持 | 詳細に原因 / 次にできること | provider fake / semantic validation test | Pass |
 | 実APIリクエスト・未分類 | 安全な定型文、未適用、再試行またはSettings案内 | 生エラーを見せず安全に復帰する | 再試行する | 入力を保持 | DTOと画面にraw detailなし | unit / API test | Pass |
 | 既存の失敗履歴（codeなし） | 未分類の安全な案内 | 旧履歴でも復帰方法がある | 設定確認または再試行 | 新しい失敗は分類される | nullable code | client test | Pass |
 | 取消済み | 結果未適用、元操作の再実行案内 | AI処理を停止した | 元の操作へ戻る | 新規Job | visible copy | existing E2E | Pass |
@@ -44,6 +44,7 @@
 | P1 | 失敗Job card右端 | 固定「使い方」が再試行を覆い得た | 失敗から復帰できない | footerの安全領域を確保し、E2Eで再試行を実クリック | 修正済み |
 | P1 | HTTP 429の失敗分類 | 利用枠・請求上限を一時的なリクエスト制限と同じ待機案内にしていた | 待機してもAPI利用を回復できない | providerの安全な`error.code`/`error.type`で利用枠・請求上限を区別し、確認後の再試行を案内 | 修正済み |
 | P1 | RateLimitErrorの早期判定 | SDK例外名だけで一時的な制限へ分類し、利用枠・請求上限のcode/typeを読む前に戻っていた | 利用枠切れでも待機だけを案内する | RateLimitError形状でも安全なcode/typeを先に判定し、SDK例外名を再現したテストで固定 | 修正済み |
+| P1 | schema後の意味検証 | 要求モード不一致や文字数上限未達のschema-valid応答がValueErrorで汎用失敗に落ちていた | 構造化出力の問題なのに原因と復旧案内が不正確になる | 型付きの`structured_output_invalid`へ変換し、Job Queue・意味検証の回帰テストで固定 | 修正済み |
 
 ## 証跡・検証
 

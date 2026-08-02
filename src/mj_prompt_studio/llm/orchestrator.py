@@ -32,6 +32,13 @@ class LLMExecutionError(RuntimeError):
         super().__init__(failure_message(code))
 
 
+class LLMOutputValidationError(LLMExecutionError):
+    """A schema-valid agent response failed an application semantic check."""
+
+    def __init__(self) -> None:
+        super().__init__("structured_output_invalid")
+
+
 @dataclass(frozen=True)
 class ConnectionTestResult:
     ok: bool

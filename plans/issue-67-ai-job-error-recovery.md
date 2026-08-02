@@ -34,6 +34,7 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 - [x] docs、UI/UX state matrix、前後スクリーンショット、ローカル検証、PR/CI/reviewを完了する。
 - [x] Codex review P1: HTTP 429の利用枠・請求上限と一時的なレート制限を分離し、復旧操作を正しく案内する。
 - [x] Codex review P1（再指摘）: RateLimitError形状のHTTP 429でも、先に利用枠・請求上限を判定して復旧案内を選ぶ。
+- [x] Codex review P1（再指摘）: schemaに通った応答でも、アプリケーションの意味検証に失敗したら構造化出力の復旧案内へ分類する。
 
 ## 受け入れ条件
 
@@ -46,6 +47,7 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 - [x] 関連文書、UI/UXレビュー、前後スクリーンショット、Issue、Ready PR、CI、review threadsを完了する。
 - [x] HTTP 429のうち利用枠・請求上限は待機だけを案内せず、利用枠・請求状態の確認後に明示再試行する導線を出す。
 - [x] RateLimitError形状の利用枠・請求上限も、一時的なリクエスト制限へ誤分類しない。
+- [x] 要求モード、除外語句、文字数上限などのLLM出力意味検証失敗を、汎用失敗へ誤分類しない。
 
 ## 検証コマンド
 
@@ -91,16 +93,18 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 | 2026-08-03 | 別ポートの `npm run e2e` | Pass | mock専用のChromium E2E 25件。ユーザー起動中アプリやOS資格情報ストアの状態に依存しない。 |
 | 2026-08-03 | `make lint && make typecheck && make test && make client-lint && make client-typecheck && make client-test && make client-build && make generate-openapi && bash scripts/verify-ai-governance.sh && git diff --check` | Pass | ruff、mypy、pytest 86件、client lint/TypeScript/Vitest 54件、production build、OpenAPI生成、ガバナンス・空白検査。実APIは未使用。 |
 | 2026-08-03 | 別ポートの `make e2e` | Pass | mock専用のChromium E2E 25件。利用枠切れの復旧カードを含む。 |
+| 2026-08-03 | `make lint && make typecheck && make test` | Pass | ruff、mypy、pytest 88件。schemaに通るが意味検証に失敗する応答を、構造化出力の安全な復旧分類へ変換する回帰を含む。実APIは未使用。 |
+| 2026-08-03 | 別ポートの `make e2e` | Pass | mock専用のChromium E2E 25件。構造化出力・利用枠切れの復旧カードを含む。ユーザー起動中アプリには未干渉。 |
 
 ## PR / CI / review 記録
 
 - Branch: `codex/issue-67-ai-job-error-recovery`
-- Commit: `cc1f005`、`8bcaec1`、`153ca44`、review再修正はコミット前
+- Commit: `cc1f005`、`8bcaec1`、`153ca44`、`d1e5642`、review再修正はコミット前
 - PR: [#68](https://github.com/stillshore-chirp/mj_prompt_studio/pull/68) (Ready)
-- Push CI: `153ca44`まで成功。review再修正コミットのpush後に再監視
-- PR CI: `153ca44`まで成功。review再修正コミットのpush後に再監視
+- Push CI: `d1e5642`まで成功。review再修正コミットのpush後に再監視
+- PR CI: `d1e5642`まで成功。review再修正コミットのpush後に再監視
 - ローカル差分レビュー: Pass（P0 / P1 なし）
 - Codex review: 未実施（外部レビューなし）
 - Codex review: P1再指摘を修正し、再レビュー依頼前
 - 未解決 review thread: 1（修正コミット後に返信・解決予定）
-- レビュー往復回数: 2
+- レビュー往復回数: 3

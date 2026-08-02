@@ -15,6 +15,7 @@ from mj_prompt_studio.domain.prompt_workshop import (
 from mj_prompt_studio.domain.reference import ResultImage
 from mj_prompt_studio.infra.ruleset_loader import load_standard_ruleset
 from mj_prompt_studio.llm.mock_client import MockLLMResponse
+from mj_prompt_studio.llm.orchestrator import LLMOutputValidationError
 
 
 def _context(tmp_path: Path) -> AppContext:
@@ -129,7 +130,7 @@ def test_exclusions_block_creative_operations_but_not_length_adjustment(tmp_path
     try:
         context.set_prompt_exclusion_terms(["stone"])
 
-        with pytest.raises(ValueError, match="除外語句"):
+        with pytest.raises(LLMOutputValidationError) as exc_info:
             context.workshop_service.generate(
                 count=1,
                 chaos_level=1,
@@ -137,7 +138,9 @@ def test_exclusions_block_creative_operations_but_not_length_adjustment(tmp_path
                 guidance="",
                 deduplicate=True,
             )
-        with pytest.raises(ValueError, match="除外語句"):
+        assert exc_info.value.code == "structured_output_invalid"
+
+        with pytest.raises(LLMOutputValidationError) as exc_info:
             context.workshop_service.transform(
                 mode="worldbuilding",
                 source_prompt="paper and stone --ar 4:5",
@@ -145,6 +148,7 @@ def test_exclusions_block_creative_operations_but_not_length_adjustment(tmp_path
                 max_characters=None,
                 additional_guidance="",
             )
+        assert exc_info.value.code == "structured_output_invalid"
 
         adjusted = context.workshop_service.adjust_length(
             source_prompt="paper and stone --ar 4:5",
@@ -153,6 +157,57 @@ def test_exclusions_block_creative_operations_but_not_length_adjustment(tmp_path
         )
         assert "stone" in adjusted["prompt"]
         assert adjusted["exclusion_terms_applied"] is False
+    finally:
+        context.shutdown()
+
+
+def test_workshop_maps_schema_valid_semantic_output_failures_to_safe_code(tmp_path: Path) -> None:
+    class SemanticFailureMock:
+        def create_agent_response(
+            self, agent_name: str, _payload: dict[str, object]
+        ) -> MockLLMResponse:
+            if agent_name == "PromptTransformAgent":
+                return MockLLMResponse(
+                    output_json={
+                        "mode": "chaos_mix",
+                        "transformed_prompt": "paper sculpture",
+                        "preserved_anchors": [],
+                        "omitted_elements": [],
+                        "warnings": [],
+                    },
+                    response_id="mock_semantic_transform",
+                )
+            assert agent_name == "PromptLengthAdjustAgent"
+            return MockLLMResponse(
+                output_json={
+                    "adjusted_prompt": "this result remains longer than the configured hard limit",
+                    "preserved_terms": [],
+                    "warnings": [],
+                },
+                response_id="mock_semantic_length",
+            )
+
+    context = _context(tmp_path)
+    try:
+        context.orchestrator.mock_client = SemanticFailureMock()
+
+        with pytest.raises(LLMOutputValidationError) as exc_info:
+            context.workshop_service.transform(
+                mode="worldbuilding",
+                source_prompt="paper sculpture",
+                output_language="source",
+                max_characters=None,
+                additional_guidance="",
+            )
+        assert exc_info.value.code == "structured_output_invalid"
+
+        with pytest.raises(LLMOutputValidationError) as exc_info:
+            context.workshop_service.adjust_length(
+                source_prompt="paper",
+                length_ratio=1.0,
+                max_characters=5,
+            )
+        assert exc_info.value.code == "structured_output_invalid"
     finally:
         context.shutdown()
 

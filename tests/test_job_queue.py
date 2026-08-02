@@ -1,6 +1,7 @@
 from threading import Event
 
 from mj_prompt_studio.llm.job_queue import LLMJobQueue
+from mj_prompt_studio.llm.orchestrator import LLMOutputValidationError
 
 
 class _ProviderSchemaError(RuntimeError):
@@ -89,4 +90,25 @@ def test_job_queue_exposes_a_safe_failure_code_and_clears_it_before_retry() -> N
     assert job.status == "succeeded"
     assert job.failure_code is None
     assert job.error_message is None
+    queue.shutdown()
+
+
+def test_job_queue_maps_semantic_llm_output_validation_to_structured_recovery() -> None:
+    done = Event()
+    queue = LLMJobQueue(max_workers=1)
+
+    def work() -> dict[str, object]:
+        raise LLMOutputValidationError()
+
+    job = queue.submit(
+        agent_name="PromptTransformAgent",
+        input_snapshot={"mode": "worldbuilding"},
+        work=work,
+        callback=lambda _job: done.set(),
+    )
+
+    assert done.wait(3)
+    assert job.status == "failed"
+    assert job.failure_code == "structured_output_invalid"
+    assert job.error_message == "実APIの応答をこの操作に必要な形式として確認できませんでした。"
     queue.shutdown()
