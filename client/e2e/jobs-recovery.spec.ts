@@ -36,6 +36,82 @@ test("対応対象を先に表示し、キーボードで履歴と詳細を確�
   await expect(failedJob.getByText("現在のPrompt文書")).toBeVisible();
   await expect(failedJob.getByText("internal provider trace must not be shown")).toBeHidden();
   await expect(failedJob.getByRole("button", { name: "再試行する" })).toBeVisible();
+  await expect(failedJob.getByText("APIリクエスト")).toBeVisible();
+  await expect(failedJob.getByText("503")).toBeVisible();
+  await expect(failedJob.getByRole("button", { name: "診断情報をコピー" })).toBeVisible();
+});
+
+test("診断情報のない旧失敗では原因を復元できないと伝え、再試行を勧めない", async ({ page }) => {
+  await page.route("**/api/jobs", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        jobs: [
+          {
+            ...job("legacy_failed", "failed", "IntentIntakeAgent"),
+            failure_code: null,
+            failure_stage: null,
+            provider_status_code: null,
+            provider_error_code: null
+          }
+        ]
+      })
+    });
+  });
+
+  await page.goto("/");
+  const failedJob = page.getByLabel("AI処理").getByRole("article", { name: /AI Briefの構造化 失敗/ });
+  await expect(failedJob.getByText(/この履歴には原因を判定する診断情報がありません。/)).toBeVisible();
+  await expect(failedJob.getByRole("button", { name: "再試行する" })).toHaveCount(0);
+  await failedJob.getByRole("button", { name: "詳細を表示" }).click();
+  await expect(failedJob.getByText("記録なし（旧履歴）")).toBeVisible();
+  await expect(failedJob.getByText("この履歴からの再試行は推奨しません")).toBeVisible();
+  await expect(failedJob.getByRole("button", { name: "診断情報をコピー" })).toBeVisible();
+});
+
+test("新しい失敗では安全な診断情報と正しい再試行判断を確認できる", async ({ page }) => {
+  await page.route("**/api/jobs", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        jobs: [
+          {
+            ...job("safe_diagnostic_fixture", "failed", "IntentIntakeAgent"),
+            failure_code: "api_request_invalid",
+            failure_stage: "request",
+            provider_status_code: 404,
+            provider_error_code: "model_not_found"
+          }
+        ]
+      })
+    });
+  });
+
+  await page.setViewportSize({ width: 2048, height: 1100 });
+  await page.goto("/");
+  const failedJob = page.getByLabel("AI処理").getByRole("article", { name: /AI Briefの構造化 失敗/ });
+  await failedJob.getByRole("button", { name: "詳細を表示" }).click();
+  await expect(failedJob.getByText("APIリクエスト")).toBeVisible();
+  await expect(failedJob.getByText("404")).toBeVisible();
+  await expect(failedJob.getByText("model_not_found")).toBeVisible();
+  await expect(
+    failedJob.getByText("アプリが指定した固定実行モデルを利用できませんでした。", { exact: true })
+  ).toBeVisible();
+  await expect(failedJob.getByText(/アプリ側の実行設定が更新されるまで再試行しない/)).toBeVisible();
+  await expect(failedJob.getByRole("button", { name: "再試行する" })).toHaveCount(0);
+  if (process.env.MJPS_CAPTURE_EVIDENCE === "1") {
+    await page.screenshot({
+      path: "../docs/ai-governance/evidence/issue-67/after-safe-diagnostics.png",
+      fullPage: true
+    });
+    await page.locator(".job-list").evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await page.screenshot({
+      path: "../docs/ai-governance/evidence/issue-67/after-safe-diagnostics-recovery.png",
+      fullPage: true
+    });
+  }
 });
 
 function job(id: string, status: "queued" | "running" | "succeeded" | "failed" | "cancelled", agentName = "VocabularyAgent") {
@@ -50,8 +126,15 @@ function job(id: string, status: "queued" | "running" | "succeeded" | "failed" |
     output_json: status === "succeeded" ? {} : null,
     error_message: status === "failed" ? "internal provider trace must not be shown" : null,
     failure_code: status === "failed" ? "network_unavailable" : null,
+    failure_stage: status === "failed" ? "request" : null,
+    provider_status_code: status === "failed" ? 503 : null,
+    provider_error_code: status === "failed" ? "server_error" : null,
     created_at: "2026-08-01T00:00:00Z",
     finished_at: status === "queued" || status === "running" ? null : "2026-08-01T00:00:01Z",
-    retry_count: 0
+    retry_count: 0,
+    configured_mode: "real",
+    execution_backend: "openai",
+    api_key_configured: true,
+    response_id_kind: null
   };
 }

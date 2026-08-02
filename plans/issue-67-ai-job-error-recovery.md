@@ -27,6 +27,11 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 
 ## マイルストーン
 
+- [x] PR #68後の実画面で確認された診断不能状態を、追加PRで解消する。
+- [x] 新規失敗に安全な失敗段階・HTTP状態・allowlist済みproviderコードを保持し、診断情報の安全なコピー導線を追加する。
+- [x] 診断情報のない旧履歴では原因を復元できないことを明示し、根拠のない再試行導線を出さない。
+- [ ] 追加修正のbackend/client/E2E、前後UI証跡、Ready PR、CI、review threadsを完了する（ローカル検証・UI証跡は完了）。
+
 - [x] 既存のprovider境界、Job永続化、Jobs panel、テストと実行記録を棚卸しし、分類・DTO・UI状態を設計する。
 - [x] provider例外・構造化出力失敗を安全な失敗分類へ変換し、Jobへ再試行可否と回復情報を記録する。
 - [x] Jobs panelと失敗通知に原因・影響・復旧操作を実装し、アクセシビリティと入力保持を検証する。
@@ -95,6 +100,8 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 | 2026-08-03 | 別ポートの `make e2e` | Pass | mock専用のChromium E2E 25件。利用枠切れの復旧カードを含む。 |
 | 2026-08-03 | `make lint && make typecheck && make test` | Pass | ruff、mypy、pytest 88件。schemaに通るが意味検証に失敗する応答を、構造化出力の安全な復旧分類へ変換する回帰を含む。実APIは未使用。 |
 | 2026-08-03 | 別ポートの `make e2e` | Pass | mock専用のChromium E2E 25件。構造化出力・利用枠切れの復旧カードを含む。ユーザー起動中アプリには未干渉。 |
+| 2026-08-03 | `make generate-openapi && make lint && make typecheck && make test && make build && make client-lint && make client-typecheck && make client-test && make client-build && bash scripts/verify-ai-governance.sh && git diff --check` | Pass | Python 89件、client 59件、production build、OpenAPI、ガバナンス・空白検査。安全な診断field、旧履歴、copy fallbackを含む。実APIは未使用。 |
+| 2026-08-03 | 別ポートの `make e2e` | Pass | mock専用Chromium E2E 27件。旧履歴の再試行抑止、新規診断詳細、狭幅、文字拡大を含む。ユーザー起動中アプリには未干渉。 |
 
 ## PR / CI / review 記録
 

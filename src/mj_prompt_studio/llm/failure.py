@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Literal, cast
 
 LLMFailureCode = Literal[
@@ -17,6 +18,43 @@ LLMFailureCode = Literal[
     "structured_output_invalid",
     "unexpected",
 ]
+
+LLMFailureStage = Literal[
+    "execution_setup",
+    "request",
+    "response_validation",
+    "semantic_validation",
+    "unknown",
+]
+
+_FAILURE_STAGES: frozenset[str] = frozenset(
+    {"execution_setup", "request", "response_validation", "semantic_validation", "unknown"}
+)
+
+_SAFE_PROVIDER_ERROR_CODES: frozenset[str] = frozenset(
+    {
+        "credit_balance_exhausted",
+        "insufficient_quota",
+        "invalid_api_key",
+        "invalid_request_error",
+        "invalid_value",
+        "model_not_found",
+        "organization_spend_limit_exceeded",
+        "organization_usage_limit_exceeded",
+        "project_spend_limit_exceeded",
+        "rate_limit_exceeded",
+        "server_error",
+        "unsupported_parameter",
+    }
+)
+
+
+@dataclass(frozen=True)
+class LLMFailureDiagnostics:
+    code: LLMFailureCode
+    stage: LLMFailureStage
+    provider_status_code: int | None
+    provider_error_code: str | None
 
 _FAILURE_CODES: frozenset[str] = frozenset(
     {
@@ -95,6 +133,61 @@ def failure_code_for_exception(exc: Exception) -> LLMFailureCode:
             return "response_storage_rejected"
         return "api_request_invalid"
     return "unexpected"
+
+
+def failure_diagnostics_for_exception(exc: Exception) -> LLMFailureDiagnostics:
+    code = failure_code_for_exception(exc)
+    stage = _failure_stage_for_exception(exc, code)
+    status_code = _safe_provider_status_code(exc)
+    provider_code = _safe_provider_error_code(exc)
+    return LLMFailureDiagnostics(code, stage, status_code, provider_code)
+
+
+def _failure_stage_for_exception(
+    exc: Exception, code: LLMFailureCode
+) -> LLMFailureStage:
+    explicit_stage = getattr(exc, "failure_stage", None)
+    if isinstance(explicit_stage, str) and explicit_stage in _FAILURE_STAGES:
+        return cast(LLMFailureStage, explicit_stage)
+    if code in {"api_key_missing", "client_initialization_failed"}:
+        return "execution_setup"
+    if _safe_provider_status_code(exc) is not None or code.startswith("api_") or code in {
+        "rate_limited",
+        "network_unavailable",
+        "response_storage_rejected",
+        "structured_output_schema_invalid",
+    }:
+        return "request"
+    if code == "structured_output_invalid":
+        return "response_validation"
+    return "unknown"
+
+
+def _safe_provider_status_code(exc: Exception) -> int | None:
+    status_code = getattr(exc, "provider_status_code", None)
+    if status_code is None:
+        status_code = getattr(exc, "status_code", None)
+    if isinstance(status_code, int) and 400 <= status_code <= 599:
+        return status_code
+    return None
+
+
+def _safe_provider_error_code(exc: Exception) -> str | None:
+    candidates: list[Any] = [
+        getattr(exc, "provider_error_code", None),
+        getattr(exc, "code", None),
+    ]
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error")
+        if not isinstance(error, dict):
+            error = body
+        candidates.append(error.get("code"))
+    candidates.append(getattr(exc, "provider_code", None))
+    for value in candidates:
+        if isinstance(value, str) and value.lower() in _SAFE_PROVIDER_ERROR_CODES:
+            return value.lower()
+    return None
 
 
 def _provider_error_detail(exc: Exception) -> str:

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { JobsPanel } from "../src/features/jobs/JobsPanel";
 import type { LLMJob } from "../src/shared/types/api";
+import { formatSafeJobDiagnostics } from "../src/shared/utils/job-failure";
 
 function createJob(status: LLMJob["status"], overrides: Partial<LLMJob> = {}): LLMJob {
   return {
@@ -16,6 +17,9 @@ function createJob(status: LLMJob["status"], overrides: Partial<LLMJob> = {}): L
     output_json: status === "succeeded" ? {} : null,
     error_message: null,
     failure_code: null,
+    failure_stage: null,
+    provider_status_code: null,
+    provider_error_code: null,
     created_at: "2026-08-01T00:00:00Z",
     finished_at: null,
     retry_count: 0,
@@ -43,6 +47,9 @@ describe("JobsPanel", () => {
             output_json: {},
             error_message: null,
             failure_code: null,
+            failure_stage: null,
+            provider_status_code: null,
+            provider_error_code: null,
             created_at: "2026-08-01T00:00:00Z",
             finished_at: "2026-08-01T00:00:01Z",
             retry_count: 0,
@@ -90,6 +97,15 @@ describe("JobsPanel", () => {
 });
 
 describe("JobsPanel status feedback", () => {
+  it("allowlist外のproviderコードを診断情報へ転記しない", () => {
+    const diagnostics = formatSafeJobDiagnostics(
+      createJob("failed", { provider_error_code: "private-provider-detail" })
+    );
+
+    expect(diagnostics).toContain("Providerコード: 記録なし");
+    expect(diagnostics).not.toContain("private-provider-detail");
+  });
+
   it("distinguishes every Job state and explains the next recovery action", () => {
     render(
       <JobsPanel
@@ -131,7 +147,10 @@ describe("JobsPanel status feedback", () => {
     const onOpenSettings = vi.fn();
     render(
       <JobsPanel
-        jobs={[createJob("queued", { id: "queued_job" }), createJob("failed", { id: "failed_job" })]}
+        jobs={[
+          createJob("queued", { id: "queued_job" }),
+          createJob("failed", { id: "failed_job", failure_code: "network_unavailable" })
+        ]}
         onRefresh={vi.fn()}
         onCancel={onCancel}
         onRetry={onRetry}
@@ -145,6 +164,103 @@ describe("JobsPanel status feedback", () => {
     expect(onCancel).toHaveBeenCalledWith("queued_job");
     expect(onRetry).toHaveBeenCalledWith("failed_job");
     expect(screen.getByRole("button", { name: "AI処理の状態を更新" })).toBeInTheDocument();
+  });
+
+  it("診断情報がない旧履歴では原因を復元できないと伝え、再試行を出さない", () => {
+    render(
+      <JobsPanel
+        jobs={[createJob("failed", { id: "legacy_failure" })]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/この履歴には原因を判定する診断情報がありません。/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "再試行する" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "詳細を表示" }));
+    expect(screen.getByText("記録なし（旧履歴）")).toBeInTheDocument();
+    expect(screen.getByText("この履歴からの再試行は推奨しません")).toBeInTheDocument();
+  });
+
+  it("安全な診断情報だけをコピーし、生のerror・入力・識別子を含めない", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    render(
+      <JobsPanel
+        jobs={[
+          createJob("failed", {
+            id: "job_fixture_identifier",
+            input_snapshot: { brief: "SENSITIVE_FIXTURE_DO_NOT_COPY" },
+            error_message: "RAW_FIXTURE_DO_NOT_COPY",
+            failure_code: "api_quota_exhausted",
+            failure_stage: "request",
+            provider_status_code: 429,
+            provider_error_code: "insufficient_quota"
+          })
+        ]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "診断情報をコピー" }));
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const copied = writeText.mock.calls[0][0] as string;
+    expect(copied).toContain("失敗分類: api_quota_exhausted");
+    expect(copied).toContain("HTTP状態: 429");
+    expect(copied).toContain("Providerコード: insufficient_quota");
+    expect(copied).not.toContain("SENSITIVE_FIXTURE_DO_NOT_COPY");
+    expect(copied).not.toContain("RAW_FIXTURE_DO_NOT_COPY");
+    expect(copied).not.toContain("job_fixture_identifier");
+    expect(await screen.findByText(/安全な診断情報をコピーしました/)).toHaveAttribute("role", "status");
+  });
+
+  it("clipboardを使えない場合は安全な診断情報を手動コピーできる", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error("blocked")) }
+    });
+    render(
+      <JobsPanel
+        jobs={[createJob("failed", { failure_code: "unexpected", failure_stage: "unknown" })]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "診断情報をコピー" }));
+    expect((await screen.findByLabelText("手動コピー用の安全な診断情報") as HTMLTextAreaElement).value)
+      .toContain("失敗分類: unexpected");
+    expect(screen.queryByRole("button", { name: "再試行する" })).not.toBeInTheDocument();
+  });
+
+  it("固定モデルを利用できない失敗を設定問題や再試行可能として扱わない", () => {
+    render(
+      <JobsPanel
+        jobs={[
+          createJob("failed", {
+            failure_code: "api_request_invalid",
+            failure_stage: "request",
+            provider_status_code: 404,
+            provider_error_code: "model_not_found"
+          })
+        ]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/アプリが指定した固定実行モデルを利用できませんでした。/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "再試行する" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "設定を開く" })).not.toBeInTheDocument();
   });
 
   it("guides setting-related failures to Settings and avoids retry for a rate limit", () => {

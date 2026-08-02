@@ -81,6 +81,9 @@ def test_job_queue_exposes_a_safe_failure_code_and_clears_it_before_retry() -> N
     assert done.wait(3)
     assert job.status == "failed"
     assert job.failure_code == "structured_output_schema_invalid"
+    assert job.failure_stage == "request"
+    assert job.provider_status_code == 400
+    assert job.provider_error_code is None
     assert job.error_message == "この操作に必要な構造化形式を実APIが受け付けませんでした。"
     assert "provider diagnostic" not in str(job.to_dict())
 
@@ -89,6 +92,9 @@ def test_job_queue_exposes_a_safe_failure_code_and_clears_it_before_retry() -> N
     assert done.wait(3)
     assert job.status == "succeeded"
     assert job.failure_code is None
+    assert job.failure_stage is None
+    assert job.provider_status_code is None
+    assert job.provider_error_code is None
     assert job.error_message is None
     queue.shutdown()
 
@@ -110,5 +116,8 @@ def test_job_queue_maps_semantic_llm_output_validation_to_structured_recovery() 
     assert done.wait(3)
     assert job.status == "failed"
     assert job.failure_code == "structured_output_invalid"
+    assert job.failure_stage == "semantic_validation"
+    assert job.provider_status_code is None
+    assert job.provider_error_code is None
     assert job.error_message == "実APIの応答をこの操作に必要な形式として確認できませんでした。"
     queue.shutdown()

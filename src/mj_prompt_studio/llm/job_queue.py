@@ -9,7 +9,12 @@ from typing import Any, Literal
 
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY
 from mj_prompt_studio.domain.prompt_document import new_id, utc_now
-from mj_prompt_studio.llm.failure import LLMFailureCode, failure_code_for_exception, failure_message
+from mj_prompt_studio.llm.failure import (
+    LLMFailureCode,
+    LLMFailureStage,
+    failure_diagnostics_for_exception,
+    failure_message,
+)
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 ExecutionBackend = Literal["openai", "mock", "unavailable"]
@@ -30,6 +35,9 @@ class LLMJob:
     output_json: dict[str, Any] | None = None
     error_message: str | None = None
     failure_code: LLMFailureCode | None = None
+    failure_stage: LLMFailureStage | None = None
+    provider_status_code: int | None = None
+    provider_error_code: str | None = None
     created_at: datetime = field(default_factory=utc_now)
     finished_at: datetime | None = None
     retry_count: int = 0
@@ -102,6 +110,9 @@ class LLMJobQueue:
         job.status = "queued"
         job.error_message = None
         job.failure_code = None
+        job.failure_stage = None
+        job.provider_status_code = None
+        job.provider_error_code = None
         job.finished_at = None
         job.response_id_kind = None
         future = self._executor.submit(self._run, job.id, work)
@@ -154,7 +165,11 @@ class LLMJobQueue:
         except Exception as exc:  # pragma: no cover - exercised by tests via behavior
             if job.status != "cancelled":
                 job.status = "failed"
-                job.failure_code = failure_code_for_exception(exc)
+                diagnostics = failure_diagnostics_for_exception(exc)
+                job.failure_code = diagnostics.code
+                job.failure_stage = diagnostics.stage
+                job.provider_status_code = diagnostics.provider_status_code
+                job.provider_error_code = diagnostics.provider_error_code
                 job.error_message = failure_message(job.failure_code)
         job.finished_at = utc_now()
         self._notify(job)

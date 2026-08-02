@@ -335,7 +335,7 @@ export function App() {
         ) {
           setAutoSuggestion({ ...autoSuggestionRequest, status: "failed" });
         }
-        setStatus(jobFailureStatus(job.agent_name, job.failure_code));
+        setStatus(jobFailureStatus(job));
       }
       if (job.status === "cancelled" && !handledJobs.current.has(job.id)) {
         handledJobs.current.add(job.id);
@@ -1465,11 +1465,11 @@ function toStatusMessage(status: StatusMessage | string): StatusMessage {
   return typeof status === "string" ? { kind: "success", message: status } : status;
 }
 
-function jobFailureStatus(agentName: string, failureCode: LLMJob["failure_code"]): StatusMessage {
-  const failure = displayJobFailure(failureCode);
+function jobFailureStatus(job: LLMJob): StatusMessage {
+  const failure = displayJobFailure(job.failure_code, job.provider_error_code);
   return {
     kind: "error",
-    message: `${displayAgentName(agentName)}を完了できませんでした。${failure.summary}結果は適用されていません。${failure.recovery}`,
+    message: `${displayAgentName(job.agent_name)}を完了できませんでした。${failure.summary}結果は適用されていません。${failure.recovery}`,
     recoveryAction: failure.requiresSettings ? "settings" : undefined
   };
 }
