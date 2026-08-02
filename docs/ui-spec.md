@@ -105,7 +105,7 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 
 初見導線:
 
-- 「AI支援の設定を確認する」目的と、API keyがなくてもMock LLMで画面の流れを試せることを示す。プロンプト作成の必須前提には見せない。
+- 「AI支援の設定を確認する」目的と、API key未設定時はAI実行を開始せずSettingsで設定・復旧できることを示す。MockLLMは明示的な開発用モードであり、通常状態として見せない。プロンプト作成の必須前提には見せない。
 
 表示:
 
@@ -116,10 +116,11 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 - Text output policy: 構造化オプションを全テキストPrompt出力へ付与するかを切り替える。OFFでもParameterとJSON snapshotは保持する。
 - Prompt除外語句: 追加、1行ずつの一括編集、個別削除、確認付き全消去。創作系操作だけへ適用範囲を明示する。
 - AI execution profile: `GPT-5.6 Luna`、`High`、`Low` を読み取り専用表示。
+- 実行状態: 設定モード、実行バックエンド（実API / 明示的Mock / 利用不可）、キー設定有無、資格情報ストアの安全な状態、接続テストの安全な結果を表示する。Mockの接続テストは成功として表示しない。
 - Feature vocabulary preferences: Agentごとの語彙量だけを編集・保存。
 - Ruleset display_name。
 - connection test。
 
-モデルと推論強度のselectは表示しない。下部Jobsには新規Jobのモデル、推論強度、応答詳細を表示する。
+モデルと推論強度のselectは表示しない。下部Jobsには新規Jobの実行バックエンドと安全な応答ID種別を表示する。明示的Mockまたは利用不可のJobを実APIモデルで実行済みのように表示しない。
 
 UIではRulesetの内部IDと特定のMidjourneyモデルバージョン番号を表示しない。

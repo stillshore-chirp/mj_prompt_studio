@@ -131,6 +131,7 @@ class LLMContext:
     text_verbosity: str = LLM_EXECUTION_POLICY.text_verbosity
     user_vocab_snapshot_id: str | None = None
     project_style_profile_id: str | None = None
+    execution_backend: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> LLMContext:
@@ -142,6 +143,7 @@ class LLMContext:
             text_verbosity=str(data.get("text_verbosity") or ""),
             user_vocab_snapshot_id=_optional_string(data.get("user_vocab_snapshot_id")),
             project_style_profile_id=_optional_string(data.get("project_style_profile_id")),
+            execution_backend=_optional_string(data.get("execution_backend")),
         )
 
 

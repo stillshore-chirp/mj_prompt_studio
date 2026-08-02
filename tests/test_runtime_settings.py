@@ -27,6 +27,15 @@ def test_load_runtime_settings_uses_real_mode_when_terminal_api_key_exists(
     assert read_openai_api_key_from_environment() == "test-key"
 
 
+def test_load_runtime_settings_uses_real_mode_without_an_environment_key(monkeypatch) -> None:
+    for name in ("OPENAI_API_KEY", "OPENAI_KEY", "MJPS_OPENAI_API_KEY", "MJPS_LLM_MODE"):
+        monkeypatch.delenv(name, raising=False)
+
+    settings = load_runtime_settings()
+
+    assert settings.llm_mode == "real"
+
+
 def test_explicit_mock_mode_overrides_terminal_api_key(monkeypatch) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     monkeypatch.setenv("MJPS_LLM_MODE", "mock")
@@ -59,6 +68,26 @@ def test_secret_store_can_read_keyring_without_environment_fallback(monkeypatch)
     )
 
     assert SecretStore().read_openai_api_key_from_keyring() == "stored-key"
+
+
+def test_secret_store_reports_a_keyring_failure_without_returning_a_secret(monkeypatch) -> None:
+    class FailingKeyring:
+        @staticmethod
+        def get_password(service: str, account: str) -> str:
+            raise RuntimeError("credential store unavailable")
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_KEY", raising=False)
+    monkeypatch.delenv("MJPS_OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "mj_prompt_studio.infra.secret_store._load_keyring", lambda: FailingKeyring
+    )
+
+    resolution = SecretStore().resolve_openai_api_key()
+
+    assert resolution.value is None
+    assert resolution.source == "not_configured"
+    assert resolution.credential_store_status == "unavailable"
 
 
 def test_project_declares_keyring_for_supported_credential_store() -> None:

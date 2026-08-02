@@ -18,7 +18,11 @@ function createJob(status: LLMJob["status"], overrides: Partial<LLMJob> = {}): L
     created_at: "2026-08-01T00:00:00Z",
     finished_at: null,
     retry_count: 0,
-    ...overrides
+    ...overrides,
+    configured_mode: overrides.configured_mode ?? "real",
+    execution_backend: overrides.execution_backend ?? "openai",
+    api_key_configured: overrides.api_key_configured ?? true,
+    response_id_kind: overrides.response_id_kind ?? (status === "succeeded" ? "openai" : null)
   };
 }
 
@@ -39,7 +43,11 @@ describe("JobsPanel", () => {
             error_message: null,
             created_at: "2026-08-01T00:00:00Z",
             finished_at: "2026-08-01T00:00:01Z",
-            retry_count: 0
+            retry_count: 0,
+            configured_mode: "real",
+            execution_backend: "openai",
+            api_key_configured: true,
+            response_id_kind: "openai"
           }
         ]}
         onRefresh={vi.fn()}
@@ -51,6 +59,29 @@ describe("JobsPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "完了 1" }));
     fireEvent.click(screen.getByRole("button", { name: "詳細を表示" }));
     expect(screen.getByText("GPT-5.6 Luna・高い推論・簡潔な応答")).toBeInTheDocument();
+    expect(screen.getByText("OpenAI Responses API")).toBeInTheDocument();
+    expect(screen.getByText("実API")).toBeInTheDocument();
+    expect(screen.getByText("設定済み")).toBeInTheDocument();
+    expect(screen.getByText("実APIの応答を確認")).toBeInTheDocument();
+  });
+
+  it("does not display a real model as used for an explicit Mock job", () => {
+    render(
+      <JobsPanel
+        jobs={[createJob("succeeded", { execution_backend: "mock", configured_mode: "mock", response_id_kind: "mock" })]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "完了 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "詳細を表示" }));
+    expect(screen.getByText("Mock（外部APIは実行していません）")).toBeInTheDocument();
+    expect(screen.getByText("明示的Mock")).toBeInTheDocument();
+    expect(screen.getByText("設定済み")).toBeInTheDocument();
+    expect(screen.getByText("実モデルは呼び出していません")).toBeInTheDocument();
+    expect(screen.queryByText("GPT-5.6 Luna・高い推論・簡潔な応答")).not.toBeInTheDocument();
   });
 });
 

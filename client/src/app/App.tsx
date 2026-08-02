@@ -87,6 +87,7 @@ type StatusKind = "progress" | "success" | "error" | "neutral";
 interface StatusMessage {
   kind: StatusKind;
   message: string;
+  recoveryAction?: "settings";
 }
 
 const tabs: { id: TabId; label: string; shortLabel: string; featureName: string; icon: ReactNode }[] = [
@@ -882,7 +883,7 @@ export function App() {
                 ? "Connection OK"
                 : { kind: "error", message: "実APIへの接続を確認できませんでした。API keyとネットワークを確認して再試行してください。" }
             );
-            return response.ok;
+            return { ok: response.ok, errorCode: response.error_code };
           } catch (error) {
             setStatus(errorToMessage(error));
             throw error;
@@ -1149,9 +1150,14 @@ export function App() {
       )}
 
       <footer className="bottom-panel">
-        <p className={`app-status is-${statusMessage.kind}`} role="status" aria-live="polite">
-          {statusMessage.message}
-        </p>
+        <div className={`app-status is-${statusMessage.kind}`} role="status" aria-live="polite">
+          <span>{statusMessage.message}</span>
+          {statusMessage.recoveryAction === "settings" && (
+            <button type="button" className="tiny secondary" onClick={() => requestNavigation({ kind: "tab", tab: "settings" })}>
+              設定を開く
+            </button>
+          )}
+        </div>
         <JobsPanel
           jobs={jobs}
           onRefresh={() => refreshJobs().catch((error: unknown) => setStatus(errorToMessage(error)))}
@@ -1471,6 +1477,13 @@ function errorToMessage(error: unknown): StatusMessage {
       };
     }
     if (clientError.status === 409) {
+      if (clientError.code === "api_key_missing" || clientError.code === "client_initialization_failed") {
+        return {
+          kind: "error",
+          message: clientError.message,
+          recoveryAction: "settings"
+        };
+      }
       return {
         kind: "error",
         message: "現在の状態では操作を完了できません。画面を更新して内容を確認してから、再試行してください。"
@@ -1489,7 +1502,7 @@ function errorToMessage(error: unknown): StatusMessage {
 
 function isApiClientError(
   error: unknown
-): error is Pick<ApiClientError, "kind" | "status"> {
+): error is Pick<ApiClientError, "kind" | "status" | "code" | "message"> {
   return (
     error instanceof ApiClientError ||
     (typeof error === "object" &&

@@ -414,6 +414,7 @@ def _record_llm_context(document: PromptDocument, result: AgentResult) -> None:
     document.llm_context.model = result.model
     document.llm_context.reasoning_effort = result.reasoning_effort
     document.llm_context.text_verbosity = result.text_verbosity
+    document.llm_context.execution_backend = result.execution_backend
 
 
 def _blocks_from_llm(data: Any) -> PromptBlocks:

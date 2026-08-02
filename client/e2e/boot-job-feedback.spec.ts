@@ -41,7 +41,11 @@ test("shows a failed Job's state, impact, and retry path without backend error d
             error_message: "internal provider trace must not be exposed",
             created_at: "2026-08-01T00:00:00Z",
             finished_at: "2026-08-01T00:00:01Z",
-            retry_count: 0
+            retry_count: 0,
+            configured_mode: "real",
+            execution_backend: "openai",
+            api_key_configured: true,
+            response_id_kind: null
           }
         ]
       })

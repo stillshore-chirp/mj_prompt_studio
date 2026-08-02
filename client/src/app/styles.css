@@ -470,12 +470,20 @@ svg {
   margin: 0;
   align-items: center;
   color: var(--text-soft);
-  display: inline-flex;
+  display: flex;
   gap: 8px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+}
+
+.app-status > span {
+  min-width: 0;
+}
+
+.app-status button {
+  flex: 0 0 auto;
 }
 
 .app-status::before {

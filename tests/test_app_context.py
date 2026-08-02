@@ -1,3 +1,5 @@
+import pytest
+
 from mj_prompt_studio.app.app_context import AppContext
 from mj_prompt_studio.config import (
     LEGACY_LLM_FEATURE_PROFILES_SETTING_KEY,
@@ -5,7 +7,9 @@ from mj_prompt_studio.config import (
     LLMFeaturePreferences,
     RuntimeSettings,
 )
+from mj_prompt_studio.infra.secret_store import APIKeyResolution, SecretStore
 from mj_prompt_studio.infra.sqlite_repository import SQLiteRepository
+from mj_prompt_studio.llm.orchestrator import LLMExecutionError
 
 
 def _settings(tmp_path) -> RuntimeSettings:
@@ -90,4 +94,58 @@ def test_app_context_recovers_from_corrupted_persisted_preferences(tmp_path) -> 
         ).vocabulary_amount
         == "standard"
     )
+    context.shutdown()
+
+
+def test_app_context_uses_a_stored_key_during_startup_before_selecting_backend(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        SecretStore,
+        "resolve_openai_api_key",
+        lambda self: APIKeyResolution("stored-key", "credential_store", "available"),
+    )
+
+    context = AppContext(
+        RuntimeSettings(data_dir=tmp_path, llm_mode="real", response_storage="normal")
+    )
+
+    assert context.orchestrator.execution_backend == "openai"
+    assert context.api_key_source == "credential_store"
+    assert context.credential_store_status == "available"
+    context.shutdown()
+
+
+def test_app_context_requires_an_api_key_in_normal_mode_before_creating_jobs(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        SecretStore,
+        "resolve_openai_api_key",
+        lambda self: APIKeyResolution(None, "not_configured", "not_configured"),
+    )
+    context = AppContext(
+        RuntimeSettings(data_dir=tmp_path, llm_mode="real", response_storage="normal")
+    )
+
+    assert context.orchestrator.execution_backend == "unavailable"
+    with pytest.raises(LLMExecutionError, match="API key") as exc_info:
+        context.submit_agent_job("VocabularyAgent", {}, lambda: {})
+    assert exc_info.value.code == "api_key_missing"
+    assert context.job_queue.list_jobs() == []
+    context.shutdown()
+
+
+def test_app_context_keeps_explicit_mock_mode_when_a_key_is_present(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        SecretStore,
+        "resolve_openai_api_key",
+        lambda self: APIKeyResolution("stored-key", "credential_store", "available"),
+    )
+    context = AppContext(
+        RuntimeSettings(data_dir=tmp_path, llm_mode="mock", response_storage="normal")
+    )
+
+    assert context.orchestrator.execution_backend == "mock"
+    assert context.orchestrator.api_key == "stored-key"
     context.shutdown()

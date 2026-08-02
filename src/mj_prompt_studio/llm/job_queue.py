@@ -11,6 +11,8 @@ from mj_prompt_studio.config import LLM_EXECUTION_POLICY
 from mj_prompt_studio.domain.prompt_document import new_id, utc_now
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
+ExecutionBackend = Literal["openai", "mock", "unavailable"]
+ResponseIDKind = Literal["openai", "mock"]
 JobCallable = Callable[[], dict[str, Any]]
 JobCallback = Callable[["LLMJob"], None]
 
@@ -29,6 +31,10 @@ class LLMJob:
     created_at: datetime = field(default_factory=utc_now)
     finished_at: datetime | None = None
     retry_count: int = 0
+    configured_mode: str = "real"
+    execution_backend: ExecutionBackend = "unavailable"
+    api_key_configured: bool = False
+    response_id_kind: ResponseIDKind | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -54,6 +60,9 @@ class LLMJobQueue:
         input_snapshot: dict[str, Any],
         work: JobCallable,
         callback: JobCallback | None = None,
+        configured_mode: str = "real",
+        execution_backend: ExecutionBackend = "unavailable",
+        api_key_configured: bool = False,
     ) -> LLMJob:
         job = LLMJob(
             id=new_id("job"),
@@ -63,6 +72,9 @@ class LLMJobQueue:
             text_verbosity=LLM_EXECUTION_POLICY.text_verbosity,
             status="queued",
             input_snapshot=input_snapshot,
+            configured_mode=configured_mode,
+            execution_backend=execution_backend,
+            api_key_configured=api_key_configured,
         )
         with self._lock:
             self._jobs[job.id] = job
@@ -88,6 +100,7 @@ class LLMJobQueue:
         job.status = "queued"
         job.error_message = None
         job.finished_at = None
+        job.response_id_kind = None
         future = self._executor.submit(self._run, job.id, work)
         future.add_done_callback(lambda completed: self._complete(job.id, completed))
         with self._lock:
@@ -134,6 +147,7 @@ class LLMJobQueue:
         try:
             job.output_json = future.result()
             job.status = "succeeded"
+            job.response_id_kind = _response_id_kind_for_backend(job.execution_backend)
         except Exception as exc:  # pragma: no cover - exercised by tests via behavior
             if job.status != "cancelled":
                 job.status = "failed"
@@ -152,3 +166,11 @@ class LLMJobQueue:
 def _safe_error_message(exc: Exception) -> str:
     message = str(exc)
     return message.replace("OPENAI_API_KEY", "API key")
+
+
+def _response_id_kind_for_backend(backend: ExecutionBackend) -> ResponseIDKind | None:
+    if backend == "openai":
+        return "openai"
+    if backend == "mock":
+        return "mock"
+    return None

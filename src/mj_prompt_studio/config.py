@@ -10,6 +10,7 @@ from typing import Any
 APP_NAME = "MJ Prompt Studio"
 ENV_PREFIX = "MJPS_"
 OPENAI_API_KEY_ENV_NAMES = ("OPENAI_API_KEY", "OPENAI_KEY", f"{ENV_PREFIX}OPENAI_API_KEY")
+LLM_MODES = ("real", "mock")
 LLM_FEATURE_PREFERENCES_SETTING_KEY = "llm_feature_preferences"
 LEGACY_LLM_FEATURE_PROFILES_SETTING_KEY = "llm_feature_profiles"
 LEGACY_MODEL_ENV_NAMES = (
@@ -145,10 +146,10 @@ def default_data_dir() -> Path:
 
 def load_runtime_settings() -> RuntimeSettings:
     _warn_about_legacy_model_environment()
-    configured_llm_mode = os.environ.get(f"{ENV_PREFIX}LLM_MODE")
+    configured_llm_mode = os.environ.get(f"{ENV_PREFIX}LLM_MODE", "")
     return RuntimeSettings(
         data_dir=default_data_dir(),
-        llm_mode=(configured_llm_mode or _default_llm_mode()).lower(),
+        llm_mode=_configured_llm_mode(configured_llm_mode),
         response_storage=os.environ.get(f"{ENV_PREFIX}RESPONSE_STORAGE", "normal").lower(),
         max_parallel_jobs=int(os.environ.get(f"{ENV_PREFIX}MAX_PARALLEL_JOBS", "3")),
         timeout_seconds=int(os.environ.get(f"{ENV_PREFIX}TIMEOUT_SECONDS", "120")),
@@ -165,7 +166,22 @@ def read_openai_api_key_from_environment() -> str | None:
 
 
 def _default_llm_mode() -> str:
-    return "real" if read_openai_api_key_from_environment() else "mock"
+    return "real"
+
+
+def _configured_llm_mode(value: str) -> str:
+    normalized = value.strip().lower()
+    if not normalized:
+        return _default_llm_mode()
+    if normalized in LLM_MODES:
+        return normalized
+    warnings.warn(
+        f"Unsupported {ENV_PREFIX}LLM_MODE={value!r}; using real mode. "
+        "Use 'mock' only for an explicit test or demo run.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
+    return _default_llm_mode()
 
 
 def default_feature_preferences() -> dict[str, LLMFeaturePreferences]:

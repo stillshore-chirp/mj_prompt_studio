@@ -7,10 +7,12 @@ from mj_prompt_studio.llm.openai_client import OpenAIResponse, TokenUsage
 from mj_prompt_studio.llm.orchestrator import LLMOrchestrator
 
 
-def _settings(tmp_path: Path, response_storage: str = "normal") -> RuntimeSettings:
+def _settings(
+    tmp_path: Path, response_storage: str = "normal", llm_mode: str = "mock"
+) -> RuntimeSettings:
     return RuntimeSettings(
         data_dir=tmp_path,
-        llm_mode="mock",
+        llm_mode=llm_mode,
         response_storage=response_storage,
     )
 
@@ -65,7 +67,7 @@ class _CapturingResponsesClient:
 
 
 def test_orchestrator_preserves_images_and_normal_continuation(tmp_path: Path) -> None:
-    orchestrator = LLMOrchestrator(_settings(tmp_path))
+    orchestrator = LLMOrchestrator(_settings(tmp_path, llm_mode="real"))
     client = _CapturingResponsesClient()
     orchestrator.real_client = client
     image_path = tmp_path / "reference.png"
@@ -88,7 +90,9 @@ def test_orchestrator_preserves_images_and_normal_continuation(tmp_path: Path) -
 
 
 def test_privacy_mode_always_removes_continuation_id(tmp_path: Path) -> None:
-    orchestrator = LLMOrchestrator(_settings(tmp_path, response_storage="privacy"))
+    orchestrator = LLMOrchestrator(
+        _settings(tmp_path, response_storage="privacy", llm_mode="real")
+    )
     client = _CapturingResponsesClient()
     orchestrator.real_client = client
 

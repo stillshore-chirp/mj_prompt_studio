@@ -8,18 +8,18 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from mj_prompt_studio.config import RuntimeSettings
-from mj_prompt_studio.infra.secret_store import SecretStore
+from mj_prompt_studio.infra.secret_store import APIKeyResolution, SecretStore
 from mj_prompt_studio.server.app_state import create_state
 from mj_prompt_studio.server.main import LOCAL_API_REQUEST_HEADER, create_app
 
 LOCAL_API_HEADERS = {LOCAL_API_REQUEST_HEADER: "1"}
 
 
-def _client(tmp_path: Path) -> TestClient:
+def _client(tmp_path: Path, llm_mode: str = "mock") -> TestClient:
     state = create_state(
         RuntimeSettings(
             data_dir=tmp_path,
-            llm_mode="mock",
+            llm_mode=llm_mode,
             response_storage="normal",
         )
     )
@@ -70,6 +70,8 @@ def test_workspace_compile_and_agent_job_use_real_services(tmp_path: Path) -> No
         assert job["model"] == "gpt-5.6-luna"
         assert job["reasoning_effort"] == "high"
         assert job["text_verbosity"] == "low"
+        assert job["execution_backend"] == "mock"
+        assert job["response_id_kind"] == "mock"
         assert "document" in job["output_json"]
 
 
@@ -182,11 +184,11 @@ def test_load_persisted_api_key_applies_without_returning_secret(
 ) -> None:
     monkeypatch.setattr(
         SecretStore,
-        "read_openai_api_key_from_keyring",
-        lambda self: "stored-key",
+        "resolve_openai_api_key_from_keyring",
+        lambda self: APIKeyResolution("stored-key", "credential_store", "available"),
     )
 
-    with _client(tmp_path) as client:
+    with _client(tmp_path, llm_mode="real") as client:
         response = client.post(
             "/api/settings/load-persisted-api-key", headers=LOCAL_API_HEADERS
         )
@@ -194,6 +196,7 @@ def test_load_persisted_api_key_applies_without_returning_secret(
         assert response.status_code == 200
         assert response.json()["loaded"] is True
         assert response.json()["settings"]["llm_mode"] == "real"
+        assert response.json()["settings"]["execution_backend"] == "openai"
         assert response.json()["settings"]["api_key_configured"] is True
         assert "stored-key" not in response.text
         assert "api_key" not in response.json()["settings"]
@@ -204,18 +207,19 @@ def test_load_persisted_api_key_keeps_session_unchanged_when_missing(
 ) -> None:
     monkeypatch.setattr(
         SecretStore,
-        "read_openai_api_key_from_keyring",
-        lambda self: None,
+        "resolve_openai_api_key_from_keyring",
+        lambda self: APIKeyResolution(None, "not_configured", "not_configured"),
     )
 
-    with _client(tmp_path) as client:
+    with _client(tmp_path, llm_mode="real") as client:
         response = client.post(
             "/api/settings/load-persisted-api-key", headers=LOCAL_API_HEADERS
         )
 
         assert response.status_code == 200
         assert response.json()["loaded"] is False
-        assert response.json()["settings"]["llm_mode"] == "mock"
+        assert response.json()["settings"]["llm_mode"] == "real"
+        assert response.json()["settings"]["execution_backend"] == "unavailable"
         assert response.json()["settings"]["api_key_configured"] is False
 
 
@@ -224,8 +228,8 @@ def test_load_persisted_api_key_rejects_a_form_like_request_without_local_header
 ) -> None:
     monkeypatch.setattr(
         SecretStore,
-        "read_openai_api_key_from_keyring",
-        lambda self: "stored-key",
+        "resolve_openai_api_key_from_keyring",
+        lambda self: APIKeyResolution("stored-key", "credential_store", "available"),
     )
 
     with _client(tmp_path) as client:
@@ -238,10 +242,54 @@ def test_load_persisted_api_key_rejects_a_form_like_request_without_local_header
 def test_connection_test_requires_local_request_header(tmp_path: Path) -> None:
     with _client(tmp_path) as client:
         assert client.post("/api/settings/connection-test").status_code == 403
-        assert (
-            client.post("/api/settings/connection-test", headers=LOCAL_API_HEADERS).status_code
-            == 200
+        response = client.post("/api/settings/connection-test", headers=LOCAL_API_HEADERS)
+        assert response.status_code == 200
+        assert response.json() == {"ok": False, "error_code": "mock_mode"}
+
+
+def test_normal_mode_without_a_key_rejects_ai_jobs_and_reports_safe_backend_state(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        SecretStore,
+        "resolve_openai_api_key",
+        lambda self: APIKeyResolution(None, "not_configured", "not_configured"),
+    )
+
+    with _client(tmp_path, llm_mode="real") as client:
+        workspace = client.get("/api/workspace").json()
+        health = client.get("/api/health").json()
+        settings = client.get("/api/settings").json()["settings"]
+        response = client.post(
+            "/api/agents/intent-intake",
+            json={"document_id": workspace["document"]["id"], "brief": "safe fixture"},
         )
+
+        assert health["execution_backend"] == "unavailable"
+        assert "db_path" not in health
+        assert settings["configured_mode"] == "real"
+        assert settings["execution_backend"] == "unavailable"
+        assert settings["api_key_configured"] is False
+        assert response.status_code == 409
+        assert response.json()["detail"]["code"] == "api_key_missing"
+        assert "safe fixture" not in response.text
+        assert client.get("/api/jobs").json()["jobs"] == []
+
+
+def test_public_job_and_document_hide_raw_response_ids(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        workspace = client.get("/api/workspace").json()
+        created = client.post(
+            "/api/agents/intent-intake",
+            json={"document_id": workspace["document"]["id"], "brief": "generic fixture"},
+        ).json()["job"]
+        job = _wait_for_job(client, created["id"])
+        refreshed_workspace = client.get("/api/workspace").json()
+
+        assert job["response_id_kind"] == "mock"
+        assert "mock_" not in str(job)
+        assert refreshed_workspace["document"]["llm_context"]["latest_response_id"] is None
+        assert refreshed_workspace["document"]["llm_context"]["response_id_kind"] == "mock"
 
 
 def test_cors_preflight_allows_the_local_request_header(tmp_path: Path) -> None:

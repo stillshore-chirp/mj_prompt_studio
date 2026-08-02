@@ -8,7 +8,7 @@ interface AIInspectorProps {
   agentResult: JsonObject | null;
   executionProfile: Pick<
     RuntimeSettingsPublic,
-    "effective_model" | "effective_reasoning_effort" | "effective_text_verbosity"
+    "effective_model" | "effective_reasoning_effort" | "effective_text_verbosity" | "execution_backend"
   >;
 }
 
@@ -30,11 +30,15 @@ export function AIInspector({ document, agentResult, executionProfile }: AIInspe
         <div>
           <dt>現在の固定AI構成</dt>
           <dd>
-            {displayExecutionDetails(
-              executionProfile.effective_model,
-              executionProfile.effective_reasoning_effort,
-              executionProfile.effective_text_verbosity
-            )}
+            {executionProfile.execution_backend === "openai"
+              ? displayExecutionDetails(
+                  executionProfile.effective_model,
+                  executionProfile.effective_reasoning_effort,
+                  executionProfile.effective_text_verbosity
+                )
+              : executionProfile.execution_backend === "mock"
+                ? "Mock（外部APIは実行していません）"
+                : "実行不可（API keyを設定してください）"}
           </dd>
         </div>
       </dl>
@@ -50,16 +54,20 @@ export function AIInspector({ document, agentResult, executionProfile }: AIInspe
             <div>
               <dt>実行時の構成</dt>
               <dd>
-                {displayExecutionDetails(
-                  document.llm_context.model,
-                  document.llm_context.reasoning_effort,
-                  document.llm_context.text_verbosity
-                )}
+                {document.llm_context.execution_backend === "mock"
+                  ? "Mock（外部APIは実行していません）"
+                  : displayExecutionDetails(
+                      document.llm_context.model,
+                      document.llm_context.reasoning_effort,
+                      document.llm_context.text_verbosity
+                    )}
               </dd>
             </div>
           </dl>
           <p className="scope-note">
-            {historyMatchesCurrent
+            {document.llm_context.execution_backend === "mock"
+              ? "この履歴はMock実行です。実APIへの送信は行われていません。"
+              : historyMatchesCurrent
               ? "この履歴は現在の固定AI構成と一致しています。"
               : "この履歴は過去の実行記録で、現在の固定AI構成とは異なります。次のAI支援は現在の固定AI構成で実行され、ここに表示した履歴は変更されません。"}
           </p>

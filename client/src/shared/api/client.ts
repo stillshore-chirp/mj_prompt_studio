@@ -23,7 +23,8 @@ export class ApiClientError extends Error {
   constructor(
     message: string,
     readonly kind: "http" | "network" | "schema",
-    readonly status?: number
+    readonly status?: number,
+    readonly code?: string
   ) {
     super(message);
     this.name = "ApiClientError";
@@ -43,8 +44,8 @@ async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> 
       }
     });
     if (!response.ok) {
-      const message = await errorMessage(response);
-      throw new ApiClientError(message, "http", response.status);
+      const detail = await errorDetails(response);
+      throw new ApiClientError(detail.message, "http", response.status, detail.code);
     }
     return (await response.json()) as T;
   } catch (error) {
@@ -64,22 +65,25 @@ async function requestText(path: string, init: RequestInit = {}): Promise<string
     }
   });
   if (!response.ok) {
-    const message = await errorMessage(response);
-    throw new ApiClientError(message, "http", response.status);
+    const detail = await errorDetails(response);
+    throw new ApiClientError(detail.message, "http", response.status, detail.code);
   }
   return response.text();
 }
 
-async function errorMessage(response: Response): Promise<string> {
+async function errorDetails(response: Response): Promise<{ message: string; code?: string }> {
   try {
-    const payload = (await response.json()) as { detail?: string };
-    if (payload.detail) {
-      return payload.detail;
+    const payload = (await response.json()) as { detail?: string | { message?: string; code?: string } };
+    if (typeof payload.detail === "string") {
+      return { message: payload.detail };
+    }
+    if (payload.detail?.message) {
+      return { message: payload.detail.message, code: payload.detail.code };
     }
   } catch {
-    return response.statusText;
+    return { message: response.statusText };
   }
-  return response.statusText;
+  return { message: response.statusText };
 }
 
 export interface SaveDocumentPayload {
@@ -206,7 +210,8 @@ export const api = {
       method: "DELETE"
     });
     if (!response.ok) {
-      throw new ApiClientError(await errorMessage(response), "http", response.status);
+      const detail = await errorDetails(response);
+      throw new ApiClientError(detail.message, "http", response.status, detail.code);
     }
   },
   uploadResult: (documentId: string, file: File) => {
@@ -316,7 +321,7 @@ export const api = {
       headers: { [LOCAL_API_REQUEST_HEADER]: "1" }
     }),
   connectionTest: () =>
-    requestJson<{ ok: boolean }>("/api/settings/connection-test", {
+    requestJson<{ ok: boolean; error_code: string | null }>("/api/settings/connection-test", {
       method: "POST",
       headers: { [LOCAL_API_REQUEST_HEADER]: "1" }
     }),

@@ -24,6 +24,7 @@ from mj_prompt_studio.domain.prompt_document import (
     PromptPatch,
 )
 from mj_prompt_studio.domain.reference import ReferenceAsset, ResultImage
+from mj_prompt_studio.llm.orchestrator import LLMExecutionError
 from mj_prompt_studio.server.app_state import AppState, create_state
 from mj_prompt_studio.server.schemas import (
     AgentRequest,
@@ -726,7 +727,8 @@ def _register_routes(app: FastAPI) -> None:
     @app.post("/api/settings/connection-test")
     def connection_test(request: Request, state: StateDep) -> dict[str, Any]:
         _require_local_api_request(request)
-        return {"ok": state.context.orchestrator.connection_test()}
+        result = state.context.orchestrator.connection_test()
+        return {"ok": result.ok, "error_code": result.error_code}
 
     @app.post("/api/exports/prompt")
     def export_prompt(payload: ExportRequest, state: StateDep) -> Response:
@@ -774,7 +776,13 @@ def _submit_job(
     input_snapshot: dict[str, Any],
     work: Callable[[], dict[str, Any]],
 ) -> Any:
-    return state.context.submit_agent_job(agent_name, input_snapshot, work)
+    try:
+        return state.context.submit_agent_job(agent_name, input_snapshot, work)
+    except LLMExecutionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "message": str(exc)},
+        ) from exc
 
 
 def _request_document(state: AppState, payload: AgentRequest) -> PromptDocument:

@@ -14,7 +14,7 @@ interface SettingsViewProps {
   onTextOutputOptions: (includeOptions: boolean) => Promise<void>;
   onExclusionTerms: (terms: string[]) => Promise<void>;
   onPreferences: (preferences: Record<string, LLMFeaturePreferences>) => void;
-  onConnectionTest: () => Promise<boolean>;
+  onConnectionTest: () => Promise<{ ok: boolean; errorCode: string | null }>;
 }
 
 type ApiKeyAction = "session" | "keyring" | "load" | null;
@@ -74,7 +74,7 @@ export function SettingsView({
   };
 
   const hasApiKey = apiKey.trim().length > 0;
-  const isRealApiMode = settings.llm_mode === "real";
+  const isRealApiMode = settings.execution_backend === "openai";
   const isApplyingKey = apiKeyAction !== null;
 
   async function applyApiKey(kind: "session" | "keyring"): Promise<void> {
@@ -155,11 +155,11 @@ export function SettingsView({
     setIsTestingConnection(true);
     setConnectionStatus(null);
     try {
-      const ok = await onConnectionTest();
+      const result = await onConnectionTest();
       setConnectionStatus(
-        ok
+        result.ok
           ? "実APIへの接続を確認しました。キーの値や応答内容は画面に表示しません。"
-          : "接続を確認できませんでした。API keyとネットワークを確認して再試行してください。"
+          : connectionFailureMessage(result.errorCode)
       );
     } catch {
       setConnectionStatus("接続を確認できませんでした。API keyとネットワークを確認して再試行してください。");
@@ -216,8 +216,8 @@ export function SettingsView({
         step="制作の準備（必要なとき）"
         title="AI支援の設定を確認する"
         featureName="Settings"
-        description="実AIを使う場合のAPI key、Privacy、テキストPrompt出力、除外語句、語彙量を確認します。API keyがなくてもMock LLMで画面の流れを試せます。"
-        whenToUse="実AIを使い始めるとき、または保存・出力・除外語句の設定を変えたいとき。プロンプト作成の前提ではありません。"
+        description="実AIを使う場合のAPI key、現在の実行経路、Privacy、テキストPrompt出力、除外語句、語彙量を確認します。"
+        whenToUse="実AIを使い始めるとき、AI処理の実行経路を確認したいとき、または保存・出力・除外語句の設定を変えたいとき。"
         actions={
           <button type="button" onClick={() => onPreferences(preferences)}>
           <Save size={16} /> 語彙設定を保存
@@ -272,11 +272,7 @@ export function SettingsView({
         <p>OS資格情報ストアへ保存: 利用可能な場合のみOSの資格情報ストアへ保存し、利用できない場合はこのセッションだけで使用します。</p>
         <p>OS資格情報ストアから読み込んで使用: 保存済みのAPI keyをこのセッションへ適用します。キーの値は画面やAPI応答へ返しません。</p>
         <p>
-          {isRealApiMode
-            ? settings.api_key_configured
-              ? "実APIモードです。接続テストは現在のセッションの設定を使います。"
-              : "実APIモードですが、API keyは未設定です。"
-            : "Mock LLMモードです。外部APIへの接続・送信は行わず、接続テストは無効です。"}
+          {executionStatusMessage(settings)}
         </p>
         {keyStatus ? <p role="status" aria-live="polite">{keyStatus}</p> : null}
         {connectionStatus ? <p role="status" aria-live="polite">{connectionStatus}</p> : null}
@@ -396,8 +392,28 @@ export function SettingsView({
         <h2>AI execution profile</h2>
         <dl className="execution-profile" aria-label="AI execution profile">
           <div>
-            <dt>Model</dt>
-            <dd>{displayModel(settings.effective_model)}</dd>
+            <dt>実行経路</dt>
+            <dd>{executionBackendLabel(settings.execution_backend)}</dd>
+          </div>
+          <div>
+            <dt>設定モード</dt>
+            <dd>{settings.configured_mode === "mock" ? "Mock（明示設定）" : "実API"}</dd>
+          </div>
+          <div>
+            <dt>API key</dt>
+            <dd>{settings.api_key_configured ? "設定済み" : "未設定"}</dd>
+          </div>
+          <div>
+            <dt>キーの取得元</dt>
+            <dd>{apiKeySourceLabel(settings.api_key_source)}</dd>
+          </div>
+          <div>
+            <dt>資格情報ストア</dt>
+            <dd>{credentialStoreStatusLabel(settings.credential_store_status)}</dd>
+          </div>
+          <div>
+            <dt>実行時モデル</dt>
+            <dd>{settings.execution_backend === "openai" ? displayModel(settings.effective_model) : "実行なし"}</dd>
           </div>
           <div>
             <dt>Reasoning</dt>
@@ -408,7 +424,7 @@ export function SettingsView({
             <dd>{displayValue(settings.effective_text_verbosity)}</dd>
           </div>
         </dl>
-        <p>この実行構成は全AI機能と接続テストで共通です。</p>
+        <p>{executionProfileMessage(settings)}</p>
       </section>
 
       <section className="plain-panel">
@@ -476,4 +492,81 @@ function displayModel(model: string): string {
 
 function displayValue(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function executionBackendLabel(backend: RuntimeSettingsPublic["execution_backend"]): string {
+  if (backend === "openai") {
+    return "OpenAI Responses API";
+  }
+  if (backend === "mock") {
+    return "Mock（外部APIは呼びません）";
+  }
+  return "実行不可";
+}
+
+function apiKeySourceLabel(source: RuntimeSettingsPublic["api_key_source"]): string {
+  if (source === "environment") {
+    return "環境変数";
+  }
+  if (source === "credential_store") {
+    return "OS資格情報ストア";
+  }
+  if (source === "session") {
+    return "このセッション";
+  }
+  return "未設定";
+}
+
+function credentialStoreStatusLabel(
+  status: RuntimeSettingsPublic["credential_store_status"]
+): string {
+  if (status === "available") {
+    return "利用可能";
+  }
+  if (status === "unavailable") {
+    return "利用不可";
+  }
+  if (status === "not_checked") {
+    return "未確認";
+  }
+  return "保存済みキーなし";
+}
+
+function executionStatusMessage(settings: RuntimeSettingsPublic): string {
+  if (settings.execution_backend === "openai") {
+    return "実APIを使用できます。接続テストは現在のセッションの設定を使います。";
+  }
+  if (settings.execution_backend === "mock") {
+    return "Mockモードは明示設定されています。外部APIへの接続・送信は行わず、接続テストは実行しません。";
+  }
+  if (settings.execution_error_code === "client_initialization_failed") {
+    return "実APIの準備を完了できませんでした。API keyとアプリの設定を確認してから、もう一度実行してください。";
+  }
+  return "API keyが未設定のため、AI処理は実行できません。OS資格情報ストアから読み込むか、このセッションへ適用してください。";
+}
+
+function executionProfileMessage(settings: RuntimeSettingsPublic): string {
+  if (settings.execution_backend === "openai") {
+    return "この実行構成は全AI機能と接続テストで共通です。";
+  }
+  if (settings.execution_backend === "mock") {
+    return "Mock実行では実モデルを呼びません。実APIを使うにはMockモードを解除して再起動してください。";
+  }
+  return "実行できるAIバックエンドがありません。API keyを設定すると、実API用の固定構成で実行します。";
+}
+
+function connectionFailureMessage(errorCode: string | null): string {
+  if (errorCode === "mock_mode") {
+    return "Mockモードでは実APIへの接続テストを実行しません。";
+  }
+  if (errorCode === "api_key_missing") {
+    return "API keyが未設定のため接続を確認できません。OS資格情報ストアから読み込むか、このセッションへ適用してください。";
+  }
+  if (errorCode === "api_authentication_failed") {
+    return "実APIの認証を確認できませんでした。API keyを確認して再試行してください。";
+  }
+  if (errorCode === "rate_limited") {
+    return "実APIの利用上限に達しました。少し待ってから再試行してください。";
+  }
+  return "接続を確認できませんでした。API keyとネットワークを確認して再試行してください。";
 }

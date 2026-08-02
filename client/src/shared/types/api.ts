@@ -46,13 +46,15 @@ export interface PromptReferences {
 }
 
 export interface LLMContext {
-  latest_response_id: string | null;
+  latest_response_id: null;
+  response_id_kind: "openai" | "mock" | null;
   last_agent: string | null;
   model: string;
   reasoning_effort: string;
   text_verbosity: string;
   user_vocab_snapshot_id: string | null;
   project_style_profile_id: string | null;
+  execution_backend: "openai" | "mock" | "unavailable" | null;
 }
 
 export interface ValidationIssue {
@@ -174,6 +176,7 @@ export interface MatrixVariant {
 }
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
+export type ExecutionBackend = "openai" | "mock" | "unavailable";
 
 export interface LLMJob {
   id: string;
@@ -188,6 +191,10 @@ export interface LLMJob {
   created_at: string;
   finished_at: string | null;
   retry_count: number;
+  configured_mode: "real" | "mock";
+  execution_backend: ExecutionBackend;
+  api_key_configured: boolean;
+  response_id_kind: "openai" | "mock" | null;
 }
 
 export interface ParameterSpec {
@@ -224,6 +231,9 @@ export interface LLMFeaturePreferences {
 
 export interface RuntimeSettingsPublic {
   llm_mode: string;
+  configured_mode: "real" | "mock";
+  execution_backend: ExecutionBackend;
+  execution_error_code: string | null;
   response_storage: "normal" | "privacy";
   include_midjourney_options_in_text_output: boolean;
   prompt_exclusion_terms: string[];
@@ -231,6 +241,8 @@ export interface RuntimeSettingsPublic {
   prompt_exclusion_term_max_length: number;
   privacy_mode: boolean;
   api_key_configured: boolean;
+  api_key_source: "environment" | "credential_store" | "session" | "not_configured";
+  credential_store_status: "available" | "not_configured" | "unavailable" | "not_checked";
   feature_preferences: Record<string, LLMFeaturePreferences>;
   feature_display_names: Record<string, string>;
   effective_model: string;

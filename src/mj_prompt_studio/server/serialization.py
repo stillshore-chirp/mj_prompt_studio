@@ -22,7 +22,15 @@ def public_project(project: ProjectRecord) -> dict[str, Any]:
 
 
 def public_document(document: PromptDocument) -> dict[str, Any]:
-    return document.to_dict()
+    data = document.to_dict()
+    context = data.get("llm_context", {})
+    if isinstance(context, dict):
+        response_id = context.get("latest_response_id")
+        context["latest_response_id"] = None
+        context["response_id_kind"] = _response_id_kind(
+            response_id, context.get("execution_backend")
+        )
+    return data
 
 
 def public_reference(reference: ReferenceAsset) -> dict[str, Any]:
@@ -84,6 +92,11 @@ def public_settings(context: AppContext) -> dict[str, Any]:
     }
     return {
         "llm_mode": context.settings.llm_mode,
+        "configured_mode": context.settings.llm_mode,
+        "execution_backend": context.orchestrator.execution_backend,
+        "execution_error_code": context.orchestrator.execution_error_code,
+        "api_key_source": context.api_key_source,
+        "credential_store_status": context.credential_store_status,
         "response_storage": context.settings.response_storage,
         "include_midjourney_options_in_text_output": (
             context.settings.include_midjourney_options_in_text_output
@@ -107,11 +120,15 @@ def public_settings(context: AppContext) -> dict[str, Any]:
 def public_health(context: AppContext) -> dict[str, Any]:
     health = context.repository.healthcheck()
     return {
-        "db_path": health["db_path"],
         "schema_version": health["schema_version"],
         "user_version": health["user_version"],
         "llm_mode": context.settings.llm_mode,
+        "configured_mode": context.settings.llm_mode,
+        "execution_backend": context.orchestrator.execution_backend,
+        "execution_error_code": context.orchestrator.execution_error_code,
         "api_key_configured": context.orchestrator.api_key is not None,
+        "api_key_source": context.api_key_source,
+        "credential_store_status": context.credential_store_status,
         "response_storage": context.settings.response_storage,
     }
 
@@ -121,7 +138,14 @@ def _redact_sensitive(value: Any) -> Any:
         redacted: dict[str, Any] = {}
         for key, item in value.items():
             key_text = str(key).lower()
-            if "key" in key_text or "token" in key_text or "secret" in key_text:
+            if key_text == "latest_response_id" or key_text.endswith("_response_id"):
+                redacted[str(key)] = None
+                continue
+            if (
+                "key" in key_text
+                or "token" in key_text
+                or "secret" in key_text
+            ):
                 redacted[str(key)] = "<redacted>"
             else:
                 redacted[str(key)] = _redact_sensitive(item)
@@ -129,3 +153,11 @@ def _redact_sensitive(value: Any) -> Any:
     if isinstance(value, list):
         return [_redact_sensitive(item) for item in value]
     return value
+
+
+def _response_id_kind(value: Any, backend: Any) -> str | None:
+    if not value:
+        return None
+    if backend in {"openai", "mock"}:
+        return str(backend)
+    return None

@@ -19,7 +19,6 @@ from mj_prompt_studio.config import (
     LLMFeaturePreferences,
     RuntimeSettings,
     load_runtime_settings,
-    read_openai_api_key_from_environment,
     serialize_feature_preferences,
 )
 from mj_prompt_studio.domain.prompt_document import PromptDocument
@@ -29,7 +28,7 @@ from mj_prompt_studio.domain.prompt_workshop import (
 )
 from mj_prompt_studio.infra.asset_store import AssetStore
 from mj_prompt_studio.infra.ruleset_loader import load_standard_ruleset
-from mj_prompt_studio.infra.secret_store import SecretStore
+from mj_prompt_studio.infra.secret_store import APIKeyResolution, SecretStore
 from mj_prompt_studio.infra.settings_store import SettingsStore
 from mj_prompt_studio.infra.sqlite_repository import ProjectRecord, SQLiteRepository
 from mj_prompt_studio.llm.job_queue import JobCallable, JobCallback, LLMJob, LLMJobQueue
@@ -45,12 +44,11 @@ class AppContext:
         self.asset_store = AssetStore(self.settings.data_dir / "assets")
         self.settings_store = SettingsStore(self.settings.data_dir / "settings.json")
         self.secret_store = SecretStore()
+        self.api_key_source = "not_configured"
+        self.credential_store_status = "not_checked"
         self.ruleset = load_standard_ruleset()
         self.settings = self._load_persisted_llm_settings(self.settings)
-        api_key = (
-            self.secret_store.read_openai_api_key() or read_openai_api_key_from_environment()
-        )
-        self.orchestrator = LLMOrchestrator(self.settings, api_key)
+        self._set_resolved_api_key(self.secret_store.resolve_openai_api_key())
         self.job_queue = LLMJobQueue(
             max_workers=self.settings.max_parallel_jobs, on_change=self._persist_job
         )
@@ -58,16 +56,17 @@ class AppContext:
         self.export_service = ExportService()
 
     def set_session_api_key(self, api_key: str | None) -> None:
-        effective_settings = replace(self.settings, llm_mode="real") if api_key else self.settings
-        self.orchestrator = LLMOrchestrator(effective_settings, api_key or None)
-        self.settings = effective_settings
+        self.api_key_source = "session" if api_key else "not_configured"
+        self.orchestrator = LLMOrchestrator(self.settings, api_key or None)
         self._rebuild_services()
 
     def load_stored_api_key(self) -> bool:
-        api_key = self.secret_store.read_openai_api_key_from_keyring()
-        if not api_key:
+        resolution = self.secret_store.resolve_openai_api_key_from_keyring()
+        self.credential_store_status = resolution.credential_store_status
+        if not resolution.value:
             return False
-        self.set_session_api_key(api_key)
+        self._set_resolved_api_key(resolution)
+        self._rebuild_services()
         return True
 
     def set_llm_feature_preferences(
@@ -152,12 +151,21 @@ class AppContext:
         work: JobCallable,
         callback: JobCallback | None = None,
     ) -> LLMJob:
+        self.orchestrator.require_execution()
         return self.job_queue.submit(
             agent_name=agent_name,
             input_snapshot=input_snapshot,
             work=work,
             callback=callback,
+            configured_mode=self.settings.llm_mode,
+            execution_backend=self.orchestrator.execution_backend,
+            api_key_configured=self.orchestrator.api_key is not None,
         )
+
+    def _set_resolved_api_key(self, resolution: APIKeyResolution) -> None:
+        self.api_key_source = resolution.source
+        self.credential_store_status = resolution.credential_store_status
+        self.orchestrator = LLMOrchestrator(self.settings, resolution.value)
 
     def export_to_file(self, path: Path, content_factory: Callable[[], str]) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)

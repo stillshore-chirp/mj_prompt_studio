@@ -97,8 +97,24 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps
                       <dd>{displayJobTarget(job.agent_name)}</dd>
                     </div>
                     <div>
+                      <dt>実行経路</dt>
+                      <dd>{displayJobBackend(job.execution_backend)}</dd>
+                    </div>
+                    <div>
+                      <dt>設定モード</dt>
+                      <dd>{job.configured_mode === "mock" ? "明示的Mock" : "実API"}</dd>
+                    </div>
+                    <div>
+                      <dt>API key</dt>
+                      <dd>{job.api_key_configured ? "設定済み" : "未設定"}</dd>
+                    </div>
+                    <div>
                       <dt>実行設定</dt>
-                      <dd>{displayExecutionDetails(job.model, job.reasoning_effort, job.text_verbosity)}</dd>
+                      <dd>{displayJobExecution(job)}</dd>
+                    </div>
+                    <div>
+                      <dt>応答の識別</dt>
+                      <dd>{job.response_id_kind ? `${job.response_id_kind === "openai" ? "実API" : "Mock"}の応答を確認` : "応答IDは未取得"}</dd>
                     </div>
                     <div>
                       <dt>作成時刻</dt>
@@ -252,4 +268,21 @@ function jobStatusDetails(status: LLMJob["status"]): { label: string; detail: st
     label: "取消済み",
     detail: "処理を取り消しました。結果は適用されていません。必要なら元の操作をもう一度実行してください。"
   };
+}
+
+function displayJobBackend(backend: LLMJob["execution_backend"]): string {
+  if (backend === "openai") {
+    return "OpenAI Responses API";
+  }
+  if (backend === "mock") {
+    return "Mock（外部APIは実行していません）";
+  }
+  return "実行不可";
+}
+
+function displayJobExecution(job: LLMJob): string {
+  if (job.execution_backend !== "openai") {
+    return "実モデルは呼び出していません";
+  }
+  return displayExecutionDetails(job.model, job.reasoning_effort, job.text_verbosity);
 }

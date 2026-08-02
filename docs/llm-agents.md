@@ -6,7 +6,7 @@
 - ローカルではPydantic modelでも必須fieldと主要型を検証する。
 - UIはLLM結果を直接保存せず、Application ServiceがPatch、Suggestion、Reviewとして扱う。
 - Patchは適用前に差分確認を必須にする。
-- APIキー未設定時はMockLLMが同じschemaで応答する。
+- MockLLMは `MJPS_LLM_MODE=mock` を明示した場合だけ同じschemaで応答する。通常モードでAPIキーまたは実clientを利用できない場合は、Jobを作成せず安全な設定誘導エラーを返す。
 - LLM Jobは `queued`、`running`、`succeeded`、`failed`、`cancelled` の状態を持ち、UIからキャンセルと再実行を操作できる。
 - 実APIの全Agent、画像入力、再試行、接続テストは `config.py` の固定実行ポリシーを参照し、`gpt-5.6-luna`、reasoning effort `high`、text verbosity `low` を使う。
 - 呼び出し側はモデルと推論強度をOpenAI clientへ渡せない。`reasoning.mode`、`temperature`、別モデルへのフォールバックは送信・実装しない。
@@ -46,9 +46,9 @@ text.verbosity: low
 text.format: Agent別strict JSON Schema
 ```
 
-`Privacy mode` の場合は `store=false` とし、`previous_response_id` を送らない。通常モードでも、PromptDocumentに保存されたモデルが `gpt-5.6-luna` と一致する場合だけ継続IDを送る。最初のLuna応答後にモデル、推論強度、応答詳細、response IDを更新する。
+`Privacy mode` の場合は `store=false` とし、`previous_response_id` を送らない。通常モードでも、PromptDocumentに保存されたモデルが `gpt-5.6-luna` と一致する場合だけ継続IDを送る。最初のLuna応答後にモデル、推論強度、応答詳細、response IDを更新する。継続に必要な実Response IDはserver内の永続化にだけ保持し、public API・Jobs・HealthではIDの種別だけを返す。
 
-usageからinput tokens、cached input tokens、output tokens、reasoning tokensを取得し、request latency、Agent名、画像入力数、schema成否、response ID有無とともに安全な計測情報として扱う。価格はコードへ埋め込まない。Jobは固定実効構成と再試行数を履歴へ記録する。
+usageからinput tokens、cached input tokens、output tokens、reasoning tokensを取得し、request latency、Agent名、画像入力数、schema成否、response ID有無とともに安全な計測情報として扱う。価格はコードへ埋め込まない。Jobは設定モード、実行バックエンド、応答ID種別、再試行数を履歴へ記録する。
 
 ## Job API
 
