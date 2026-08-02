@@ -4,7 +4,7 @@
 
 - Header / Toolbar: 新規プロジェクト、Undo/Redo、Export、保存状態。
 - Left Panel: Project Explorer、制作の流れ。制作の流れは「プロンプトを作る」から「生成結果を見直す」までを目的名で並べ、必要な画面だけを選べるようにする。
-- Main Tabs: プロンプトを作る（Composer）、既存Promptを整える（Free Editor）、参考画像を使う（Reference Library）、複数案を比較する（Matrix Lab）、生成結果を見直す（Result Review）、設定（Settings）。
+- Main Tabs: プロンプトを作る（Composer）、Prompt Workshop、参考画像を使う（Reference Library）、複数案を比較する（Matrix Lab）、生成結果を見直す（Result Review）、設定（Settings）。
 - Right Panel: AI Inspector、Parameter Advisor、Prompt Doctor。
 - Bottom Panel: Status、Jobs。
 - Right-bottom Help: 常設の「使い方」buttonから開く、modalではない折りたたみpanel。Quick Startとユーザーマニュアルを安全なMarkdown previewとして表示し、文書の目次、節ジャンプ、現在の画面に対応する節へのクイックジャンプを提供する。
@@ -46,17 +46,19 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 
 - LLM Job失敗時は下部Jobsとstatusに安全なエラーを表示する。
 
-## Free Editor
+## Prompt Workshop
 
 初見導線:
 
-- 「既存Promptを整える」目的と、Composerとの使い分け（新規作成ではなく、既存文章の変換・改善）を示す。
+- 材料なしの複数案生成と、既存文章の変換・改善を同じ画面で混同せず、別sectionとして示す。
 
 主要操作:
 
-- 日本語入力と英語promptを受け付ける。
-- 6種変換をVocabularyAgent jobとして実行する。
-- 変換結果とdetailを表示する。
+- ゼロ入力のPrompt生成は件数1〜30（初期値10）、カオス度1〜10、英語/日本語、任意ガイダンス、重複除外を扱う。
+- 既存Promptは世界観整形、カオスミックス、文字数のみ調整、LLMアレンジを分けて実行する。後者はプリセットと強度0〜3を扱う。
+- 結果はコピー、入力欄への反映、確認付きComposer取り込みを提供する。
+- Job作成中は同じ創作系操作を重複実行せず、部分成功・失敗はJobsとstatusで回復方法を示す。
+- 従来の6種Vocabulary変換は互換導線として残す。
 
 ## Reference Library
 
@@ -111,6 +113,8 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 - OS資格情報ストアへのAPI key保存。保存不可環境ではセッション内適用に留める。
 - 保存済みOS資格情報ストアからAPI keyを読み込み、値を表示せずセッションへ適用する。未発見・利用不可・失敗時は設定を変更せず、次の行動を示す。
 - Privacy mode / normal response storage。
+- Text output policy: 構造化オプションを全テキストPrompt出力へ付与するかを切り替える。OFFでもParameterとJSON snapshotは保持する。
+- Prompt除外語句: 追加、1行ずつの一括編集、個別削除、確認付き全消去。創作系操作だけへ適用範囲を明示する。
 - AI execution profile: `GPT-5.6 Luna`、`High`、`Low` を読み取り専用表示。
 - Feature vocabulary preferences: Agentごとの語彙量だけを編集・保存。
 - Ruleset display_name。

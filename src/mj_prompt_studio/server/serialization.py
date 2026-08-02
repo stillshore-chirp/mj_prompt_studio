@@ -85,6 +85,12 @@ def public_settings(context: AppContext) -> dict[str, Any]:
     return {
         "llm_mode": context.settings.llm_mode,
         "response_storage": context.settings.response_storage,
+        "include_midjourney_options_in_text_output": (
+            context.settings.include_midjourney_options_in_text_output
+        ),
+        "prompt_exclusion_terms": list(context.settings.prompt_exclusion_terms),
+        "prompt_exclusion_term_limit": 200,
+        "prompt_exclusion_term_max_length": 100,
         "privacy_mode": context.settings.privacy_mode,
         "api_key_configured": context.orchestrator.api_key is not None,
         "feature_preferences": preferences,

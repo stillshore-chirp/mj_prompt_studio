@@ -154,7 +154,7 @@ export function ComposerView({
         title="プロンプトを作る"
         featureName="Composer"
         description="作りたい画像を日本語で書き、画像生成サービスへ手動で貼り付けるPromptに整えます。"
-        whenToUse="新しい画像を作り始めるとき。手元の既存Promptを整えたいときは「既存Promptを整える」を使います。"
+        whenToUse="新しい画像を作り始めるとき。手元の既存Promptを整えたいときは「Prompt Workshop」を使います。"
         actions={
           <>
           <p className={`draft-status ${isDirty ? "is-dirty" : ""}`} role="status" aria-live="polite">

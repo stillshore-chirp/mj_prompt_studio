@@ -50,7 +50,7 @@ React.js + TypeScript client
 - Composer、Reference、Matrix、Result Reviewなどのユースケースを束ねる。
 - LLM出力をPatchまたはReviewとして受け取り、検証後にDomainへ適用する。
 - RepositoryとAssetStoreを通じて保存する。
-- Free Editor変換整形やExportなどの操作ポリシーを保持する。
+- Prompt Workshopの生成・変換・文字数調整・プリセットアレンジ、テキスト出力ポリシー、Exportなどの操作ポリシーを保持する。
 
 依存:
 
@@ -63,7 +63,7 @@ React.js + TypeScript client
 
 - `PromptDocument`、`PromptBlocks`、`PromptParameters`、`Ruleset`、`ValidationReport`。
 - `ReferenceAsset` / `ResultImage` はローカル画像メタデータとAI分析結果を分けて保持する。
-- Prompt Compiler、Validator、Matrix Generator。
+- Prompt Compiler、PromptOutputRenderer、Prompt除外語句の正規化・検証、プリセットcatalog、Validator、Matrix Generator。
 - LLMやSQLiteに依存しない決定論的処理。
 
 拡張ポイント:

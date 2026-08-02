@@ -159,6 +159,24 @@
         "title": "Body_upload_result_api_prompt_documents__document_id__results_upload_post",
         "type": "object"
       },
+      "ExclusionTermsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "terms": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Terms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "terms"
+        ],
+        "title": "ExclusionTermsRequest",
+        "type": "object"
+      },
       "ExportRequest": {
         "additionalProperties": false,
         "properties": {
@@ -348,6 +366,199 @@
         "title": "ProjectCreateRequest",
         "type": "object"
       },
+      "PromptArrangeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "additional_guidance": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Additional Guidance",
+            "type": "string"
+          },
+          "length_ratio": {
+            "default": 1.0,
+            "title": "Length Ratio",
+            "type": "number"
+          },
+          "max_characters": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 50.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Characters"
+          },
+          "output_language": {
+            "default": "source",
+            "enum": [
+              "source",
+              "en",
+              "ja"
+            ],
+            "title": "Output Language",
+            "type": "string"
+          },
+          "preset_id": {
+            "default": "auto",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Preset Id",
+            "type": "string"
+          },
+          "source_prompt": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Source Prompt",
+            "type": "string"
+          },
+          "strength": {
+            "default": 2,
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "source_prompt"
+        ],
+        "title": "PromptArrangeRequest",
+        "type": "object"
+      },
+      "PromptGeneratorRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "chaos_level": {
+            "default": 1,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Chaos Level",
+            "type": "integer"
+          },
+          "count": {
+            "default": 10,
+            "maximum": 30.0,
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "deduplicate": {
+            "default": true,
+            "title": "Deduplicate",
+            "type": "boolean"
+          },
+          "guidance": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Guidance",
+            "type": "string"
+          },
+          "output_language": {
+            "default": "en",
+            "enum": [
+              "en",
+              "ja"
+            ],
+            "title": "Output Language",
+            "type": "string"
+          }
+        },
+        "title": "PromptGeneratorRequest",
+        "type": "object"
+      },
+      "PromptLengthAdjustRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "length_ratio": {
+            "default": 1.0,
+            "title": "Length Ratio",
+            "type": "number"
+          },
+          "max_characters": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 50.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Characters"
+          },
+          "source_prompt": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Source Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_prompt"
+        ],
+        "title": "PromptLengthAdjustRequest",
+        "type": "object"
+      },
+      "PromptTransformRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "additional_guidance": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Additional Guidance",
+            "type": "string"
+          },
+          "max_characters": {
+            "anyOf": [
+              {
+                "maximum": 5000.0,
+                "minimum": 100.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Characters"
+          },
+          "mode": {
+            "enum": [
+              "worldbuilding",
+              "chaos_mix"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "output_language": {
+            "default": "source",
+            "enum": [
+              "source",
+              "en",
+              "ja"
+            ],
+            "title": "Output Language",
+            "type": "string"
+          },
+          "source_prompt": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Source Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "source_prompt"
+        ],
+        "title": "PromptTransformRequest",
+        "type": "object"
+      },
       "ReferenceTagsRequest": {
         "additionalProperties": false,
         "properties": {
@@ -392,6 +603,20 @@
           "project_id"
         ],
         "title": "ResultCompareRequest",
+        "type": "object"
+      },
+      "TextOutputOptionsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "include_midjourney_options_in_text_output": {
+            "title": "Include Midjourney Options In Text Output",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "include_midjourney_options_in_text_output"
+        ],
+        "title": "TextOutputOptionsRequest",
         "type": "object"
       },
       "ValidationError": {
@@ -642,6 +867,46 @@
         "summary": "Parameter Advisor"
       }
     },
+    "/api/agents/prompt-arrange": {
+      "post": {
+        "operationId": "prompt_arrange_api_agents_prompt_arrange_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptArrangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Prompt Arrange Api Agents Prompt Arrange Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prompt Arrange"
+      }
+    },
     "/api/agents/prompt-doctor": {
       "post": {
         "operationId": "prompt_doctor_api_agents_prompt_doctor_post",
@@ -680,6 +945,126 @@
           }
         },
         "summary": "Prompt Doctor"
+      }
+    },
+    "/api/agents/prompt-generator": {
+      "post": {
+        "operationId": "prompt_generator_api_agents_prompt_generator_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptGeneratorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Prompt Generator Api Agents Prompt Generator Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prompt Generator"
+      }
+    },
+    "/api/agents/prompt-length-adjust": {
+      "post": {
+        "operationId": "prompt_length_adjust_api_agents_prompt_length_adjust_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptLengthAdjustRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Prompt Length Adjust Api Agents Prompt Length Adjust Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prompt Length Adjust"
+      }
+    },
+    "/api/agents/prompt-transform": {
+      "post": {
+        "operationId": "prompt_transform_api_agents_prompt_transform_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromptTransformRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Prompt Transform Api Agents Prompt Transform Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prompt Transform"
       }
     },
     "/api/agents/reference-analyzer": {
@@ -1583,6 +1968,26 @@
         "summary": "Project Results"
       }
     },
+    "/api/prompt-arrange-presets": {
+      "get": {
+        "operationId": "prompt_arrange_presets_api_prompt_arrange_presets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Prompt Arrange Presets Api Prompt Arrange Presets Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Prompt Arrange Presets"
+      }
+    },
     "/api/prompt-documents/{document_id}": {
       "get": {
         "operationId": "get_prompt_document_api_prompt_documents__document_id__get",
@@ -2242,6 +2647,46 @@
         "summary": "Connection Test"
       }
     },
+    "/api/settings/exclusion-terms": {
+      "put": {
+        "operationId": "update_exclusion_terms_api_settings_exclusion_terms_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExclusionTermsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Exclusion Terms Api Settings Exclusion Terms Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Exclusion Terms"
+      }
+    },
     "/api/settings/feature-preferences": {
       "put": {
         "operationId": "update_llm_feature_preferences_api_settings_feature_preferences_put",
@@ -2420,6 +2865,46 @@
           }
         },
         "summary": "Set Session Api Key"
+      }
+    },
+    "/api/settings/text-output-options": {
+      "put": {
+        "operationId": "update_text_output_options_api_settings_text_output_options_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextOutputOptionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Text Output Options Api Settings Text Output Options Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Text Output Options"
       }
     },
     "/api/workspace": {

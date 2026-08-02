@@ -83,17 +83,40 @@ describe("empty action availability", () => {
 
   it("Free Editorは入力後だけ変換を実行できる", () => {
     const onTransform = vi.fn();
-    render(<FreeEditorView result="" detail="" onTransform={onTransform} />);
+    const props = {
+      result: "",
+      detail: "",
+      workshopResults: {},
+      presets: [],
+      presetWarning: null,
+      onTransform,
+      onGenerate: vi.fn(),
+      onPromptTransform: vi.fn(),
+      onLengthAdjust: vi.fn(),
+      onArrange: vi.fn(),
+      onCopy: vi.fn(),
+      onUseInComposer: vi.fn()
+    };
+    const { rerender } = render(
+      <FreeEditorView
+        isBusy={false}
+        {...props}
+      />
+    );
 
     const transform = screen.getByRole("button", { name: "英語Prompt化" });
     expect(transform).toBeDisabled();
-    expect(screen.getByRole("heading", { name: /既存Promptを整える Free Editor/ })).toBeVisible();
-    expect(screen.getByText("Japanese SourceまたはEnglish Promptを入力すると、変換できます。")).toBeVisible();
+    expect(screen.getByRole("heading", { name: /Promptを生成・整える Prompt Workshop/ })).toBeVisible();
+    expect(screen.getByText("文字数のみ調整は除外語句を適用せず、意味保持を優先します。その他の創作系操作にはSettingsの除外語句が適用されます。")).toBeVisible();
 
-    fireEvent.change(screen.getByLabelText("Japanese Source"), { target: { value: "朝食会場" } });
+    fireEvent.change(screen.getByLabelText("作業中のPrompt"), { target: { value: "朝食会場" } });
     expect(transform).toBeEnabled();
     fireEvent.click(transform);
     expect(onTransform).toHaveBeenCalledWith("英語Prompt化", "朝食会場", "");
+
+    rerender(<FreeEditorView isBusy {...props} />);
+    expect(screen.getByRole("button", { name: "Prompt案を生成" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "世界観整形" })).toBeDisabled();
   });
 
   it("Matrix LabはObjectiveとPlanに応じて操作を有効化する", () => {

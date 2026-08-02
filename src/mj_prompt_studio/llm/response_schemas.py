@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -73,6 +73,39 @@ class FinalAuditModel(StrictModel):
 class PromptCompileModel(StrictModel):
     compiled_prompt: str
     rationale: list[str]
+
+
+class GeneratedPromptModel(StrictModel):
+    text: str
+    language: Literal["en", "ja"]
+
+
+class PromptGeneratorModel(StrictModel):
+    requested_count: int
+    prompts: list[GeneratedPromptModel]
+    warnings: list[str]
+
+
+class PromptTransformModel(StrictModel):
+    mode: Literal["worldbuilding", "chaos_mix"]
+    transformed_prompt: str
+    preserved_anchors: list[str]
+    omitted_elements: list[str]
+    warnings: list[str]
+
+
+class PromptLengthAdjustModel(StrictModel):
+    adjusted_prompt: str
+    preserved_terms: list[str]
+    warnings: list[str]
+
+
+class PromptArrangeModel(StrictModel):
+    arranged_prompt: str
+    applied_preset_id: str
+    strength: int
+    preserved_anchors: list[str]
+    warnings: list[str]
 
 
 def strict_object(properties: JsonDict, required: list[str] | None = None) -> JsonDict:
@@ -194,6 +227,58 @@ def schema(name: str, required: list[str], properties: JsonDict) -> JsonDict:
     }
 
 
+GENERATED_PROMPT_SCHEMA = strict_object(
+    {
+        "text": {"type": "string"},
+        "language": {"type": "string", "enum": ["en", "ja"]},
+    }
+)
+
+PROMPT_TRANSFORM_SCHEMA = schema(
+    "prompt_transform",
+    ["mode", "transformed_prompt", "preserved_anchors", "omitted_elements", "warnings"],
+    {
+        "mode": {"type": "string", "enum": ["worldbuilding", "chaos_mix"]},
+        "transformed_prompt": {"type": "string"},
+        "preserved_anchors": string_array(),
+        "omitted_elements": string_array(),
+        "warnings": string_array(),
+    },
+)
+
+PROMPT_LENGTH_ADJUST_SCHEMA = schema(
+    "prompt_length_adjust",
+    ["adjusted_prompt", "preserved_terms", "warnings"],
+    {
+        "adjusted_prompt": {"type": "string"},
+        "preserved_terms": string_array(),
+        "warnings": string_array(),
+    },
+)
+
+PROMPT_ARRANGE_SCHEMA = schema(
+    "prompt_arrange",
+    ["arranged_prompt", "applied_preset_id", "strength", "preserved_anchors", "warnings"],
+    {
+        "arranged_prompt": {"type": "string"},
+        "applied_preset_id": {"type": "string"},
+        "strength": {"type": "integer"},
+        "preserved_anchors": string_array(),
+        "warnings": string_array(),
+    },
+)
+
+PROMPT_GENERATOR_SCHEMA = schema(
+    "prompt_generator",
+    ["requested_count", "prompts", "warnings"],
+    {
+        "requested_count": {"type": "integer"},
+        "prompts": {"type": "array", "items": GENERATED_PROMPT_SCHEMA},
+        "warnings": string_array(),
+    },
+)
+
+
 PROMPT_BRIEF_SCHEMA = schema(
     "prompt_brief",
     ["intent", "subject", "prompt_blocks", "suggested_parameters", "missing_decisions"],
@@ -313,6 +398,10 @@ SCHEMAS: dict[str, JsonDict] = {
     "MatrixPlannerAgent": MATRIX_PLAN_SCHEMA,
     "ResultReviewAgent": RESULT_REVIEW_SCHEMA,
     "FinalAuditorAgent": FINAL_AUDIT_SCHEMA,
+    "PromptGeneratorAgent": PROMPT_GENERATOR_SCHEMA,
+    "PromptTransformAgent": PROMPT_TRANSFORM_SCHEMA,
+    "PromptLengthAdjustAgent": PROMPT_LENGTH_ADJUST_SCHEMA,
+    "PromptArrangeAgent": PROMPT_ARRANGE_SCHEMA,
 }
 
 MODELS: dict[str, type[BaseModel]] = {
@@ -325,6 +414,10 @@ MODELS: dict[str, type[BaseModel]] = {
     "MatrixPlannerAgent": MatrixPlanModel,
     "ResultReviewAgent": ResultReviewModel,
     "FinalAuditorAgent": FinalAuditModel,
+    "PromptGeneratorAgent": PromptGeneratorModel,
+    "PromptTransformAgent": PromptTransformModel,
+    "PromptLengthAdjustAgent": PromptLengthAdjustModel,
+    "PromptArrangeAgent": PromptArrangeModel,
 }
 
 

@@ -26,6 +26,7 @@ gitへ公開する文書、plan、Issue/PR本文、screenshot、検証log要約�
 - OS資格情報ストアからのkey適用と実API接続テストは、React clientだけが付与する `X-MJPS-Request` headerを必須にし、通常のcross-origin form POSTを403で拒否する。
 - React UIはtyped API clientだけを使い、SQLite、AssetStore、SecretStore、OpenAI SDKを直接扱わない。
 - HTTP response、Job payload、console logにAPI key、Token、Cookie、画像本文、prompt全文を含めない。
+- Prompt WorkshopのJob入力snapshotは、Prompt本文・任意ガイダンス・除外語句を含めず、文字数、件数、mode、設定有無だけを保存する。除外語句の文字列はJobログ、公開文書、スクリーンショットのfixtureに含めない。
 
 ## 外部送信
 
@@ -34,6 +35,7 @@ gitへ公開する文書、plan、Issue/PR本文、screenshot、検証log要約�
 - 通常モードでも、保存モデルが `gpt-5.6-luna` と一致しない旧会話IDは送信しない。
 - LLM計測にはAgent名、token usage、latency、画像入力数、再試行数、schema成否、response ID有無だけを使い、APIキー、prompt本文、画像内容を含めない。
 - connection testと代表Agentの実API手動検証は `OPENAI_API_KEY` を設定した環境でだけ行う。通常テストとCIはMockLLMを使う。
+- Prompt Workshopの実API手動検証は、テスト専用の一般的な入力だけを使い、ユーザーの制作Prompt、除外語句、画像を送信しない。
 
 ## 生成サービス境界
 

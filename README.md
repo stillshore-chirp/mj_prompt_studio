@@ -65,7 +65,8 @@ OpenAPI schemaを更新する場合は `make generate-openapi` を実行しま�
 ## 主な機能
 
 - Composer: 日本語ブリーフからPromptDocument、Prompt Blocks、Compiled Promptを作成。
-- Composer / Free Editor: 各入力欄のAI補完、候補、専門語化、短縮、説明、入力停止後の自動提案、Undo/Redo。
+- Composer: 各入力欄のAI補完、候補、専門語化、短縮、説明、入力停止後の自動提案、Undo/Redo。
+- Prompt Workshop: 材料なしの複数Prompt生成、世界観整形・カオスミックス、文字数のみ調整、プリセットアレンジ、コピーとComposer取り込み。
 - Prompt Doctor: 決定論的ValidatorとAIレビューで矛盾、不足、弱い語彙を検出し、確認後にPatch適用。
 - Parameter Advisor: Rulesetに基づくパラメータ表示と目的別提案、確認付き適用。
 - Reference Library: 参照画像を手動取り込みまたはドラッグ&ドロップし、プレビュー、ローカル画像メタデータ、用途判定、検索、タグ、語彙抽出を保存。
@@ -73,6 +74,7 @@ OpenAPI schemaを更新する場合は `make generate-openapi` を実行しま�
 - Result Review: 手動取り込み画像を元プロンプトと比較し、画像プレビュー、parameters snapshot、改善候補をComposerへPatchとして戻す。
 - Export: Prompt only、Markdown record、JSON snapshot、CSV/Markdown matrix variants。
 - Jobs: LLM処理の状態、固定実効構成、キャンセル、再実行を表示。
+- Text output policy: Settingsで構造化オプションをテキストPromptへ含めるかを全出力で切り替え、Prompt除外語句を創作系の生成・変換へ適用。
 
 ## データとセキュリティ
 

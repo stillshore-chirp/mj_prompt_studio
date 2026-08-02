@@ -23,6 +23,10 @@ class MockLLMClient:
             "MatrixPlannerAgent": _matrix_response,
             "ResultReviewAgent": _result_review_response,
             "FinalAuditorAgent": _final_audit_response,
+            "PromptGeneratorAgent": _prompt_generator_response,
+            "PromptTransformAgent": _prompt_transform_response,
+            "PromptLengthAdjustAgent": _prompt_length_adjust_response,
+            "PromptArrangeAgent": _prompt_arrange_response,
         }.get(agent_name)
         if factory is None:
             raise KeyError(f"Unknown mock agent: {agent_name}")
@@ -258,6 +262,96 @@ def _final_audit_response(payload: dict[str, Any]) -> dict[str, Any]:
         "summary": "コピー前の最終監査を完了しました。",
         "warnings": warnings,
         "patches": [],
+    }
+
+
+def _prompt_generator_response(payload: dict[str, Any]) -> dict[str, Any]:
+    requested_count = int(payload.get("count", 10))
+    language = str(payload.get("output_language", "en"))
+    prompts = [
+        (
+            {
+                "text": (
+                    "静かな朝の光に包まれた抽象的な展示空間、"
+                    "層状の紙と石の質感、余白のある構図"
+                ),
+                "language": "ja",
+            }
+            if language == "ja"
+            else {
+                "text": (
+                    "quiet abstract exhibition space in early morning light, "
+                    "layered paper and stone "
+                    "textures, generous negative space"
+                ),
+                "language": "en",
+            }
+        )
+        for _index in range(requested_count)
+    ]
+    for index, prompt in enumerate(prompts, start=1):
+        variation = f"、案{index}" if language == "ja" else f", visual variation {index}"
+        prompt["text"] = f"{prompt['text']}{variation}"
+    return {"requested_count": requested_count, "prompts": prompts, "warnings": []}
+
+
+def _prompt_transform_response(payload: dict[str, Any]) -> dict[str, Any]:
+    source = str(payload.get("source_prompt", "")).strip()
+    mode = str(payload.get("mode", "worldbuilding"))
+    suffix = (
+        "同じ空間と瞬間で意図的に衝突させる、読みやすい単一シーン"
+        if mode == "chaos_mix"
+        else "一枚の画像として自然につながる光、空間関係、素材の流れ"
+    )
+    transformed = f"{source}, {suffix}" if source else suffix
+    anchors = payload.get("anchors", [])
+    return {
+        "mode": mode,
+        "transformed_prompt": transformed,
+        "preserved_anchors": anchors if isinstance(anchors, list) else [],
+        "omitted_elements": [],
+        "warnings": [],
+    }
+
+
+def _prompt_length_adjust_response(payload: dict[str, Any]) -> dict[str, Any]:
+    source = str(payload.get("source_prompt", "")).strip()
+    target = max(1, int(payload.get("target_count", len(source))))
+    words = source.split()
+    if len(source) > target and words:
+        result_parts: list[str] = []
+        for word in words:
+            candidate = " ".join([*result_parts, word]).strip()
+            if len(candidate) > target:
+                break
+            result_parts.append(word)
+        result = " ".join(result_parts) or words[0]
+    elif len(source) < target:
+        result = f"{source}, refined light, material texture, and spatial relation".strip(", ")
+    else:
+        result = source
+    return {
+        "adjusted_prompt": result,
+        "preserved_terms": payload.get("anchors", [])
+        if isinstance(payload.get("anchors", []), list)
+        else [],
+        "warnings": [],
+    }
+
+
+def _prompt_arrange_response(payload: dict[str, Any]) -> dict[str, Any]:
+    source = str(payload.get("source_prompt", "")).strip()
+    preset_id = str(payload.get("preset_id", "auto"))
+    strength = int(payload.get("strength", 2))
+    suffix = "refined visual atmosphere and coherent material detail"
+    return {
+        "arranged_prompt": f"{source}, {suffix}".strip(", "),
+        "applied_preset_id": preset_id,
+        "strength": strength,
+        "preserved_anchors": payload.get("anchors", [])
+        if isinstance(payload.get("anchors", []), list)
+        else [],
+        "warnings": [],
     }
 
 

@@ -19,4 +19,8 @@ AGENT_NAMES = (
     "ResultReviewAgent",
     "MatrixPlannerAgent",
     "FinalAuditorAgent",
+    "PromptGeneratorAgent",
+    "PromptTransformAgent",
+    "PromptLengthAdjustAgent",
+    "PromptArrangeAgent",
 )

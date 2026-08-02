@@ -1352,15 +1352,68 @@ section[aria-label="Live Preview"] p {
   white-space: pre-wrap;
 }
 
-section[aria-label="Free Editor"] .button-grid {
+section[aria-label="Free Editor"] .button-grid,
+section[aria-label="Prompt Workshop"] .button-grid {
   background: var(--panel-soft);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
 }
 
-section[aria-label="Free Editor"] .plain-panel {
+section[aria-label="Free Editor"] .plain-panel,
+section[aria-label="Prompt Workshop"] .plain-panel {
   min-height: 210px;
+}
+
+.workshop-result {
+  background: rgb(8 19 29 / 0.58);
+  border: 1px solid #2a4c5e;
+  border-radius: 7px;
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+}
+
+.workshop-result h3,
+.workshop-result p {
+  margin: 0;
+}
+
+.prompt-result-list,
+.term-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.prompt-result-list article,
+.term-list li {
+  align-items: center;
+  background: rgb(20 38 51 / 0.72);
+  border: 1px solid #294456;
+  border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 9px;
+}
+
+.prompt-result-list article.selected {
+  border-color: var(--accent);
+}
+
+.prompt-result-list label {
+  align-items: flex-start;
+  display: flex;
+  flex: 1 1 260px;
+  gap: 8px;
+}
+
+.term-list span {
+  overflow-wrap: anywhere;
 }
 
 section[aria-label="Reference Library"] .library-grid {

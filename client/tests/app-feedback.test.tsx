@@ -5,12 +5,17 @@ import { App } from "../src/app/App";
 
 const mocks = vi.hoisted(() => ({
   workspace: vi.fn(() => Promise.reject({ kind: "network" })),
-  settings: vi.fn(() => Promise.resolve({ settings: {} }))
+  settings: vi.fn(() => Promise.resolve({ settings: {} })),
+  promptArrangePresets: vi.fn(() => Promise.resolve({ presets: [], warning: null }))
 }));
 
 vi.mock("../src/shared/api/client", () => ({
   ApiClientError: class ApiClientError extends Error {},
-  api: { workspace: mocks.workspace, settings: mocks.settings }
+  api: {
+    workspace: mocks.workspace,
+    settings: mocks.settings,
+    promptArrangePresets: mocks.promptArrangePresets
+  }
 }));
 
 describe("App boot feedback", () => {

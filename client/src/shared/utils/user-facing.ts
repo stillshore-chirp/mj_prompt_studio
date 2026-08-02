@@ -33,7 +33,11 @@ const agentLabels: Record<string, string> = {
   MatrixPlannerAgent: "Matrix計画の作成",
   ResultReviewAgent: "生成結果のレビュー",
   FinalAuditorAgent: "最終確認",
-  ReferenceAnalyzerAgent: "参照素材の分析"
+  ReferenceAnalyzerAgent: "参照素材の分析",
+  PromptGeneratorAgent: "Prompt案の生成",
+  PromptTransformAgent: "Promptの整形",
+  PromptLengthAdjustAgent: "文字数の調整",
+  PromptArrangeAgent: "Promptのアレンジ"
 };
 
 export function displayFieldName(fieldPath: string | null | undefined): string {

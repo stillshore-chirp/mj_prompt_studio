@@ -7,7 +7,8 @@ vi.mock("../src/shared/api/client", () => ({
   ApiClientError: class ApiClientError extends Error {},
   api: {
     workspace: vi.fn(() => new Promise(() => undefined)),
-    jobs: vi.fn(() => Promise.resolve({ jobs: [] }))
+    jobs: vi.fn(() => Promise.resolve({ jobs: [] })),
+    promptArrangePresets: vi.fn(() => Promise.resolve({ presets: [], warning: null }))
   }
 }));
 

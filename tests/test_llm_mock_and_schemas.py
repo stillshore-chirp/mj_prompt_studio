@@ -121,6 +121,24 @@ def test_mock_agent_payloads_match_strict_response_schemas(tmp_path) -> None:
             "image_metadata": {},
         },
         "FinalAuditorAgent": {"prompt": "premium breakfast", "validation": {}},
+        "PromptGeneratorAgent": {
+            "count": 2,
+            "chaos_level": 3,
+            "output_language": "en",
+        },
+        "PromptTransformAgent": {
+            "mode": "worldbuilding",
+            "source_prompt": "paper sculpture",
+        },
+        "PromptLengthAdjustAgent": {
+            "source_prompt": "paper sculpture",
+            "target_count": 20,
+        },
+        "PromptArrangeAgent": {
+            "source_prompt": "paper sculpture",
+            "preset_id": "auto",
+            "strength": 1,
+        },
     }
 
     for agent_name, payload in payloads.items():

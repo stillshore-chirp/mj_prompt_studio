@@ -12,6 +12,7 @@
 - 呼び出し側はモデルと推論強度をOpenAI clientへ渡せない。`reasoning.mode`、`temperature`、別モデルへのフォールバックは送信・実装しない。
 - SettingsでAgentごとに保存できるのはモデル非依存の語彙量だけとする。旧機能別プロファイルは起動時に語彙量だけを残して移行する。
 - ログやJob payloadにはAPIキー、Token、Cookieを含めない。
+- Prompt WorkshopのJob入力snapshotにはPrompt本文、任意ガイダンス、除外語句を保存せず、件数・文字数・設定有無などの安全なメタデータだけを残す。除外語句の文字列はログや公開用証跡に出さない。
 - React UIはAgentを直接呼ばず、`/api/agents/*` または機能別endpointからJobを作成する。
 - Job結果の永続化やPromptDocument更新はPython Application Service / Repositoryを通す。
 - 実API経路もMockLLMと同じschemaを使う。Structured Outputs向けのJSON schemaは、objectごとに `additionalProperties: false` と必須fieldを明示する。
@@ -29,6 +30,10 @@
 | MatrixPlannerAgent | experiment objective | axes、fixed_conditions、evaluation_points | 手動軸入力に戻せる |
 | ResultReviewAgent | result image、prompt snapshot | scores、strengths、issues、next_prompt_candidates | 手動レビューだけ保存 |
 | FinalAuditorAgent | prompt、validation | approved、summary、warnings、patches | コピー前警告として表示 |
+| PromptGeneratorAgent | 件数、カオス度、出力言語、任意ガイダンス、除外語句 | Prompt案、言語、warning | 有効な案がなければJob failed、件数不足はpartialとして表示 |
+| PromptTransformAgent | 本文、整形mode、出力言語、上限、anchor、除外語句 | 整形本文、保持anchor、除外要素、warning | 除外語句・上限に違反した結果は表示・コピー・適用しない |
+| PromptLengthAdjustAgent | 本文、目標文字数、上限、anchor | 調整本文、保持語句、warning | 上限超過時は最大1回だけ同一Job内で再調整し、失敗なら適用しない |
+| PromptArrangeAgent | 本文、プリセット、強度、任意ガイダンス、anchor、除外語句 | アレンジ本文、適用プリセット、強度、保持anchor、warning | プリセット・強度不一致、除外語句、上限違反は適用しない |
 
 ## OpenAI Responses API
 
@@ -58,12 +63,19 @@ usageからinput tokens、cached input tokens、output tokens、reasoning tokens
 - `/api/agents/matrix-planner`
 - `/api/agents/result-review`
 - `/api/agents/final-audit`
+- `/api/agents/prompt-generator`
+- `/api/agents/prompt-transform`
+- `/api/agents/prompt-length-adjust`
+- `/api/agents/prompt-arrange`
+- `/api/prompt-arrange-presets`
 - `/api/jobs`
 - `/api/jobs/{job_id}`
 - `/api/jobs/{job_id}/cancel`
 - `/api/jobs/{job_id}/retry`
 - `/api/jobs/stream`
 - `/api/settings/feature-preferences`
+- `/api/settings/text-output-options`
+- `/api/settings/exclusion-terms`
 
 SSEが使えない環境でもReact clientは1秒pollingでJob状態を更新する。
 
@@ -75,14 +87,15 @@ CIではOpenAI実APIを呼ばない。納品前またはリリース前に、API
 2. `make run` でローカルAPIとReact UIを起動する。
 3. `Settings`で接続テストを実行する。
 4. Intent Intake、Vocabulary、Prompt Compiler、Prompt Doctor、Parameter Advisorを順に実行する。
-5. Reference Analyzerへ画像を入力する。
-6. Matrix Plannerを実行する。
-7. Result Reviewへ画像を入力する。
-8. Final Auditorを実行する。
-9. 通常モードでLuna応答の継続を確認する。
-10. 旧モデル由来response IDが切断されることを確認する。
-11. Privacy modeで保存と継続IDが無効になることを確認する。
-12. 各ケースのschema成否、token usage、latency、エラーをPRへ記録する。
+5. Prompt Workshopでゼロ入力生成、世界観整形、カオスミックス、文字数のみ調整、LLMアレンジを1回ずつ実行し、schema・出力設定・除外語句を確認する。
+6. Reference Analyzerへ画像を入力する。
+7. Matrix Plannerを実行する。
+8. Result Reviewへ画像を入力する。
+9. Final Auditorを実行する。
+10. 通常モードでLuna応答の継続を確認する。
+11. 旧モデル由来response IDが切断されることを確認する。
+12. Privacy modeで保存と継続IDが無効になることを確認する。
+13. 各ケースのschema成否、token usage、latency、エラーをPRへ記録する。
 
 参考にした公式ドキュメント:
 

@@ -138,7 +138,7 @@ class LLMOrchestrator:
                 "type": "input_text",
                 "text": (
                     f"You are {agent_name} for MJ Prompt Studio. "
-                    "Return only schema-valid JSON."
+                    f"{_agent_instruction(agent_name)} Return only schema-valid JSON."
                 ),
             },
             {"type": "input_text", "text": _redacted_payload(payload)},
@@ -179,3 +179,29 @@ def _redacted_payload(payload: dict[str, Any]) -> str:
         for key, value in payload.items()
     }
     return str(safe_payload)
+
+
+def _agent_instruction(agent_name: str) -> str:
+    instructions = {
+        "PromptGeneratorAgent": (
+            "Generate the requested number of distinct image prompt bodies. "
+            "Do not add bullets, explanations, JSON, Markdown, or --options."
+        ),
+        "PromptTransformAgent": (
+            "Return one image prompt body for the requested mode. "
+            "Keep worldbuilding to one coherent scene and chaos_mix to "
+            "one simultaneous, intentional collision of the supplied elements. "
+            "Do not add video language, explanations, JSON, Markdown, or --options."
+        ),
+        "PromptLengthAdjustAgent": (
+            "Change only length while retaining the subject, language, style, "
+            "and supplied anchors. "
+            "Do not add new major subjects, explanations, JSON, Markdown, or --options."
+        ),
+        "PromptArrangeAgent": (
+            "Blend the supplied preset guidance at the requested strength while "
+            "retaining the source "
+            "subject and anchors. Do not add explanations, JSON, Markdown, or --options."
+        ),
+    }
+    return instructions.get(agent_name, "")

@@ -21,6 +21,7 @@ from mj_prompt_studio.domain.prompt_document import (
     PromptPatch,
     ValidationReport,
 )
+from mj_prompt_studio.domain.prompt_output import PromptOutputRenderer, split_known_options
 from mj_prompt_studio.domain.reference import (
     ReferenceAnalysis,
     ReferenceAsset,
@@ -42,12 +43,15 @@ class PromptWorkflowService:
         repository: SQLiteRepository,
         ruleset: GenerationRuleset,
         orchestrator: LLMOrchestrator,
+        *,
+        include_midjourney_options: bool = True,
     ) -> None:
         self.repository = repository
         self.ruleset = ruleset
         self.orchestrator = orchestrator
         self.compiler = PromptCompiler()
         self.validator = PromptValidator()
+        self.include_midjourney_options = include_midjourney_options
 
     def create_project_with_document(
         self, project_name: str, title: str
@@ -98,7 +102,11 @@ class PromptWorkflowService:
         source: str = "manual",
         diff_summary: str = "Compileを実行",
     ) -> PromptDocument:
-        compile_result = self.compiler.compile(document, self.ruleset)
+        compile_result = self.compiler.compile(
+            document,
+            self.ruleset,
+            include_midjourney_options=self.include_midjourney_options,
+        )
         document.compiled_prompt = compile_result.prompt
         document.validation_report = self.validator.validate(document, self.ruleset)
         self.repository.save_prompt_document(document)
@@ -232,10 +240,17 @@ class ReferenceWorkflowService:
 
 
 class MatrixWorkflowService:
-    def __init__(self, repository: SQLiteRepository, orchestrator: LLMOrchestrator) -> None:
+    def __init__(
+        self,
+        repository: SQLiteRepository,
+        orchestrator: LLMOrchestrator,
+        *,
+        include_midjourney_options: bool = True,
+    ) -> None:
         self.repository = repository
         self.orchestrator = orchestrator
         self.generator = MatrixGenerator()
+        self.include_midjourney_options = include_midjourney_options
 
     def plan_experiment(self, objective: str) -> MatrixPlan:
         result = self.orchestrator.run_agent("MatrixPlannerAgent", {"objective": objective})
@@ -259,7 +274,11 @@ class MatrixWorkflowService:
     def generate_and_save(
         self, project_id: str, plan: MatrixPlan, base_prompt: str
     ) -> list[MatrixVariant]:
-        variants = self.generator.generate(plan, base_prompt)
+        variants = self.generator.generate(
+            plan,
+            base_prompt,
+            include_midjourney_options=self.include_midjourney_options,
+        )
         self.repository.save_matrix_experiment(
             project_id,
             plan.id,
@@ -280,10 +299,16 @@ class ResultReviewWorkflowService:
         repository: SQLiteRepository,
         asset_store: AssetStore,
         orchestrator: LLMOrchestrator,
+        ruleset: GenerationRuleset,
+        *,
+        include_midjourney_options: bool = True,
     ) -> None:
         self.repository = repository
         self.asset_store = asset_store
         self.orchestrator = orchestrator
+        self.ruleset = ruleset
+        self.include_midjourney_options = include_midjourney_options
+        self.renderer = PromptOutputRenderer()
 
     def import_result_image(self, document: PromptDocument, source_path: Path) -> ResultImage:
         result = ResultImage.create(
@@ -300,10 +325,12 @@ class ResultReviewWorkflowService:
         return result
 
     def review_result(self, result_image: ResultImage) -> ResultReview:
+        source = split_known_options(result_image.prompt_snapshot, self.ruleset)
+        parameters = PromptParameters.from_dict(result_image.parameters_snapshot)
         result = self.orchestrator.run_agent(
             "ResultReviewAgent",
             {
-                "prompt": result_image.prompt_snapshot,
+                "prompt": source.body,
                 "parameters": result_image.parameters_snapshot,
                 "image_metadata": asdict(result_image.image_metadata),
             },
@@ -315,12 +342,24 @@ class ResultReviewWorkflowService:
             strengths=[str(item) for item in result.output_json["strengths"]],
             issues=[str(item) for item in result.output_json["issues"]],
             next_prompt_candidates=[
-                str(item) for item in result.output_json["next_prompt_candidates"]
+                self._render_review_candidate(str(item), parameters)
+                for item in result.output_json["next_prompt_candidates"]
             ],
             ai_summary=str(result.output_json["ai_summary"]),
         )
         self.repository.save_result_review(review)
         return review
+
+    def _render_review_candidate(
+        self, candidate: str, parameters: PromptParameters
+    ) -> str:
+        candidate_parts = split_known_options(candidate, self.ruleset)
+        return self.renderer.render(
+            candidate_parts.body,
+            parameters,
+            self.ruleset,
+            include_midjourney_options=self.include_midjourney_options,
+        )
 
     def final_audit(self, document: PromptDocument) -> AgentResult:
         result = self.orchestrator.run_agent(

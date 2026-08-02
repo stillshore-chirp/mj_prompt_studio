@@ -35,10 +35,10 @@ test("core local workflow parity", async ({ page }) => {
   await page.getByRole("button", { name: "適用" }).click();
   await expect(page.getByText("提案されたパラメータを適用し、Compiled Promptを更新しました。内容を確認できます。")).toBeVisible();
 
-  await page.getByRole("tab", { name: /既存Promptを整える/ }).click();
-  await page.getByLabel("Japanese Source").fill("高級感のある朝食");
+  await page.getByRole("tab", { name: /Prompt Workshop/ }).click();
+  await page.getByLabel("作業中のPrompt").fill("高級感のある朝食");
   await page.getByRole("button", { name: /英語Prompt化/ }).click();
-  await expect(page.getByLabel("変換結果")).toHaveValue(/premium editorial/);
+  await expect(page.getByLabel("既存変換の結果")).toHaveValue(/premium editorial/);
 
   const imagePath = writeImage("reference.png");
   await page.getByRole("tab", { name: /参考画像を使う/ }).click();

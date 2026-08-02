@@ -1,0 +1,229 @@
+{
+  "presets": [
+    {
+      "id": "fantasy",
+      "label": "ファンタジー",
+      "guidance": "FANTASY MOOD: evoke mythic wonder through atmosphere, light, and grand scale without naming specific creatures, places, or artifacts. Keep the subject partially undefined; suggest ancient magic through glow, haze, silhouettes, and resonant patterns. Allow 2–3 surprising, non-literal metaphors to emerge. Composition should feel dreamlike and open-ended."
+    },
+    {
+      "id": "dark_fantasy",
+      "label": "ダークファンタジー",
+      "guidance": "DARK FANTASY MOOD: ominous, ritual ambience with occult undertones—no explicit monsters or gore. Use long shadows, fractured light, unsettling geometry, and textured symbols. Keep specifics ambiguous; hint at forbidden power via patterns and negative space. Add one quiet, beautiful counterpoint to heighten dread."
+    },
+    {
+      "id": "high_fantasy",
+      "label": "ハイファンタジー",
+      "guidance": "HIGH FANTASY MOOD: grand, luminous, heroic atmosphere without explicit characters, battles, or named relics. Convey divine scale through elevation, radiance, and vast depth. Let nobility and awe be implied by light and composition rather than concrete subjects."
+    },
+    {
+      "id": "mythological",
+      "label": "神話風",
+      "guidance": "MYTHOLOGICAL MOOD: archetypal, timeless energy. Allude to elemental forces—sky, sea, fire, earth— without naming deities or creatures. Use symbolic silhouettes, halos, repeating rhythms, and ritual symmetry. Keep narrative abstract and allegorical."
+    },
+    {
+      "id": "cyberpunk",
+      "label": "サイバーパンク",
+      "guidance": "CYBERPUNK MOOD: saturated neon, dense layering, synthetic textures—avoid naming gadgets, brands, or vehicles. Convey high-tech/low-life tension through reflections, glitches, signage fragments, and humid atmosphere. Leave any protagonist undefined; let surfaces and light tell the story."
+    },
+    {
+      "id": "solarpunk",
+      "label": "ソーラーパンク",
+      "guidance": "SOLARPUNK MOOD: optimistic ecological harmony. Suggest renewable systems and living integration via textures, dappled light, and rhythmic greenery—no named devices. Emphasize convivial atmosphere, soft futurism, and gentle prosperity."
+    },
+    {
+      "id": "steampunk",
+      "label": "スチームパンク",
+      "guidance": "STEAMPUNK MOOD: retro-mechanical charm through brass tones, pressure, and rhythmic mechanisms without naming engines or vehicles. Express invention through joints, gauges, valves, and soft steam hints. Keep the subject open and suggestive."
+    },
+    {
+      "id": "dieselpunk",
+      "label": "ディーゼルパンク",
+      "guidance": "DIESELPUNK MOOD: industrial mass and interwar grit—no named machines or weapons. Use heavy geometry, riveted textures, oily patina, and smoky gradients. Undercurrent of art-deco cadence without explicit references."
+    },
+    {
+      "id": "post_apocalyptic",
+      "label": "ポストアポカリプス",
+      "guidance": "POST-APOCALYPTIC MOOD: quiet aftermath and adaptive survival without named ruins or weaponry. Let nature reclaim forms; use weathered textures, broken symmetry, dust-haze, and sharp shafts of light. Keep human presence ambiguous."
+    },
+    {
+      "id": "wafuu",
+      "label": "和風",
+      "guidance": "JAPANESE AESTHETIC MOOD: serene, restrained elegance; imply wood, paper, stone, water, and seasonal transience without naming clothing or utensils. Use negative space, asymmetry, quiet textures, and subtle patina to suggest wabi-sabi."
+    },
+    {
+      "id": "ukiyoe",
+      "label": "浮世絵",
+      "guidance": "UKIYO-E MOOD: woodblock sensibility—bold outlines, flat fields, rhythmic patterns—without specific historical actors or scenes. Emphasize pattern flow, stylized perspective, and graphic simplicity."
+    },
+    {
+      "id": "samurai",
+      "label": "侍",
+      "guidance": "SAMURAI MOOD: stoic discipline and honor implied through composition and material cues—avoid naming armor or weapons. Suggest presence via controlled posture-like silhouettes, fabric flow, and restrained tension."
+    },
+    {
+      "id": "ninja",
+      "label": "忍者",
+      "guidance": "NINJA MOOD: stealth and moonlit suspense without explicit tools, rooftops, or pursuits. Use layered shadows, sudden highlights, and pauses of stillness. Keep identity undefined and elusive."
+    },
+    {
+      "id": "gothic",
+      "label": "ゴシック",
+      "guidance": "GOTHIC MOOD: vertical awe and melancholic beauty—no named cathedrals or figures. Use tracery-like patterns, stained-light atmospherics, candle-dark contrasts, and solemn grandeur."
+    },
+    {
+      "id": "art_deco",
+      "label": "アール・デコ",
+      "guidance": "ART DECO MOOD: geometric opulence and streamline elegance without specific places or decades. Emphasize stepped forms, metallic sheen, symmetrical rhythm, and luxe restraint."
+    },
+    {
+      "id": "art_nouveau",
+      "label": "アール・ヌーヴォー",
+      "guidance": "ART NOUVEAU MOOD: organic flow and whiplash curves; floral suggestions without naming species or portraits. Highlight sinuous lines, integrated ornament, and lyrical continuity."
+    },
+    {
+      "id": "watercolor",
+      "label": "水彩画",
+      "guidance": "WATERCOLOR MOOD: soft washes, granulation, translucent layering; edges breathe and pigments wander. Avoid concrete subjects—let forms emerge from color and atmosphere."
+    },
+    {
+      "id": "manga",
+      "label": "漫画",
+      "guidance": "MANGA MOOD: clean line emphasis and dynamic framing without specific characters or text. Use speed, onomatopoeic energy, screentone-like textures, and panel-aware composition."
+    },
+    {
+      "id": "anime",
+      "label": "アニメ",
+      "guidance": "ANIME MOOD: cinematic, cel-shaded clarity with vibrant yet disciplined palette. Avoid named subjects; emphasize framing, motion cues, and lighting beats to imply narrative without stating it."
+    },
+    {
+      "id": "sci_fi",
+      "label": "サイファイ",
+      "guidance": "SCI-FI MOOD: speculative materiality and luminous interfaces suggested through surfaces and light—no named spacecraft, robots, or weapons. Imply futurity via minimal forms, color logic, and quiet technology."
+    },
+    {
+      "id": "noir",
+      "label": "ノワール",
+      "guidance": "NOIR MOOD: high-contrast tension, rain-slick atmosphere, and moral ambiguity—no detectives or props named. Let silhouettes, blind-shadow patterns, and smoke-like haze carry the drama."
+    },
+    {
+      "id": "vaporwave",
+      "label": "ヴェイパーウェーブ",
+      "guidance": "VAPORWAVE MOOD: nostalgic digital haze and pastel surrealism without specific statues or malls. Use gradients, grids, chrome hints, lo-fi texture, and liminal emptiness."
+    },
+    {
+      "id": "palette_pastel",
+      "label": "パステル",
+      "guidance": "PASTEL PALETTE MOOD: gentle, airy chroma with low contrast and soft transitions. Avoid concrete objects; focus on comfort, lightness, and dreamlike gradients."
+    },
+    {
+      "id": "palette_neon",
+      "label": "ネオン",
+      "guidance": "NEON PALETTE MOOD: electrified chroma and high-contrast glow. Avoid naming objects; let light interplay, reflections, and afterimages convey the energy."
+    },
+    {
+      "id": "ultra_realistic_photo",
+      "label": "超高精細写真",
+      "guidance": "ULTRA-REALISTIC PHOTO MOOD: photographic credibility, natural optics, and precise materials without prescribing subject matter. Let authenticity emerge through light, texture, and depth-of-field; keep the topic open and unforced."
+    },
+    {
+      "id": "surrealism",
+      "label": "シュルレアリスム",
+      "guidance": "SURREALISM MOOD: dream-logic juxtapositions and elastic scale—no named objects or artists. Fuse mismatched textures, floating perspectives, and impossible shadows. Keep meaning ambiguous; let subconscious patterns surface."
+    },
+    {
+      "id": "minimalism",
+      "label": "ミニマリズム",
+      "guidance": "MINIMALISM MOOD: radical reduction, spare geometry, and generous negative space. Avoid concrete items; rely on proportion, rhythm, and subtle material shifts. Tension should arise from placement and silence."
+    },
+    {
+      "id": "brutalism",
+      "label": "ブルータリズム",
+      "guidance": "BRUTALISM MOOD: raw mass and honest materiality—no named buildings. Emphasize monolithic forms, rough concrete-like textures, stark light, and hard edges. Keep composition severe yet dignified."
+    },
+    {
+      "id": "baroque",
+      "label": "バロック",
+      "guidance": "BAROQUE MOOD: dramatic contrast, swirling movement, and gilded abundance without saints or palaces. Use cascading curves, theatrical light, and layered ornament. Emotion implied through motion and glow."
+    },
+    {
+      "id": "impressionism",
+      "label": "印象派",
+      "guidance": "IMPRESSIONISM MOOD: fleeting light, broken color, and airy stroke-like texture—no named scenes. Let atmosphere dissolve edges; emphasize momentary glow and outdoor freshness."
+    },
+    {
+      "id": "abstract_expressionism",
+      "label": "抽象表現主義",
+      "guidance": "ABSTRACT EXPRESSIONISM MOOD: gestural energy and field-like immersion—no figures or symbols. Use sweeping motion, layered pigment, and charged emptiness. Let scale feel bodily and immediate."
+    },
+    {
+      "id": "biopunk",
+      "label": "バイオパンク",
+      "guidance": "BIOPUNK MOOD: organic-mechanical tension and lab-adjacent ambience—no named tech or organs. Suggest membranes, filaments, growth patterns, and clinical glow. Beauty edged with unease."
+    },
+    {
+      "id": "afrofuturism",
+      "label": "アフロフューチャリズム",
+      "guidance": "AFROFUTURISM MOOD: diasporic futurity and radiant cultural synthesis without naming people or motifs. Use warm cosmic palettes, rhythmic patterning, and ceremonial light. Uplift through dignity and wonder."
+    },
+    {
+      "id": "dreamcore",
+      "label": "ドリームコア",
+      "guidance": "DREAMCORE MOOD: nostalgic softness and quiet unreality—no named places or props. Use off-hours light, empty arrangements, pastel fog, and gentle dislocation. Comfort tinged with melancholy."
+    },
+    {
+      "id": "liminal_spaces",
+      "label": "リミナルスペース",
+      "guidance": "LIMINAL SPACES MOOD: thresholds and in-between stillness without signage or brands. Emphasize vacant architecture, fluorescent hum, long perspective, and quiet echo. Unease through emptiness."
+    },
+    {
+      "id": "glitchcore",
+      "label": "グリッチコア",
+      "guidance": "GLITCHCORE MOOD: signal failure, scanlines, bitrot, and compression ghosts—no devices or UIs named. Let corruption and discontinuity carry the drama; rhythmic errors, temporal smears, and pixel afterimages."
+    },
+    {
+      "id": "non_euclidean",
+      "label": "非ユークリッド",
+      "guidance": "NON-EUCLIDEAN MOOD: warped space and paradox perspective without named shapes or places. Elastic angles, recursive corridors, folded adjacency; cool, analytical light maintains calm strangeness."
+    },
+    {
+      "id": "synesthesia",
+      "label": "共感覚",
+      "guidance": "SYNESTHESIA MOOD: sound-as-color and taste-as-light logic—no instruments or food. Use resonance rings, chroma pulses, and flowing gradients to imply cross-sense mapping."
+    },
+    {
+      "id": "pareidolia",
+      "label": "パレイドリア",
+      "guidance": "PAREIDOLIA MOOD: almost-recognizable forms rising from clouds, stone, or woodgrain—do not depict faces. Suggest agency via symmetry hints, near-eyes patterns, and misread silhouettes; keep it ambiguous."
+    },
+    {
+      "id": "bio_luminescent_depths",
+      "label": "生物発光の深層",
+      "guidance": "BIOLUMINESCENT DEPTHS MOOD: abyssal hush and networked glow—no named creatures. Membranes, tendrils, particulate drift, and velvet dark; serenity edged with awe."
+    },
+    {
+      "id": "infrared_dreamscape",
+      "label": "赤外線ドリームスケープ",
+      "guidance": "INFRARED DREAMSCAPE MOOD: false-color heat logic and foliage inversion—no cameras or sensors. High-key whites, surreal warmth gradients, and airy haze create a lucid, uncanny calm."
+    },
+    {
+      "id": "magnetic_fluid",
+      "label": "磁性流体",
+      "guidance": "MAGNETIC FLUID MOOD: field-driven spikes, smooth menisci, and ordered ripples—no lab gear. Glossy black sheen, micro-to-macro ambiguity, and poised tension between flow and structure."
+    },
+    {
+      "id": "time_dilation",
+      "label": "時間伸長",
+      "guidance": "TIME DILATION MOOD: layered instants, stretched motion, and ghost trails—avoid clocks or hourglasses. Emphasize duration with repeats, soft echoes, and accumulated light."
+    },
+    {
+      "id": "algorithmic_ornament",
+      "label": "アルゴリズミック・オーナメント",
+      "guidance": "ALGORITHMIC ORNAMENT MOOD: rule-born elegance—tilings, quasi-crystals, and L-system-like flourishes. Avoid code snippets; highlight emergence, recursion, and delicate constraint."
+    },
+    {
+      "id": "hyperspace_blossom",
+      "label": "ハイパースペースの花",
+      "guidance": "HYPERSPACE BLOSSOM MOOD: higher-dimensional bloom metaphor expressed via unfolding cross-sections. No sci-fi props; use iridescent gradients and shadows cast from unseen axes."
+    }
+  ]
+}

@@ -8,6 +8,9 @@ test("文字を125%相当に拡大しても主作業と補助情報へ到達で�
   });
 
   await expect(page.getByRole("textbox", { name: "Subject" })).toBeVisible();
+  await page.getByRole("tab", { name: /Prompt Workshop/ }).click();
+  await expect(page.getByRole("button", { name: "Prompt案を生成" })).toBeVisible();
+  expect(await page.locator("html").evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.getByRole("tab", { name: /設定/ }).click();
   await expect(page.getByRole("region", { name: "Settings" })).toBeVisible();
 
