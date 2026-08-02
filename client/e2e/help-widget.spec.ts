@@ -20,3 +20,15 @@ test("右下ヘルプで文書の目次と現在画面の手順へ到達でき�
   await expect(page.getByRole("region", { name: "使い方" })).toBeHidden();
   await expect(trigger).toBeFocused();
 });
+
+test("Prompt Workshopのヘルプから、目的と使い分けを含むマニュアルを読める", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("tab", { name: /Prompt Workshop/ }).click();
+
+  await page.getByRole("button", { name: "使い方", exact: true }).click();
+  await page.getByRole("button", { name: "この画面の使い方へ" }).click();
+
+  const manual = page.getByRole("tabpanel", { name: "ユーザーマニュアル" });
+  await expect(manual).toContainText("Prompt Workshopは、材料なしで案を出す作業");
+  await expect(manual).toContainText("比較する条件を管理したい場合はMatrix Lab");
+});
