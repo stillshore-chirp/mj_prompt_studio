@@ -99,12 +99,11 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 ## PR / CI / review 記録
 
 - Branch: `codex/issue-67-ai-job-error-recovery`
-- Commit: `cc1f005`、`8bcaec1`、`153ca44`、`d1e5642`、review再修正はコミット前
+- Commit: `cc1f005`、`8bcaec1`、`153ca44`、`d1e5642`、`8c48b92`、完了記録はコミット前
 - PR: [#68](https://github.com/stillshore-chirp/mj_prompt_studio/pull/68) (Ready)
-- Push CI: `d1e5642`まで成功。review再修正コミットのpush後に再監視
-- PR CI: `d1e5642`まで成功。review再修正コミットのpush後に再監視
+- Push CI: `8c48b92`で成功（Quality and package、macOS、Windows）
+- PR CI: `8c48b92`で成功（Quality and package、macOS、Windows）
 - ローカル差分レビュー: Pass（P0 / P1 なし）
-- Codex review: 未実施（外部レビューなし）
-- Codex review: P1再指摘を修正し、再レビュー依頼前
-- 未解決 review thread: 1（修正コミット後に返信・解決予定）
+- Codex review: `8c48b92`を再レビュー済み（重大な問題なし）
+- 未解決 review thread: 0
 - レビュー往復回数: 3
