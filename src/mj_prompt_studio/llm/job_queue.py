@@ -158,25 +158,30 @@ class LLMJobQueue:
         return work()
 
     def _complete(self, job_id: str, future: Future[dict[str, Any]]) -> None:
-        job = self.get(job_id)
-        if job is None:
-            return
+        output: dict[str, Any] | None = None
+        diagnostics = None
         try:
-            job.output_json = future.result()
-            job.status = "succeeded"
-            job.response_id_kind = _response_id_kind_for_backend(job.execution_backend)
+            output = future.result()
         except Exception as exc:  # pragma: no cover - exercised by tests via behavior
-            if job.status != "cancelled":
-                job.status = "failed"
-                diagnostics = failure_diagnostics_for_exception(exc)
+            diagnostics = failure_diagnostics_for_exception(exc)
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return
+            if diagnostics is None:
+                job.output_json = output
+                job.status = "succeeded"
+                job.response_id_kind = _response_id_kind_for_backend(job.execution_backend)
+            elif job.status != "cancelled":
                 job.failure_code = diagnostics.code
                 job.failure_stage = diagnostics.stage
                 job.provider_status_code = diagnostics.provider_status_code
                 job.provider_error_code = diagnostics.provider_error_code
                 job.error_message = failure_message(job.failure_code)
-        job.finished_at = utc_now()
+                job.status = "failed"
+            job.finished_at = utc_now()
+            callback = self._callbacks.get(job.id)
         self._notify(job)
-        callback = self._callbacks.get(job.id)
         if callback:
             callback(job)
 

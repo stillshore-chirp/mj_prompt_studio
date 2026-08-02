@@ -2,6 +2,7 @@ from threading import Event
 
 import pytest
 
+import mj_prompt_studio.llm.job_queue as job_queue_module
 from mj_prompt_studio.llm.job_queue import LLMJobQueue
 from mj_prompt_studio.llm.orchestrator import LLMOutputValidationError
 
@@ -114,6 +115,47 @@ def test_job_queue_enforces_one_retry_for_structured_output_failure() -> None:
     with pytest.raises(ValueError, match="retry limit reached"):
         queue.retry(job.id)
     assert job.retry_count == 1
+    queue.shutdown()
+
+
+def test_job_queue_does_not_publish_failed_before_failure_classification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    classifying = Event()
+    release_classification = Event()
+    release_work = Event()
+    done = Event()
+    original_classifier = job_queue_module.failure_diagnostics_for_exception
+
+    def delayed_classifier(exc: Exception):
+        classifying.set()
+        assert release_classification.wait(3)
+        return original_classifier(exc)
+
+    monkeypatch.setattr(job_queue_module, "failure_diagnostics_for_exception", delayed_classifier)
+    queue = LLMJobQueue(max_workers=1)
+
+    def work() -> dict[str, object]:
+        assert release_work.wait(3)
+        raise LLMOutputValidationError()
+
+    job = queue.submit(
+        agent_name="PromptTransformAgent",
+        input_snapshot={},
+        work=work,
+        callback=lambda _job: done.set(),
+    )
+
+    release_work.set()
+    assert classifying.wait(3)
+    assert job.status == "running"
+    with pytest.raises(ValueError, match="only be retried after failure"):
+        queue.retry(job.id)
+
+    release_classification.set()
+    assert done.wait(3)
+    assert job.status == "failed"
+    assert job.failure_code == "structured_output_invalid"
     queue.shutdown()
 
 

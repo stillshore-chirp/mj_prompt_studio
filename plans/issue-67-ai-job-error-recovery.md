@@ -104,6 +104,7 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 | 2026-08-03 | 別ポートの `make e2e` | Pass | mock専用Chromium E2E 27件。旧履歴の再試行抑止、新規診断詳細、狭幅、文字拡大を含む。ユーザー起動中アプリには未干渉。 |
 | 2026-08-03 | Codex review P1 / P2修正後のclient検証 | Pass | 公開文言検査、lint、型検査、Vitest 61件、production build。応答保存分類の優先と再試行1回上限を含む。 |
 | 2026-08-03 | Codex再レビューP1修正後の全検証 | Pass | Python 91件、client 62件、Chromium E2E 28件、build、公開文言検査。client/server双方の重複再試行防止を含む。 |
+| 2026-08-03 | Codex最終確認P1修正後のbackend検証 | Pass | lint、型検査、Python 92件、build、公開文言検査。失敗分類と状態公開の競合窓を意図的に停止させる回帰テストを含む。 |
 
 ## PR / CI / review 記録
 
