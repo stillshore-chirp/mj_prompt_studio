@@ -159,6 +159,10 @@ describe("JobsPanel status feedback", () => {
           createJob("failed", {
             id: "rate_limit",
             failure_code: "rate_limited"
+          }),
+          createJob("failed", {
+            id: "quota_exhausted",
+            failure_code: "api_quota_exhausted"
           })
         ]}
         onRefresh={vi.fn()}
@@ -168,8 +172,12 @@ describe("JobsPanel status feedback", () => {
       />
     );
 
-    expect(screen.getAllByRole("button", { name: "再試行する" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "再試行する" })).toHaveLength(2);
     expect(screen.getByText(/少し待ってから、元の操作をもう一度実行してください。/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/OpenAI Platformで利用枠・請求状態を確認し、必要な更新後に再試行してください。/)
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "設定を開く" })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "設定を開く" }));
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });

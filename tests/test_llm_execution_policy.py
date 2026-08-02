@@ -69,15 +69,32 @@ class _CapturingResponsesClient:
 
 
 class _ProviderFailure(RuntimeError):
-    def __init__(self, status_code: int, detail: str) -> None:
+    def __init__(
+        self,
+        status_code: int,
+        detail: str,
+        provider_code: str | None = None,
+        code_on_exception: bool = False,
+    ) -> None:
         self.status_code = status_code
         self.body = {"error": {"message": detail}}
+        if provider_code is not None:
+            if code_on_exception:
+                self.code = provider_code
+            else:
+                self.body["error"]["code"] = provider_code
         super().__init__(detail)
 
 
 class _FailingResponsesClient:
-    def __init__(self, status_code: int, detail: str) -> None:
-        self.error = _ProviderFailure(status_code, detail)
+    def __init__(
+        self,
+        status_code: int,
+        detail: str,
+        provider_code: str | None = None,
+        code_on_exception: bool = False,
+    ) -> None:
+        self.error = _ProviderFailure(status_code, detail, provider_code, code_on_exception)
 
     def create_response(self, **_kwargs):
         raise self.error
@@ -122,22 +139,67 @@ def test_privacy_mode_always_removes_continuation_id(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("status_code", "detail", "expected_code"),
+    ("status_code", "detail", "provider_code", "code_on_exception", "expected_code"),
     [
         (
             400,
             "provider diagnostic: invalid response_format schema",
+            None,
+            False,
             "structured_output_schema_invalid",
         ),
-        (400, "provider diagnostic: store setting is not accepted", "response_storage_rejected"),
-        (429, "provider diagnostic: quota", "rate_limited"),
+        (
+            400,
+            "provider diagnostic: store setting is not accepted",
+            None,
+            False,
+            "response_storage_rejected",
+        ),
+        (429, "provider diagnostic: too many requests", None, False, "rate_limited"),
+        (
+            429,
+            "provider diagnostic: quota",
+            "credit_balance_exhausted",
+            False,
+            "api_quota_exhausted",
+        ),
+        (
+            429,
+            "provider diagnostic: quota",
+            "organization_spend_limit_exceeded",
+            False,
+            "api_quota_exhausted",
+        ),
+        (
+            429,
+            "provider diagnostic: quota",
+            "project_spend_limit_exceeded",
+            False,
+            "api_quota_exhausted",
+        ),
+        (
+            429,
+            "provider diagnostic: quota",
+            "organization_usage_limit_exceeded",
+            False,
+            "api_quota_exhausted",
+        ),
+        (429, "provider diagnostic: quota", "insufficient_quota", False, "api_quota_exhausted"),
+        (429, "provider diagnostic: quota", "insufficient_quota", True, "api_quota_exhausted"),
     ],
 )
 def test_orchestrator_classifies_provider_failures_without_exposing_raw_detail(
-    tmp_path: Path, status_code: int, detail: str, expected_code: str
+    tmp_path: Path,
+    status_code: int,
+    detail: str,
+    provider_code: str | None,
+    code_on_exception: bool,
+    expected_code: str,
 ) -> None:
     orchestrator = LLMOrchestrator(_settings(tmp_path, llm_mode="real"))
-    orchestrator.real_client = _FailingResponsesClient(status_code, detail)
+    orchestrator.real_client = _FailingResponsesClient(
+        status_code, detail, provider_code, code_on_exception
+    )
 
     with pytest.raises(LLMExecutionError) as exc_info:
         orchestrator.run_agent("VocabularyAgent", {"text": "safe fixture"})

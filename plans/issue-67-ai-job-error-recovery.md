@@ -32,6 +32,7 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 - [x] Jobs panelと失敗通知に原因・影響・復旧操作を実装し、アクセシビリティと入力保持を検証する。
 - [x] 構造化AI Jobのリクエスト契約を検証し、観測済み失敗に対する回帰をフェイク境界で固定する。
 - [x] docs、UI/UX state matrix、前後スクリーンショット、ローカル検証、PR/CI/reviewを完了する。
+- [x] Codex review P1: HTTP 429の利用枠・請求上限と一時的なレート制限を分離し、復旧操作を正しく案内する。
 
 ## 受け入れ条件
 
@@ -42,6 +43,7 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 - [x] 機微情報がJob DTO、画面、テスト、ログ、公開証跡に含まれない。
 - [x] backend、client、E2Eで通常・失敗・再試行・設定確認・狭幅・キーボードを検証する。
 - [x] 関連文書、UI/UXレビュー、前後スクリーンショット、Issue、Ready PR、CI、review threadsを完了する。
+- [x] HTTP 429のうち利用枠・請求上限は待機だけを案内せず、利用枠・請求状態の確認後に明示再試行する導線を出す。
 
 ## 検証コマンド
 
@@ -82,15 +84,19 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 | 2026-08-02 | `npm run lint && npm run typecheck && npm run test:run && npm run build` | Pass | client lint、TypeScript、Vitest 54件、production build。 |
 | 2026-08-02 | `npm run e2e` | Pass | mock専用のChromium E2E 24件。構造化失敗fixture、再試行の実クリック、狭幅reflowを含む。視覚証跡は匿名化済みのdocs evidenceとして別途確認。 |
 | 2026-08-02 | `bash scripts/verify-ai-governance.sh && git diff --check` | Pass | ガバナンス検査と差分空白検査。 |
+| 2026-08-03 | `make lint && make typecheck && make test && make build` | Pass | ruff、mypy、pytest 83件、compileall。実APIは未使用。 |
+| 2026-08-03 | `make client-lint && make client-typecheck && make client-test && make client-build` | Pass | client lint、TypeScript、Vitest 54件、production build。 |
+| 2026-08-03 | 別ポートの `npm run e2e` | Pass | mock専用のChromium E2E 25件。ユーザー起動中アプリやOS資格情報ストアの状態に依存しない。 |
 
 ## PR / CI / review 記録
 
 - Branch: `codex/issue-67-ai-job-error-recovery`
-- Commit: `cc1f005`、`8bcaec1`
+- Commit: `cc1f005`、`8bcaec1`、review修正はコミット前
 - PR: [#68](https://github.com/stillshore-chirp/mj_prompt_studio/pull/68) (Ready)
-- Push CI: Pass（Quality and package、macOS / Windows smoke）
-- PR CI: Pass（Quality and package、macOS / Windows smoke）
+- Push CI: review修正コミットのpush後に再監視
+- PR CI: review修正コミットのpush後に再監視
 - ローカル差分レビュー: Pass（P0 / P1 なし）
 - Codex review: 未実施（外部レビューなし）
-- 未解決 review thread: 0
-- レビュー往復回数: 0
+- Codex review: P1 1件を修正済み。push後に再確認
+- 未解決 review thread: 1（修正コミット後に返信・解決予定）
+- レビュー往復回数: 1

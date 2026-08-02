@@ -63,3 +63,44 @@ test("shows a failed Job's state, impact, and retry path without backend error d
   await expect(page.getByText("internal provider trace must not be exposed")).toBeHidden();
   await job.getByRole("button", { name: "再試行する" }).click();
 });
+
+test("guides quota exhaustion to account recovery instead of wait-only guidance", async ({ page }) => {
+  await page.route("**/api/jobs", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        jobs: [
+          {
+            id: "job_quota_exhausted_fixture",
+            agent_name: "PromptDoctorAgent",
+            model: "gpt-5.6-luna",
+            reasoning_effort: "high",
+            text_verbosity: "low",
+            status: "failed",
+            input_snapshot: {},
+            output_json: null,
+            error_message: "internal provider trace must not be exposed",
+            failure_code: "api_quota_exhausted",
+            created_at: "2026-08-01T00:00:00Z",
+            finished_at: "2026-08-01T00:00:01Z",
+            retry_count: 0,
+            configured_mode: "real",
+            execution_backend: "openai",
+            api_key_configured: true,
+            response_id_kind: null
+          }
+        ]
+      })
+    });
+  });
+
+  await page.goto("/");
+  const job = page.getByRole("article").filter({ hasText: "Prompt Doctorの確認" });
+  await expect(job).toContainText(
+    "実APIの利用枠または請求上限に達したため処理できませんでした。結果は適用されていません。OpenAI Platformで利用枠・請求状態を確認し、必要な更新後に再試行してください。"
+  );
+  await expect(job.getByRole("button", { name: "再試行する" })).toBeVisible();
+  await expect(job.getByRole("button", { name: "設定を開く" })).toBeHidden();
+  await expect(page.getByText("internal provider trace must not be exposed")).toBeHidden();
+  await job.getByRole("button", { name: "再試行する" }).click();
+});

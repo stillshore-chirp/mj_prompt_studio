@@ -39,8 +39,14 @@ const failureDisplays: Record<LLMFailureCode, JobFailureDisplay> = {
     canRetry: true,
     requiresSettings: true
   },
+  api_quota_exhausted: {
+    summary: "実APIの利用枠または請求上限に達したため処理できませんでした。",
+    recovery: "OpenAI Platformで利用枠・請求状態を確認し、必要な更新後に再試行してください。",
+    canRetry: true,
+    requiresSettings: false
+  },
   rate_limited: {
-    summary: "実APIの利用上限または一時的な混雑のため処理できませんでした。",
+    summary: "実APIの一時的なリクエスト制限のため処理できませんでした。",
     recovery: "少し待ってから、元の操作をもう一度実行してください。",
     canRetry: false,
     requiresSettings: false

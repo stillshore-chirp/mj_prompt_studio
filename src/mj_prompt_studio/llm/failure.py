@@ -7,6 +7,7 @@ LLMFailureCode = Literal[
     "client_initialization_failed",
     "api_authentication_failed",
     "api_permission_denied",
+    "api_quota_exhausted",
     "rate_limited",
     "network_unavailable",
     "api_unavailable",
@@ -23,6 +24,7 @@ _FAILURE_CODES: frozenset[str] = frozenset(
         "client_initialization_failed",
         "api_authentication_failed",
         "api_permission_denied",
+        "api_quota_exhausted",
         "rate_limited",
         "network_unavailable",
         "api_unavailable",
@@ -39,7 +41,8 @@ _FAILURE_MESSAGES: dict[LLMFailureCode, str] = {
     "client_initialization_failed": "実APIの準備を完了できませんでした。",
     "api_authentication_failed": "実APIの認証を確認できませんでした。",
     "api_permission_denied": "このAPI keyには必要な実APIの利用権限がありません。",
-    "rate_limited": "実APIの利用上限または一時的な混雑のため処理できませんでした。",
+    "api_quota_exhausted": "実APIの利用枠または請求上限に達したため処理できませんでした。",
+    "rate_limited": "実APIの一時的なリクエスト制限のため処理できませんでした。",
     "network_unavailable": "実APIへ接続できませんでした。",
     "api_unavailable": "実API側の一時的な問題で処理できませんでした。",
     "api_request_invalid": "実APIがこの処理のリクエストを受け付けませんでした。",
@@ -78,6 +81,8 @@ def failure_code_for_exception(exc: Exception) -> LLMFailureCode:
         return "api_authentication_failed"
     if status_code == 403:
         return "api_permission_denied"
+    if status_code == 429 and _provider_quota_exhausted(exc):
+        return "api_quota_exhausted"
     if status_code == 429:
         return "rate_limited"
     if isinstance(status_code, int) and status_code >= 500:
@@ -105,3 +110,32 @@ def _provider_error_detail(exc: Exception) -> str:
         if isinstance(value, str):
             values.append(value.lower())
     return " ".join(values)
+
+
+def _provider_quota_exhausted(exc: Exception) -> bool:
+    """Classify durable 429 failures from safe provider code/type fields only."""
+    identifiers = {
+        value.lower()
+        for value in (getattr(exc, "code", None), getattr(exc, "type", None))
+        if isinstance(value, str)
+    }
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error")
+        if not isinstance(error, dict):
+            error = body
+        identifiers.update(
+            value.lower()
+            for key in ("code", "type")
+            if isinstance((value := error.get(key)), str)
+        )
+    return bool(
+        identifiers
+        & {
+            "credit_balance_exhausted",
+            "organization_spend_limit_exceeded",
+            "project_spend_limit_exceeded",
+            "organization_usage_limit_exceeded",
+            "insufficient_quota",
+        }
+    )

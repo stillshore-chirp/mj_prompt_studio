@@ -182,6 +182,7 @@ export type LLMFailureCode =
   | "client_initialization_failed"
   | "api_authentication_failed"
   | "api_permission_denied"
+  | "api_quota_exhausted"
   | "rate_limited"
   | "network_unavailable"
   | "api_unavailable"

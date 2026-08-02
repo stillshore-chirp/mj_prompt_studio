@@ -50,7 +50,7 @@ text.format: Agent別strict JSON Schema
 
 usageからinput tokens、cached input tokens、output tokens、reasoning tokensを取得し、request latency、Agent名、画像入力数、schema成否、response ID有無とともに安全な計測情報として扱う。価格はコードへ埋め込まない。Jobは設定モード、実行バックエンド、応答ID種別、再試行数、失敗時の安全な `failure_code` を履歴へ記録する。
 
-失敗分類は、API key未設定、client初期化、認証、権限、利用上限、ネットワーク、実API一時障害、リクエスト、応答保存、構造化schema、構造化応答、未分類とする。HTTP status・SDK例外・構造化出力のローカル検証から分類しても、生のエラー本文は保持・表示しない。すべてのAgent schemaは送信前にStrict Structured Outputsの必須条件を検証する。接続テストはAPI keyと基本接続の確認だけであり、Agent schemaまたはresponse storageを含む各Jobの成功保証ではない。
+失敗分類は、API key未設定、client初期化、認証、権限、利用枠または請求上限、一時的なリクエスト制限、ネットワーク、実API一時障害、リクエスト、応答保存、構造化schema、構造化応答、未分類とする。HTTP 429はproviderの安全な`error.code`/`error.type`から利用枠・請求上限を判定し、それ以外だけを一時的なリクエスト制限として扱う。どちらの場合も生のエラー本文は保持・表示しない。すべてのAgent schemaは送信前にStrict Structured Outputsの必須条件を検証する。接続テストはAPI keyと基本接続の確認だけであり、Agent schemaまたはresponse storageを含む各Jobの成功保証ではない。
 
 ## Job API
 

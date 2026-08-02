@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
 
 test("explains mock mode and confirms Privacy mode before changing it", async ({ page }) => {
+  await page.route("**/api/settings/load-persisted-api-key", async (route) => {
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "credential store fixture unavailable" })
+    });
+  });
   await page.goto("/");
   await page.getByRole("navigation", { name: "Main tabs" }).getByRole("tab", { name: /設定/ }).click();
 
@@ -16,7 +23,7 @@ test("explains mock mode and confirms Privacy mode before changing it", async ({
 
   await settings.getByRole("button", { name: "OS資格情報ストアから読み込んで使用" }).click();
   await expect(
-    settings.getByText("保存済みのAPI keyが見つからないか、OS資格情報ストアを利用できません。設定は変更していません。")
+    settings.getByText("OS資格情報ストアから読み込めませんでした。設定は変更していません。保存またはセッション適用を使って再試行してください。")
   ).toBeVisible();
 
   const privacySwitch = page.getByRole("checkbox", { name: "Privacy modeを有効にする" });
