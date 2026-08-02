@@ -31,17 +31,17 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 - [x] provider例外・構造化出力失敗を安全な失敗分類へ変換し、Jobへ再試行可否と回復情報を記録する。
 - [x] Jobs panelと失敗通知に原因・影響・復旧操作を実装し、アクセシビリティと入力保持を検証する。
 - [x] 構造化AI Jobのリクエスト契約を検証し、観測済み失敗に対する回帰をフェイク境界で固定する。
-- [ ] docs、UI/UX state matrix、前後スクリーンショット、ローカル検証、PR/CI/reviewを完了する。
+- [x] docs、UI/UX state matrix、前後スクリーンショット、ローカル検証、PR/CI/reviewを完了する。
 
 ## 受け入れ条件
 
-- [ ] API key未設定、初期化、認証、利用上限、ネットワーク、providerリクエスト、構造化出力、キャンセルを安全な原因カテゴリへ分ける。
-- [ ] 失敗UIが対象操作、影響、次の回復操作を表示し、入力・既存文書が変更されなかったことを伝える。
-- [ ] 再試行可能なJobは入力を失わず、明示操作だけで再実行できる。再試行すべきでない失敗は理由に応じた設定確認または待機を案内する。
-- [ ] 接続確認の対象範囲と構造化AI Jobとの差を誤認させない。
-- [ ] 機微情報がJob DTO、画面、テスト、ログ、公開証跡に含まれない。
-- [ ] backend、client、E2Eで通常・失敗・再試行・設定確認・狭幅・キーボードを検証する。
-- [ ] 関連文書、UI/UXレビュー、前後スクリーンショット、Issue、Ready PR、CI、review threadsを完了する。
+- [x] API key未設定、初期化、認証、利用上限、ネットワーク、providerリクエスト、構造化出力、キャンセルを安全な原因カテゴリへ分ける。
+- [x] 失敗UIが対象操作、影響、次の回復操作を表示し、入力・既存文書が変更されなかったことを伝える。
+- [x] 再試行可能なJobは入力を失わず、明示操作だけで再実行できる。再試行すべきでない失敗は理由に応じた設定確認または待機を案内する。
+- [x] 接続確認の対象範囲と構造化AI Jobとの差を誤認させない。
+- [x] 機微情報がJob DTO、画面、テスト、ログ、公開証跡に含まれない。
+- [x] backend、client、E2Eで通常・失敗・再試行・設定確認・狭幅・キーボードを検証する。
+- [x] 関連文書、UI/UXレビュー、前後スクリーンショット、Issue、Ready PR、CI、review threadsを完了する。
 
 ## 検証コマンド
 
@@ -86,10 +86,11 @@ AI支援操作が失敗しても、利用者が対象操作、原因カテゴリ
 ## PR / CI / review 記録
 
 - Branch: `codex/issue-67-ai-job-error-recovery`
-- Commit: 未作成
-- PR: 未作成
-- Push CI: 未実行
-- PR CI: 未実行
-- Codex review: 未実行
-- 未解決 review thread: 未確認
+- Commit: `cc1f005`、`8bcaec1`
+- PR: [#68](https://github.com/stillshore-chirp/mj_prompt_studio/pull/68) (Ready)
+- Push CI: Pass（Quality and package、macOS / Windows smoke）
+- PR CI: Pass（Quality and package、macOS / Windows smoke）
+- ローカル差分レビュー: Pass（P0 / P1 なし）
+- Codex review: 未実施（外部レビューなし）
+- 未解決 review thread: 0
 - レビュー往復回数: 0
