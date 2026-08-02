@@ -39,6 +39,7 @@ test("shows a failed Job's state, impact, and retry path without backend error d
             input_snapshot: {},
             output_json: null,
             error_message: "internal provider trace must not be exposed",
+            failure_code: "structured_output_schema_invalid",
             created_at: "2026-08-01T00:00:00Z",
             finished_at: "2026-08-01T00:00:01Z",
             retry_count: 0,
@@ -56,8 +57,10 @@ test("shows a failed Job's state, impact, and retry path without backend error d
   const job = page.getByRole("article").filter({ hasText: "Prompt Doctorの確認" });
   await expect(job).toContainText("失敗");
   await expect(job).toContainText(
-    "この処理を完了できませんでした。結果は適用されていません。入力や接続設定を確認して、再試行してください。"
+    "この操作に必要な構造化形式を実APIが受け付けませんでした。結果は適用されていません。入力は保持されています。再試行しても続く場合は、アプリを更新してから再試行してください。"
   );
   await expect(job.getByRole("button", { name: "再試行する" })).toBeVisible();
   await expect(page.getByText("internal provider trace must not be exposed")).toBeHidden();
+  await expect(job).toHaveScreenshot("structured-output-failure.png");
+  await job.getByRole("button", { name: "再試行する" }).click();
 });

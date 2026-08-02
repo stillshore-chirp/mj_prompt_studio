@@ -1,10 +1,12 @@
 from pathlib import Path
 
+import pytest
+
 from mj_prompt_studio.app.app_context import AppContext
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY, RuntimeSettings
 from mj_prompt_studio.llm.mock_client import MockLLMClient
 from mj_prompt_studio.llm.openai_client import OpenAIResponse, TokenUsage
-from mj_prompt_studio.llm.orchestrator import LLMOrchestrator
+from mj_prompt_studio.llm.orchestrator import LLMExecutionError, LLMOrchestrator
 
 
 def _settings(
@@ -66,6 +68,21 @@ class _CapturingResponsesClient:
         )
 
 
+class _ProviderFailure(RuntimeError):
+    def __init__(self, status_code: int, detail: str) -> None:
+        self.status_code = status_code
+        self.body = {"error": {"message": detail}}
+        super().__init__(detail)
+
+
+class _FailingResponsesClient:
+    def __init__(self, status_code: int, detail: str) -> None:
+        self.error = _ProviderFailure(status_code, detail)
+
+    def create_response(self, **_kwargs):
+        raise self.error
+
+
 def test_orchestrator_preserves_images_and_normal_continuation(tmp_path: Path) -> None:
     orchestrator = LLMOrchestrator(_settings(tmp_path, llm_mode="real"))
     client = _CapturingResponsesClient()
@@ -90,9 +107,7 @@ def test_orchestrator_preserves_images_and_normal_continuation(tmp_path: Path) -
 
 
 def test_privacy_mode_always_removes_continuation_id(tmp_path: Path) -> None:
-    orchestrator = LLMOrchestrator(
-        _settings(tmp_path, response_storage="privacy", llm_mode="real")
-    )
+    orchestrator = LLMOrchestrator(_settings(tmp_path, response_storage="privacy", llm_mode="real"))
     client = _CapturingResponsesClient()
     orchestrator.real_client = client
 
@@ -104,3 +119,28 @@ def test_privacy_mode_always_removes_continuation_id(tmp_path: Path) -> None:
 
     assert client.calls[0]["previous_response_id"] is None
     assert client.calls[0]["store"] is False
+
+
+@pytest.mark.parametrize(
+    ("status_code", "detail", "expected_code"),
+    [
+        (
+            400,
+            "provider diagnostic: invalid response_format schema",
+            "structured_output_schema_invalid",
+        ),
+        (400, "provider diagnostic: store setting is not accepted", "response_storage_rejected"),
+        (429, "provider diagnostic: quota", "rate_limited"),
+    ],
+)
+def test_orchestrator_classifies_provider_failures_without_exposing_raw_detail(
+    tmp_path: Path, status_code: int, detail: str, expected_code: str
+) -> None:
+    orchestrator = LLMOrchestrator(_settings(tmp_path, llm_mode="real"))
+    orchestrator.real_client = _FailingResponsesClient(status_code, detail)
+
+    with pytest.raises(LLMExecutionError) as exc_info:
+        orchestrator.run_agent("VocabularyAgent", {"text": "safe fixture"})
+
+    assert exc_info.value.code == expected_code
+    assert detail not in str(exc_info.value)

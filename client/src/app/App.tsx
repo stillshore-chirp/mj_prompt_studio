@@ -48,6 +48,7 @@ import type {
   WorkspaceResponse
 } from "../shared/types/api";
 import { copyText, downloadText } from "../shared/utils/clipboard";
+import { displayJobFailure, isLLMFailureCode } from "../shared/utils/job-failure";
 import { displayAgentName, displayFieldName, displayPatch, displayValue } from "../shared/utils/user-facing";
 import "./styles.css";
 
@@ -334,7 +335,7 @@ export function App() {
         ) {
           setAutoSuggestion({ ...autoSuggestionRequest, status: "failed" });
         }
-        setStatus(jobFailureStatus(job.agent_name));
+        setStatus(jobFailureStatus(job.agent_name, job.failure_code));
       }
       if (job.status === "cancelled" && !handledJobs.current.has(job.id)) {
         handledJobs.current.add(job.id);
@@ -878,10 +879,19 @@ export function App() {
         onConnectionTest={async () => {
           try {
             const response = await api.connectionTest();
+            const failure = isLLMFailureCode(response.error_code)
+              ? displayJobFailure(response.error_code)
+              : null;
             setStatus(
               response.ok
                 ? "Connection OK"
-                : { kind: "error", message: "実APIへの接続を確認できませんでした。API keyとネットワークを確認して再試行してください。" }
+                : {
+                    kind: "error",
+                    message: failure
+                      ? `${failure.summary}${failure.recovery}`
+                      : "実APIへの接続を確認できませんでした。API keyとネットワークを確認して再試行してください。",
+                    recoveryAction: failure?.requiresSettings ? "settings" : undefined
+                  }
             );
             return { ok: response.ok, errorCode: response.error_code };
           } catch (error) {
@@ -1171,9 +1181,16 @@ export function App() {
             handledJobs.current.delete(jobId);
             api
               .retryJob(jobId)
-              .then(() => refreshJobs())
+              .then((response) => {
+                setStatus({
+                  kind: "progress",
+                  message: `${displayAgentName(response.job.agent_name)}を再試行しています。入力は保持されています。`
+                });
+                return refreshJobs();
+              })
               .catch((error: unknown) => setStatus(errorToMessage(error)));
           }}
+          onOpenSettings={() => requestNavigation({ kind: "tab", tab: "settings" })}
         />
       </footer>
 
@@ -1448,10 +1465,12 @@ function toStatusMessage(status: StatusMessage | string): StatusMessage {
   return typeof status === "string" ? { kind: "success", message: status } : status;
 }
 
-function jobFailureStatus(agentName: string): StatusMessage {
+function jobFailureStatus(agentName: string, failureCode: LLMJob["failure_code"]): StatusMessage {
+  const failure = displayJobFailure(failureCode);
   return {
     kind: "error",
-    message: `${displayAgentName(agentName)}を完了できませんでした。結果は適用されていません。入力や接続設定を確認して、再試行してください。`
+    message: `${displayAgentName(agentName)}を完了できませんでした。${failure.summary}結果は適用されていません。${failure.recovery}`,
+    recoveryAction: failure.requiresSettings ? "settings" : undefined
   };
 }
 
@@ -1477,11 +1496,12 @@ function errorToMessage(error: unknown): StatusMessage {
       };
     }
     if (clientError.status === 409) {
-      if (clientError.code === "api_key_missing" || clientError.code === "client_initialization_failed") {
+      if (isLLMFailureCode(clientError.code)) {
+        const failure = displayJobFailure(clientError.code);
         return {
           kind: "error",
-          message: clientError.message,
-          recoveryAction: "settings"
+          message: `${failure.summary}${failure.recovery}`,
+          recoveryAction: failure.requiresSettings ? "settings" : undefined
         };
       }
       return {

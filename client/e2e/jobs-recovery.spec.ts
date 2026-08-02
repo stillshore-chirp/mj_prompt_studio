@@ -49,6 +49,7 @@ function job(id: string, status: "queued" | "running" | "succeeded" | "failed" |
     input_snapshot: {},
     output_json: status === "succeeded" ? {} : null,
     error_message: status === "failed" ? "internal provider trace must not be shown" : null,
+    failure_code: status === "failed" ? "network_unavailable" : null,
     created_at: "2026-08-01T00:00:00Z",
     finished_at: status === "queued" || status === "running" ? null : "2026-08-01T00:00:01Z",
     retry_count: 0

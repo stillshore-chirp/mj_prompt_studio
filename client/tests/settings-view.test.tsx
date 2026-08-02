@@ -235,6 +235,72 @@ describe("SettingsView", () => {
     await waitFor(() => expect(screen.getByLabelText("OpenAI API key")).toHaveValue(""));
   });
 
+  it("explains the limited scope of the connection test", async () => {
+    const onConnectionTest = vi.fn().mockResolvedValue({ ok: true, errorCode: null });
+    render(
+      <SettingsView
+        settings={{
+          ...settings,
+          llm_mode: "real",
+          configured_mode: "real",
+          execution_backend: "openai",
+          api_key_configured: true,
+          api_key_source: "session"
+        }}
+        onSessionKey={vi.fn()}
+        onPersistKey={vi.fn()}
+        onLoadStoredKey={vi.fn()}
+        onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
+        onPreferences={vi.fn()}
+        onConnectionTest={onConnectionTest}
+      />
+    );
+
+    const button = screen.getByRole("button", { name: "実APIへの接続をテスト" });
+    expect(button).toHaveAttribute("aria-describedby", "connection-test-help");
+    expect(
+      screen.getByText("実APIへの接続をテスト: API keyと基本的な接続だけを確認します。構造化の各AI処理や現在の応答保存設定まで成功することは保証しません。")
+    ).toBeInTheDocument();
+
+    fireEvent.click(button);
+    await waitFor(() => expect(onConnectionTest).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("実APIへの接続を確認しました。キーの値や応答内容は画面に表示しません。")).toHaveAttribute("role", "status");
+  });
+
+  it("shows a classified, safe recovery step when the connection test fails", async () => {
+    const onConnectionTest = vi
+      .fn()
+      .mockResolvedValue({ ok: false, errorCode: "api_permission_denied" });
+    render(
+      <SettingsView
+        settings={{
+          ...settings,
+          llm_mode: "real",
+          configured_mode: "real",
+          execution_backend: "openai",
+          api_key_configured: true,
+          api_key_source: "session"
+        }}
+        onSessionKey={vi.fn()}
+        onPersistKey={vi.fn()}
+        onLoadStoredKey={vi.fn()}
+        onResponseStorage={vi.fn()}
+        onTextOutputOptions={vi.fn()}
+        onExclusionTerms={vi.fn()}
+        onPreferences={vi.fn()}
+        onConnectionTest={onConnectionTest}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "実APIへの接続をテスト" }));
+    await waitFor(() => expect(onConnectionTest).toHaveBeenCalledTimes(1));
+    expect(
+      screen.getByText("このAPI keyには必要な実APIの利用権限がありません。設定のAPI keyと、そのkeyに紐づくプロジェクトの権限を確認してから再試行してください。")
+    ).toHaveAttribute("role", "status");
+  });
+
   it("requires confirmation before persisting Privacy mode and keeps the setting unchanged on cancel", async () => {
     const onResponseStorage = vi.fn().mockResolvedValue(undefined);
     render(

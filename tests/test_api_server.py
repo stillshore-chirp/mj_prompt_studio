@@ -189,9 +189,7 @@ def test_load_persisted_api_key_applies_without_returning_secret(
     )
 
     with _client(tmp_path, llm_mode="real") as client:
-        response = client.post(
-            "/api/settings/load-persisted-api-key", headers=LOCAL_API_HEADERS
-        )
+        response = client.post("/api/settings/load-persisted-api-key", headers=LOCAL_API_HEADERS)
 
         assert response.status_code == 200
         assert response.json()["loaded"] is True
@@ -212,9 +210,7 @@ def test_load_persisted_api_key_keeps_session_unchanged_when_missing(
     )
 
     with _client(tmp_path, llm_mode="real") as client:
-        response = client.post(
-            "/api/settings/load-persisted-api-key", headers=LOCAL_API_HEADERS
-        )
+        response = client.post("/api/settings/load-persisted-api-key", headers=LOCAL_API_HEADERS)
 
         assert response.status_code == 200
         assert response.json()["loaded"] is False
@@ -287,9 +283,43 @@ def test_public_job_and_document_hide_raw_response_ids(tmp_path: Path) -> None:
         refreshed_workspace = client.get("/api/workspace").json()
 
         assert job["response_id_kind"] == "mock"
+        assert job["failure_code"] is None
         assert "mock_" not in str(job)
         assert refreshed_workspace["document"]["llm_context"]["latest_response_id"] is None
         assert refreshed_workspace["document"]["llm_context"]["response_id_kind"] == "mock"
+
+
+def test_failed_ai_job_returns_a_safe_classification_without_provider_detail(
+    tmp_path: Path, monkeypatch
+) -> None:
+    class ProviderFailure(RuntimeError):
+        status_code = 400
+        body = {"error": {"message": "provider diagnostic: invalid response_format schema"}}
+
+    class FailingClient:
+        def create_response(self, **_kwargs: Any) -> Any:
+            raise ProviderFailure()
+
+    monkeypatch.setattr(
+        SecretStore,
+        "resolve_openai_api_key",
+        lambda self: APIKeyResolution("test-key", "session", "available"),
+    )
+
+    with _client(tmp_path, llm_mode="real") as client:
+        client.app.state.mjps_state.context.orchestrator.real_client = FailingClient()
+        workspace = client.get("/api/workspace").json()
+        created = client.post(
+            "/api/agents/intent-intake",
+            json={"document_id": workspace["document"]["id"], "brief": "safe fixture"},
+        ).json()["job"]
+        job = _wait_for_job(client, created["id"])
+
+    assert job["status"] == "failed"
+    assert job["failure_code"] == "structured_output_schema_invalid"
+    assert job["error_message"] == "この操作に必要な構造化形式を実APIが受け付けませんでした。"
+    assert "provider diagnostic" not in str(job)
+    assert "test-key" not in str(job)
 
 
 def test_cors_preflight_allows_the_local_request_header(tmp_path: Path) -> None:
@@ -301,7 +331,7 @@ def test_cors_preflight_allows_the_local_request_header(tmp_path: Path) -> None:
                 "Access-Control-Request-Method": "POST",
                 "Access-Control-Request-Headers": LOCAL_API_REQUEST_HEADER,
             },
-    )
+        )
 
     assert response.status_code == 200
     allowed_headers = response.headers["access-control-allow-headers"].lower()
@@ -338,20 +368,14 @@ def test_settings_expose_fixed_execution_policy_and_vocabulary_only(tmp_path: Pa
     assert settings["effective_text_verbosity"] == "low"
     assert "available_models" not in settings
     assert "reasoning_efforts" not in settings
-    assert set(settings["feature_preferences"]["VocabularyAgent"]) == {
-        "vocabulary_amount"
-    }
+    assert set(settings["feature_preferences"]["VocabularyAgent"]) == {"vocabulary_amount"}
 
 
 def test_feature_preferences_api_rejects_legacy_model_fields(tmp_path: Path) -> None:
     with _client(tmp_path) as client:
         valid = client.put(
             "/api/settings/feature-preferences",
-            json={
-                "preferences": {
-                    "VocabularyAgent": {"vocabulary_amount": "rich"}
-                }
-            },
+            json={"preferences": {"VocabularyAgent": {"vocabulary_amount": "rich"}}},
         )
         legacy = client.put(
             "/api/settings/feature-preferences",
@@ -367,8 +391,7 @@ def test_feature_preferences_api_rejects_legacy_model_fields(tmp_path: Path) -> 
         )
 
     assert valid.status_code == 200
-    assert (
-        valid.json()["settings"]["feature_preferences"]["VocabularyAgent"]
-        == {"vocabulary_amount": "rich"}
-    )
+    assert valid.json()["settings"]["feature_preferences"]["VocabularyAgent"] == {
+        "vocabulary_amount": "rich"
+    }
     assert legacy.status_code == 422
