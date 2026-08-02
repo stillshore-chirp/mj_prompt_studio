@@ -32,7 +32,7 @@
 - [x] 目的→判断→準備→結果→手順→注意点の構造でマニュアルを再構成する。
 - [x] アプリ内ヘルプでの文書表示・画面別ジャンプを回帰テストする。
 - [x] UI/UXレビュー、公開安全性、ローカル検証を完了する。
-- [ ] 変更をレビューし、コミット・push・Ready PR・CI・review threadを確認する。
+- [x] 変更をレビューし、コミット・push・Ready PR・CI・review threadを確認する。
 
 ## 受け入れ条件
 
@@ -91,10 +91,10 @@
 ## PR / CI / review 記録
 
 - Branch: `codex/rebuild-user-manual`
-- Commit: 未作成
-- PR: 未作成
-- Push CI: 未確認
-- PR CI: 未確認
-- Codex review: 未確認
-- 未解決 review thread: 未確認
+- Commit: `d796d4e`（ユーザーマニュアルを目的別に再構成）
+- PR: [#66](https://github.com/stillshore-chirp/mj_prompt_studio/pull/66)（Ready）
+- Push CI: `ci.yml`は`main` / `master`だけを対象にするため、作業ブランチpushでは設定どおり起動対象外。mergeはユーザー未指示のため未実施。
+- PR CI: run 160（pull_request）成功。Quality and package、macOS smoke、Windows smokeがすべて成功。
+- Codex review: stage済み差分を目的・正確性・公開安全性・UI/UX証跡の観点で確認し、P0 / P1なし。
+- 未解決 review thread: 0（GraphQL確認）
 - レビュー往復回数: 0
