@@ -195,7 +195,7 @@ export function formatSafeJobDiagnostics(job: LLMJob): string {
     ? job.retry_count
     : 0;
   return [
-    "MJ Prompt Studio 安全な診断情報 v1",
+    "MJ Prompt Studio 安全な診断情報",
     `操作: ${displayAgentName(job.agent_name)}`,
     `失敗分類: ${failureCode}`,
     `失敗段階: ${failureStage}`,
