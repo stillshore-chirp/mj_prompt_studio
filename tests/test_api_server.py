@@ -10,7 +10,9 @@ from PIL import Image
 from mj_prompt_studio.config import RuntimeSettings
 from mj_prompt_studio.infra.secret_store import SecretStore
 from mj_prompt_studio.server.app_state import create_state
-from mj_prompt_studio.server.main import create_app
+from mj_prompt_studio.server.main import LOCAL_API_REQUEST_HEADER, create_app
+
+LOCAL_API_HEADERS = {LOCAL_API_REQUEST_HEADER: "1"}
 
 
 def _client(tmp_path: Path) -> TestClient:
@@ -117,7 +119,9 @@ def test_load_persisted_api_key_applies_without_returning_secret(
     )
 
     with _client(tmp_path) as client:
-        response = client.post("/api/settings/load-persisted-api-key")
+        response = client.post(
+            "/api/settings/load-persisted-api-key", headers=LOCAL_API_HEADERS
+        )
 
         assert response.status_code == 200
         assert response.json()["loaded"] is True
@@ -137,12 +141,55 @@ def test_load_persisted_api_key_keeps_session_unchanged_when_missing(
     )
 
     with _client(tmp_path) as client:
-        response = client.post("/api/settings/load-persisted-api-key")
+        response = client.post(
+            "/api/settings/load-persisted-api-key", headers=LOCAL_API_HEADERS
+        )
 
         assert response.status_code == 200
         assert response.json()["loaded"] is False
         assert response.json()["settings"]["llm_mode"] == "mock"
         assert response.json()["settings"]["api_key_configured"] is False
+
+
+def test_load_persisted_api_key_rejects_a_form_like_request_without_local_header(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        SecretStore,
+        "read_openai_api_key_from_keyring",
+        lambda self: "stored-key",
+    )
+
+    with _client(tmp_path) as client:
+        response = client.post("/api/settings/load-persisted-api-key")
+
+        assert response.status_code == 403
+        assert client.get("/api/settings").json()["settings"]["llm_mode"] == "mock"
+
+
+def test_connection_test_requires_local_request_header(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        assert client.post("/api/settings/connection-test").status_code == 403
+        assert (
+            client.post("/api/settings/connection-test", headers=LOCAL_API_HEADERS).status_code
+            == 200
+        )
+
+
+def test_cors_preflight_allows_the_local_request_header(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        response = client.options(
+            "/api/settings/load-persisted-api-key",
+            headers={
+                "Origin": "http://127.0.0.1:5173",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": LOCAL_API_REQUEST_HEADER,
+            },
+    )
+
+    assert response.status_code == 200
+    allowed_headers = response.headers["access-control-allow-headers"].lower()
+    assert LOCAL_API_REQUEST_HEADER.lower() in allowed_headers
 
 
 def test_openapi_schema_contains_react_contract_endpoints(tmp_path: Path) -> None:

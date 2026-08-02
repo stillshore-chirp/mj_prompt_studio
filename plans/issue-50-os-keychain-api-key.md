@@ -31,7 +31,7 @@ Settingsから、既にOS資格情報ストアへ保存したOpenAI API keyを�
 - [x] keyringから安全に読み込むbackend契約を追加する
 - [x] Settingsの読み込み操作、状態、a11y、copyを追加する
 - [x] テスト、OpenAPI、関連docs、UI/UX証跡を更新する
-- [x] 品質ゲート、commit、push、Ready PR、CI、review状態を確認する
+- [ ] Codex reviewのP1/P2を修正し、再検証・再レビューを確認する
 
 ## 受け入れ条件
 
@@ -89,14 +89,17 @@ Settingsから、既にOS資格情報ストアへ保存したOpenAI API keyを�
 | 2026-08-02 | 隔離mock E2E（8769 / 5182、20 tests） | 成功 | 標準portは既存プロセス占有のため、proxyを含む一時設定で実行。初回はproxy先誤りで1件失敗後、修正して全20件成功 |
 | 2026-08-02 | safe mock Settings before/after screenshot | 成功 | API key、prompt全文、画像、local path、ユーザー情報なし。sRGB metadataのみ |
 | 2026-08-02 | PR本文へのsafe mock before/after添付 | 成功 | GitHub user-attachmentsへ2枚を添付。API key、prompt全文、画像、local path、ユーザー情報なし |
+| 2026-08-02 | GitHub Codex review | P1/P2検出 | CSRF保護なしの副作用endpoint、key操作中の誤ったloading文言 |
+| 2026-08-02 | P1/P2修正後のlint/typecheck/test/build/OpenAPI/公開テキスト/ガバナンス | 成功 | Python 49 tests、client 43 tests |
+| 2026-08-02 | P1/P2修正後の隔離mock E2E（8769 / 5182、20 tests） | 成功 | 保存済みkeyなしの安全な回復を含む。標準portは既存PID 76243が使用中 |
 
 ## PR / CI / review 記録
 
 - Branch: `codex/os-keychain-api-key`
-- Commit: `647e793fac51e807446375e8ad94cb3990bb98d1`
+- Commit: `647e793fac51e807446375e8ad94cb3990bb98d1`（初回実装）、P1/P2修正はcommit前
 - PR: [#51](https://github.com/stillshore-chirp/mj_prompt_studio/pull/51)（Ready、`Closes #50`）
-- Push CI: 成功（run `30736910312`、macOS / Windows / Quality and package）
-- PR CI: 成功（run `30736938363`、macOS / Windows / Quality and package）
-- Codex review: ローカル差分、秘密情報境界、UI/UX報告、テスト証跡を確認済み。GitHubレビューは未登録
-- 未解決 review thread: 0件（GraphQL `reviewThreads`）
-- レビュー往復回数: 0
+- Push CI: 初回成功。P1/P2修正後はpush・再監視待ち
+- PR CI: 初回成功。P1/P2修正後はpush・再監視待ち
+- Codex review: `d02bd0683a`に対してP1/P2を検出。修正後headの再レビュー待ち
+- 未解決 review thread: 2件（P1/P2、修正後の再確認待ち）
+- レビュー往復回数: 1

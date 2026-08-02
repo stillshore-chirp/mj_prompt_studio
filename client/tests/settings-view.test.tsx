@@ -120,13 +120,15 @@ describe("SettingsView", () => {
       />
     );
 
+    const apiKey = screen.getByLabelText("OpenAI API key");
+    fireEvent.change(apiKey, { target: { value: "manual-key" } });
     fireEvent.click(screen.getByRole("button", { name: "OS資格情報ストアから読み込んで使用" }));
 
     await waitFor(() => expect(onLoadStoredKey).toHaveBeenCalledTimes(1));
     expect(
       screen.getByText("OS資格情報ストアから読み込み、このセッションに適用しました。キーの値は表示しません。")
     ).toHaveAttribute("role", "status");
-    expect(screen.getByLabelText("OpenAI API key")).toHaveValue("");
+    expect(apiKey).toHaveValue("");
     expect(document.body).not.toHaveTextContent("stored-key");
   });
 
@@ -174,6 +176,36 @@ describe("SettingsView", () => {
         screen.getByText("OS資格情報ストアから読み込めませんでした。設定は変更していません。保存またはセッション適用を使って再試行してください。")
       ).toHaveAttribute("role", "status")
     );
+  });
+
+  it("does not claim that credential-store loading is in progress during session apply", async () => {
+    let resolveSessionKey: (() => void) | undefined;
+    const onSessionKey = vi.fn(
+      () => new Promise<void>((resolve) => {
+        resolveSessionKey = resolve;
+      })
+    );
+    render(
+      <SettingsView
+        settings={settings}
+        onSessionKey={onSessionKey}
+        onPersistKey={vi.fn()}
+        onLoadStoredKey={vi.fn()}
+        onResponseStorage={vi.fn()}
+        onPreferences={vi.fn()}
+        onConnectionTest={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("OpenAI API key"), { target: { value: "x" } });
+    fireEvent.click(screen.getByRole("button", { name: "このセッションだけで使用" }));
+
+    await waitFor(() => expect(onSessionKey).toHaveBeenCalledWith("x"));
+    expect(screen.getByRole("button", { name: "OS資格情報ストアから読み込んで使用" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "OS資格情報ストアを確認中…" })).not.toBeInTheDocument();
+
+    resolveSessionKey?.();
+    await waitFor(() => expect(screen.getByLabelText("OpenAI API key")).toHaveValue(""));
   });
 
   it("requires confirmation before persisting Privacy mode and keeps the setting unchanged on cancel", async () => {
