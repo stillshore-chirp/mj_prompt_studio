@@ -38,7 +38,7 @@ class SecretStore:
 
 def _load_keyring() -> Any | None:
     try:
-        import keyring  # type: ignore[import-not-found]
+        import keyring
     except Exception:
         return None
     return keyring

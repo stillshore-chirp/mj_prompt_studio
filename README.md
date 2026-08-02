@@ -79,7 +79,7 @@ OpenAPI schemaを更新する場合は `make generate-openapi` を実行しま�
 - APIは既定でlocalhostにのみbindします。
 - React clientはtyped API client経由でPython Application Serviceを呼びます。
 - SQLite、asset store、settings、job queueが永続化の正本です。
-- APIキーは環境変数を優先し、Settingsから利用可能なOS資格情報ストアへ保存・再読み込みできます。資格情報ストアが使えない環境ではセッション内適用に限定します。再読み込みしたキーの値はclientへ返しません。
+- APIキーは環境変数を優先し、標準インストールに含まれる`keyring`を通じてSettingsから利用可能なOS資格情報ストアへ保存・再読み込みできます。資格情報ストアが使えない環境ではセッション内適用に限定します。再読み込みしたキーの値はclientへ返しません。
 - Privacy modeではResponses APIの保存を無効化し、`previous_response_id` を送りません。
 - ローカルDB、asset、cache、log、export、API response dumpはgit追跡対象にしません。
 

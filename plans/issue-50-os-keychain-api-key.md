@@ -31,7 +31,7 @@ Settingsから、既にOS資格情報ストアへ保存したOpenAI API keyを�
 - [x] keyringから安全に読み込むbackend契約を追加する
 - [x] Settingsの読み込み操作、状態、a11y、copyを追加する
 - [x] テスト、OpenAPI、関連docs、UI/UX証跡を更新する
-- [ ] Codex reviewのP1/P2を修正し、再検証・再レビューを確認する
+- [ ] Codex reviewのP1/P2と再レビューP1を修正し、再検証・再レビューを確認する
 
 ## 受け入れ条件
 
@@ -92,6 +92,8 @@ Settingsから、既にOS資格情報ストアへ保存したOpenAI API keyを�
 | 2026-08-02 | GitHub Codex review | P1/P2検出 | CSRF保護なしの副作用endpoint、key操作中の誤ったloading文言 |
 | 2026-08-02 | P1/P2修正後のlint/typecheck/test/build/OpenAPI/公開テキスト/ガバナンス | 成功 | Python 49 tests、client 43 tests |
 | 2026-08-02 | P1/P2修正後の隔離mock E2E（8769 / 5182、20 tests） | 成功 | 保存済みkeyなしの安全な回復を含む。標準portは既存PID 76243が使用中 |
+| 2026-08-02 | GitHub Codex再レビュー | P1検出 | 標準インストールに`keyring`依存がなく、OS資格情報ストアから読み込めない |
+| 2026-08-02 | 再レビューP1修正後の`pip install -e ".[dev]"`、lint/typecheck/test/build/OpenAPI/公開テキスト/ガバナンス | 成功 | keyring 25.7.0を標準依存として導入。Python 51 tests、client 43 tests |
 
 ## PR / CI / review 記録
 

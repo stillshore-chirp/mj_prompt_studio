@@ -1,3 +1,6 @@
+import tomllib
+from pathlib import Path
+
 import pytest
 
 from mj_prompt_studio.config import (
@@ -56,6 +59,13 @@ def test_secret_store_can_read_keyring_without_environment_fallback(monkeypatch)
     )
 
     assert SecretStore().read_openai_api_key_from_keyring() == "stored-key"
+
+
+def test_project_declares_keyring_for_supported_credential_store() -> None:
+    project_root = Path(__file__).resolve().parents[1]
+    pyproject = tomllib.loads((project_root / "pyproject.toml").read_text())
+
+    assert "keyring>=25.0" in pyproject["project"]["dependencies"]
 
 
 def test_execution_policy_is_luna_high_with_low_verbosity() -> None:

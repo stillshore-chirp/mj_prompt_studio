@@ -4,7 +4,7 @@ gitへ公開する文書、plan、Issue/PR本文、screenshot、検証log要約�
 
 ## APIキー
 
-- `OPENAI_API_KEY` は端末の環境変数またはOS資格情報ストアから読む。
+- `OPENAI_API_KEY` は端末の環境変数または標準依存の`keyring`を通じたOS資格情報ストアから読む。
 - 互換用に `OPENAI_KEY` と `MJPS_OPENAI_API_KEY` も環境変数として読み取れる。
 - 平文設定ファイルへの保存は既定にしない。
 - Settingsから保存済みのOS資格情報ストアのkeyを再読み込みする場合も、API keyはserver内でセッションへ適用し、clientの画面・HTTP response・ログへ返さない。

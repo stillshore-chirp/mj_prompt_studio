@@ -5,7 +5,7 @@
 - 対象Issue / PR / 作業: [#50](https://github.com/stillshore-chirp/mj_prompt_studio/issues/50) / [#51](https://github.com/stillshore-chirp/mj_prompt_studio/pull/51) / SettingsのAPI key設定
 - 画面・component・状態: Settings、API key入力、OS資格情報ストア保存・再読み込み、mock/実API、未発見・利用不可・失敗、keyboard、狭幅
 - 判定: 再レビュー待ち
-- P0 / P1 / P2件数: 0 / 0 / 0（Codex reviewのP1/P2を修正済み、再レビュー待ち）
+- P0 / P1 / P2件数: 0 / 0 / 0（初回P1/P2と再レビューP1を修正済み、再レビュー待ち）
 
 ## ユーザー価値
 
@@ -34,7 +34,7 @@
 - copy（用語、error、空、disabled、tone、禁止表記）: 「保存」ではなく「読み込んで使用」と結果を示す。失敗時に設定変更なしと次の操作を示す。特定のMidjourney version表記は追加しない。
 - 熟練者効率（手数、保持、近道）: 保存済みkeyを再入力せず1操作で適用する。既存のsession入力・保存導線を削らない。
 - 満足感・信頼感（待機、成功、失敗、危険操作、外部送信）: key値を画面・HTTP response・ログへ返さないことを説明し、未発見/利用不可時も既存設定を変えない。読み込み成功時は残っていた手入力も消去する。OS保存済みkeyの適用と接続テストは、通常フォームから呼べない専用headerを必須にする。実OpenAI接続はこの変更で自動実行しない。
-- 反証レビュー: keyring未導入相当、keyring例外、保存値なし、処理中の二重クリック、既存env/session設定、実値のDOM/response混入、狭幅時のbutton消失に加え、cross-origin formによるOS保存済みkey有効化と、別操作中の誤ったloading文言を確認した。backend contract/unitとclient unit/E2Eで回帰を固定した。
+- 反証レビュー: keyring未導入相当、keyring例外、保存値なし、処理中の二重クリック、既存env/session設定、実値のDOM/response混入、狭幅時のbutton消失に加え、cross-origin formによるOS保存済みkey有効化、別操作中の誤ったloading文言、標準インストールにkeyringが含まれない場合を確認した。backend contract/unitとclient unit/E2Eで回帰を固定した。
 
 ## 指摘
 
@@ -42,12 +42,13 @@
 |---|---|---|---|---|---|
 | P1 | `load-persisted-api-key` / `connection-test` | bodyなしPOSTを通常フォームから送信でき、OS保存済みkeyの有効化や外部接続を誘発できる | 意図しない資格情報利用・課金 | `X-MJPS-Request`必須化、CORS許可header、headerなしは403、回帰test | 修正済み・再レビュー待ち |
 | P2 | Settings key操作のloading表示 | session適用・保存中にも、資格情報ストア読込中と表示した | 状態の誤認 | 実行中のkey操作を個別状態化し、load操作だけ文言/`aria-busy`を変更 | 修正済み・再レビュー待ち |
+| P1 | `pyproject.toml` | 標準インストールに`keyring`が含まれず、読み込み機能が常に利用不可になる | 保存済みkeyを再利用できない | production dependencyへ`keyring`を追加し、package宣言を回帰testで固定 | 修正済み・再レビュー待ち |
 
 ## 証跡・検証
 
 - 変更前/変更後screenshot: API key未入力・safe mock状態でSettingsを撮影し、変更前は再読み込みbuttonなし、変更後はbuttonと説明・通常状態を比較した。API key、prompt、画像、local path、ユーザー情報がないこととsRGB metadataを確認し、PR本文へ添付する。
-- test / trace / 手動確認: backend unit/contract（headerなし403と設定不変、headerあり成功）、Settings component（手入力消去、操作別loading）、client lint/typecheck/test/build、隔離E2E 20件（未保存keyの安全な回復を含む）、API key混入検索、狭幅・文字拡大・keyboard確認を実施した。
-- Codex review: `d02bd0683a` に対するGitHub Codex reviewがP1/P2を検出した。修正後のheadは再レビュー待ち。
+- test / trace / 手動確認: backend unit/contract（headerなし403と設定不変、headerあり成功）、Settings component（手入力消去、操作別loading）、`python -m pip install -e ".[dev]"`による標準セットアップ相当でのkeyring導入、package宣言回帰test、client lint/typecheck/test/build、隔離E2E 20件（未保存keyの安全な回復を含む）、API key混入検索、狭幅・文字拡大・keyboard確認を実施した。
+- Codex review: `d02bd0683a` に対するGitHub Codex reviewがP1/P2を検出し、`3f5eb5a`への再レビューがP1（標準インストールのkeyring依存）を検出した。各修正後のheadは再レビュー待ち。
 - 実OpenAI API・実OSのcredential backend・実ユーザー評価: CI/通常テストでは未実施。実環境でのKeychain/Credential Manager/Secret Serviceの対話・権限差は後続の手動確認が必要。
 
 | 未実行検証 | 理由 | 残リスク | 後続 |
