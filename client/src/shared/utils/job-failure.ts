@@ -113,10 +113,12 @@ const failureDisplays: Record<LLMFailureCode, JobFailureDisplay> = {
 
 export function displayJobFailure(
   code: LLMFailureCode | null,
-  providerErrorCode?: string | null
+  providerErrorCode?: string | null,
+  retryCount = 0
 ): JobFailureDisplay {
   const safeCode = safeProviderErrorCode(providerErrorCode);
-  if (safeCode === "model_not_found") {
+  const providerOverrideAllowed = code === "api_request_invalid" || code === "unexpected";
+  if (providerOverrideAllowed && safeCode === "model_not_found") {
     return {
       summary: "アプリが指定した固定実行モデルを利用できませんでした。",
       recovery: "再試行せず、「診断情報をコピー」から内容を確認・報告してください。",
@@ -125,7 +127,10 @@ export function displayJobFailure(
       retryGuidance: "アプリ側の実行設定が更新されるまで再試行しないでください"
     };
   }
-  if (["unsupported_parameter", "invalid_value", "invalid_request_error"].includes(safeCode ?? "")) {
+  if (
+    providerOverrideAllowed &&
+    ["unsupported_parameter", "invalid_value", "invalid_request_error"].includes(safeCode ?? "")
+  ) {
     return {
       summary: "アプリのAPIリクエストが現在の実API仕様と一致しませんでした。",
       recovery: "再試行せず、「診断情報をコピー」から内容を確認・報告してください。",
@@ -134,7 +139,16 @@ export function displayJobFailure(
       retryGuidance: "アプリ側の修正を確認するまで再試行しないでください"
     };
   }
-  return code ? failureDisplays[code] : unknownFailure;
+  const display = code ? failureDisplays[code] : unknownFailure;
+  if (code === "structured_output_invalid" && retryCount >= 1) {
+    return {
+      ...display,
+      recovery: "1回の再試行でも完了できませんでした。「診断情報をコピー」から内容を確認・報告してください。",
+      canRetry: false,
+      retryGuidance: "再試行済みです。これ以上同じJobを繰り返さないでください"
+    };
+  }
+  return display;
 }
 
 export function isLLMFailureCode(code: string | null | undefined): code is LLMFailureCode {

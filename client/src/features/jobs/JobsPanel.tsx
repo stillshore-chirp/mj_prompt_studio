@@ -102,7 +102,7 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }
         {copyFeedback && <p className="job-copy-feedback" role="status">{copyFeedback}</p>}
         {visibleJobs.map((job) => {
           const failure = job.status === "failed"
-            ? displayJobFailure(job.failure_code, job.provider_error_code)
+            ? displayJobFailure(job.failure_code, job.provider_error_code, job.retry_count)
             : null;
           const status = jobStatusDetails(job.status, failure);
           const expanded = expandedJobId === job.id;

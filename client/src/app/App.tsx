@@ -1466,7 +1466,7 @@ function toStatusMessage(status: StatusMessage | string): StatusMessage {
 }
 
 function jobFailureStatus(job: LLMJob): StatusMessage {
-  const failure = displayJobFailure(job.failure_code, job.provider_error_code);
+  const failure = displayJobFailure(job.failure_code, job.provider_error_code, job.retry_count);
   return {
     kind: "error",
     message: `${displayAgentName(job.agent_name)}を完了できませんでした。${failure.summary}結果は適用されていません。${failure.recovery}`,

@@ -263,6 +263,52 @@ describe("JobsPanel status feedback", () => {
     expect(screen.queryByRole("button", { name: "設定を開く" })).not.toBeInTheDocument();
   });
 
+  it("応答保存拒否では汎用providerコードよりPrivacy modeの復旧案内を優先する", () => {
+    render(
+      <JobsPanel
+        jobs={[
+          createJob("failed", {
+            failure_code: "response_storage_rejected",
+            failure_stage: "request",
+            provider_status_code: 400,
+            provider_error_code: "invalid_value"
+          })
+        ]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/現在の応答保存設定では実APIがこの処理を受け付けませんでした。/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "設定を開く" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "再試行する" })).toBeInTheDocument();
+  });
+
+  it("構造化応答を1回再試行しても失敗したJobでは再試行を繰り返せない", () => {
+    render(
+      <JobsPanel
+        jobs={[
+          createJob("failed", {
+            failure_code: "structured_output_invalid",
+            failure_stage: "response_validation",
+            retry_count: 1
+          })
+        ]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/1回の再試行でも完了できませんでした。/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "再試行する" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "詳細を表示" }));
+    expect(screen.getByText("再試行済みです。これ以上同じJobを繰り返さないでください")).toBeInTheDocument();
+  });
+
   it("guides setting-related failures to Settings and avoids retry for a rate limit", () => {
     const onOpenSettings = vi.fn();
     render(
