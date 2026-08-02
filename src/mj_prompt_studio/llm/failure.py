@@ -72,7 +72,7 @@ def failure_code_for_exception(exc: Exception) -> LLMFailureCode:
     if "permission" in exception_name:
         return "api_permission_denied"
     if "ratelimit" in exception_name or "rate_limit" in exception_name:
-        return "rate_limited"
+        return "api_quota_exhausted" if _provider_quota_exhausted(exc) else "rate_limited"
     if "timeout" in exception_name or "connection" in exception_name or "network" in exception_name:
         return "network_unavailable"
 

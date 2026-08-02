@@ -4,6 +4,7 @@ import pytest
 
 from mj_prompt_studio.app.app_context import AppContext
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY, RuntimeSettings
+from mj_prompt_studio.llm.failure import failure_code_for_exception
 from mj_prompt_studio.llm.mock_client import MockLLMClient
 from mj_prompt_studio.llm.openai_client import OpenAIResponse, TokenUsage
 from mj_prompt_studio.llm.orchestrator import LLMExecutionError, LLMOrchestrator
@@ -98,6 +99,10 @@ class _FailingResponsesClient:
 
     def create_response(self, **_kwargs):
         raise self.error
+
+
+class _RateLimitError(_ProviderFailure):
+    """Matches the OpenAI SDK exception name without calling the real SDK."""
 
 
 def test_orchestrator_preserves_images_and_normal_continuation(tmp_path: Path) -> None:
@@ -206,3 +211,24 @@ def test_orchestrator_classifies_provider_failures_without_exposing_raw_detail(
 
     assert exc_info.value.code == expected_code
     assert detail not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("provider_code", "code_on_exception", "expected_code"),
+    [
+        ("insufficient_quota", False, "api_quota_exhausted"),
+        ("credit_balance_exhausted", True, "api_quota_exhausted"),
+        ("rate_limit_exceeded", False, "rate_limited"),
+    ],
+)
+def test_rate_limit_error_name_still_checks_safe_quota_code(
+    provider_code: str, code_on_exception: bool, expected_code: str
+) -> None:
+    error = _RateLimitError(
+        429,
+        "provider diagnostic: quota",
+        provider_code,
+        code_on_exception=code_on_exception,
+    )
+
+    assert failure_code_for_exception(error) == expected_code
