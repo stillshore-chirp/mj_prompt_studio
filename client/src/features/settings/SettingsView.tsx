@@ -2,6 +2,7 @@ import { KeyRound, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
+import { ScreenGuide } from "../../shared/components/ScreenGuide";
 import type { LLMFeaturePreferences, RuntimeSettingsPublic } from "../../shared/types/api";
 
 interface SettingsViewProps {
@@ -148,12 +149,18 @@ export function SettingsView({
 
   return (
     <section className="workspace-pane" aria-label="Settings">
-      <div className="section-header">
-        <h1>Settings</h1>
-        <button type="button" onClick={() => onPreferences(preferences)}>
+      <ScreenGuide
+        step="制作の準備（必要なとき）"
+        title="AI支援の設定を確認する"
+        featureName="Settings"
+        description="実AIを使う場合のAPI key、Privacy mode、語彙量を確認します。API keyがなくてもMock LLMで画面の流れを試せます。"
+        whenToUse="実AIを使い始めるとき、または保存・Privacyの設定を変えたいとき。プロンプト作成の前提ではありません。"
+        actions={
+          <button type="button" onClick={() => onPreferences(preferences)}>
           <Save size={16} /> 語彙設定を保存
-        </button>
-      </div>
+          </button>
+        }
+      />
 
       <section className="plain-panel">
         <h2>API Key</h2>

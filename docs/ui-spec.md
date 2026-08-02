@@ -3,10 +3,11 @@
 ## 全体構成
 
 - Header / Toolbar: 新規プロジェクト、Undo/Redo、Export、保存状態。
-- Left Panel: Project Explorer、Quick Actions。
-- Main Tabs: Composer、Free Editor、Matrix Lab、Reference Library、Result Review、Settings。
+- Left Panel: Project Explorer、制作の流れ。制作の流れは「プロンプトを作る」から「生成結果を見直す」までを目的名で並べ、必要な画面だけを選べるようにする。
+- Main Tabs: プロンプトを作る（Composer）、既存Promptを整える（Free Editor）、参考画像を使う（Reference Library）、複数案を比較する（Matrix Lab）、生成結果を見直す（Result Review）、設定（Settings）。
 - Right Panel: AI Inspector、Parameter Advisor、Prompt Doctor。
 - Bottom Panel: Status、Jobs。
+- Right-bottom Help: 常設の「使い方」buttonから開く、modalではない折りたたみpanel。Quick Startとユーザーマニュアルを安全なMarkdown previewとして表示し、文書の目次、節ジャンプ、現在の画面に対応する節へのクイックジャンプを提供する。
 
 Dock実装ではなくReact layoutで構成する。情報配置は旧クライアントの作業順序を維持する。
 
@@ -19,6 +20,11 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 - ユーザー向け文言ではRulesetの内部IDと特定のMidjourneyモデルバージョン番号を表示しない。
 
 ## Composer
+
+初見導線:
+
+- 画面の先頭で「プロンプトを作る」目的、使う場面、作成 → 外部サービスへ手動貼り付け・生成 → 生成結果を見直す流れを示す。
+- 最初の有意味な操作はAI Briefへの制作意図入力であり、入力欄へfocusする明示buttonを表示する。
 
 主要操作:
 
@@ -42,6 +48,10 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 
 ## Free Editor
 
+初見導線:
+
+- 「既存Promptを整える」目的と、Composerとの使い分け（新規作成ではなく、既存文章の変換・改善）を示す。
+
 主要操作:
 
 - 日本語入力と英語promptを受け付ける。
@@ -49,6 +59,10 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 - 変換結果とdetailを表示する。
 
 ## Reference Library
+
+初見導線:
+
+- 「参考画像からヒントを得る」目的と、表現の方向性に迷うときに使う補助画面であることを示す。
 
 主要操作:
 
@@ -62,6 +76,10 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 
 ## Matrix Lab
 
+初見導線:
+
+- 「複数案を比較する」目的と、構図・スタイルなどの条件を比較したいときに使うことを示す。
+
 主要操作:
 
 - 実験目的からAIが軸と固定条件を提案する。
@@ -69,6 +87,10 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 - 選択Variantコピー、一括コピー、CSV/Markdown download/copyができる。
 
 ## Result Review
+
+初見導線:
+
+- 「生成結果を見直す」目的と、外部サービスで画像を手動生成した後に戻る画面であることを示す。
 
 主要操作:
 
@@ -78,6 +100,10 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 - Next Prompt CandidateはComposerへPatchとして戻し、適用前に確認する。
 
 ## Settings
+
+初見導線:
+
+- 「AI支援の設定を確認する」目的と、API keyがなくてもMock LLMで画面の流れを試せることを示す。プロンプト作成の必須前提には見せない。
 
 表示:
 

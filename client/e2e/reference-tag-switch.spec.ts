@@ -8,7 +8,7 @@ const pngBase64 =
 
 test("未保存の参照タグは素材切替前に確認する", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "Reference Library" }).click();
+  await page.getByRole("tab", { name: /参考画像を使う/ }).click();
   const firstImage = writeImage("first-safe-reference.png");
   const secondImage = writeImage("second-safe-reference.png");
   const fileInput = page.getByLabel("Reference Library").locator('input[type="file"]');

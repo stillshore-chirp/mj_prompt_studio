@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("Matrix variantをキーボードで選択し、空状態の出力は無効", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("tab", { name: "Matrix Lab" }).click();
+  await page.getByRole("tab", { name: /複数案を比較する/ }).click();
   await expect(page.getByRole("button", { name: "CSV" })).toBeDisabled();
   await page.getByLabel("Objective").fill("safe matrix objective");
   await page.getByRole("button", { name: /AI Plan/ }).click();

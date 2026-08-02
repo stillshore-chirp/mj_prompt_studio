@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { JsonObject, ResultImage, ResultReview } from "../../shared/types/api";
 import { ImageUploadControl } from "../../shared/components/ImageUploadControl";
+import { ScreenGuide } from "../../shared/components/ScreenGuide";
 
 interface ResultReviewViewProps {
   resultImages: ResultImage[];
@@ -55,15 +56,21 @@ export function ResultReviewView({
 
   return (
     <section className="workspace-pane" aria-label="Result Review">
-      <div className="section-header">
-        <h1>Result Review</h1>
-        <ImageUploadControl
+      <ScreenGuide
+        step="制作の流れ 5 / 5"
+        title="生成結果を見直す"
+        featureName="Result Review"
+        description="外部の画像生成サービスで作った画像を取り込み、良かった点と改善案を次のPromptへつなげます。"
+        whenToUse="Promptをコピーして画像を手動で生成した後。生成前に使う画面ではありません。"
+        actions={
+          <ImageUploadControl
           buttonLabel="生成結果の画像を選択して追加"
           helpText="対応形式は画像ファイルです。選択した画像はこのプロジェクトのResult Reviewへ追加します。"
           onUpload={onUpload}
           buttonRef={uploadButtonRef}
-        />
-      </div>
+          />
+        }
+      />
       <div className="library-grid">
         <div className="item-list">
           {resultImages.map((image, index) => (

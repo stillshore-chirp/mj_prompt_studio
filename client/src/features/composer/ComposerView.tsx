@@ -1,6 +1,7 @@
 import { Clipboard, Save, Sparkles, Wand2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { ScreenGuide } from "../../shared/components/ScreenGuide";
 import type { PromptBlocks, PromptDocument, PromptParameters } from "../../shared/types/api";
 import {
   blockLabels,
@@ -57,6 +58,7 @@ export function ComposerView({
   const [brief, setBrief] = useState(draft?.user_brief ?? document.user_brief);
   const [blocks, setBlocks] = useState<PromptBlocks>(draft?.blocks ?? document.blocks);
   const [autoSuggestionRevision, setAutoSuggestionRevision] = useState(0);
+  const briefRef = useRef<HTMLTextAreaElement>(null);
   const sentAutoSuggestionRevision = useRef<number | null>(null);
 
   useEffect(() => {
@@ -147,9 +149,14 @@ export function ComposerView({
 
   return (
     <section className="workspace-pane" aria-label="Composer">
-      <div className="section-header">
-        <h1>Composer</h1>
-        <div className="toolbar-actions">
+      <ScreenGuide
+        step="制作の流れ 1 / 5"
+        title="プロンプトを作る"
+        featureName="Composer"
+        description="作りたい画像を日本語で書き、画像生成サービスへ手動で貼り付けるPromptに整えます。"
+        whenToUse="新しい画像を作り始めるとき。手元の既存Promptを整えたいときは「既存Promptを整える」を使います。"
+        actions={
+          <>
           <p className={`draft-status ${isDirty ? "is-dirty" : ""}`} role="status" aria-live="polite">
             {isDirty ? "未保存の変更" : "保存済み"}
           </p>
@@ -171,8 +178,22 @@ export function ComposerView({
           >
             <Wand2 size={16} /> Compile (Alt+Shift+Enter)
           </button>
+          </>
+        }
+      />
+      <section className="workflow-guide" aria-labelledby="composer-workflow-title">
+        <div>
+          <h2 id="composer-workflow-title">まずは、作りたい画像を短く書きます</h2>
+          <ol>
+            <li>この画面で制作意図を入力して、Promptを整えます。</li>
+            <li>コピーしたPromptを画像生成サービスへ手動で貼り付けて、画像を生成します。</li>
+            <li>生成した画像は「生成結果を見直す」で取り込み、次の改善案を作れます。</li>
+          </ol>
         </div>
-      </div>
+        <button type="button" onClick={() => briefRef.current?.focus()}>
+          AI Briefを入力する
+        </button>
+      </section>
       <p id="compile-action-help" className="scope-note">
         {hasComposerContent
           ? "AI BriefまたはPrompt Blocksの入力をCompiled Promptにまとめます。"
@@ -186,6 +207,7 @@ export function ComposerView({
         <label className="field full">
           <span>AI Brief</span>
           <textarea
+            ref={briefRef}
             value={brief}
             onChange={(event) => setBrief(event.currentTarget.value)}
             rows={4}

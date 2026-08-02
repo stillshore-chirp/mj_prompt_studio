@@ -1,6 +1,7 @@
 import { Clipboard, Download, Grid3X3, Sparkles } from "lucide-react";
 import { KeyboardEvent, useRef, useState } from "react";
 
+import { ScreenGuide } from "../../shared/components/ScreenGuide";
 import type { MatrixPlan, MatrixVariant } from "../../shared/types/api";
 
 interface MatrixLabViewProps {
@@ -45,9 +46,14 @@ export function MatrixLabView({
 
   return (
     <section className="workspace-pane" aria-label="Matrix Lab">
-      <div className="section-header">
-        <h1>Matrix Lab</h1>
-        <div className="toolbar-actions">
+      <ScreenGuide
+        step="制作の流れ 4 / 5（必要なとき）"
+        title="複数案を比較する"
+        featureName="Matrix Lab"
+        description="同じPromptで何を変えるかを決め、比較しやすい複数案を作ります。"
+        whenToUse="構図やスタイルなど、どの条件がよいかを比べて試したいとき。"
+        actions={
+          <>
           <button
             type="button"
             onClick={() => onPlan(objective)}
@@ -66,8 +72,9 @@ export function MatrixLabView({
           >
             <Grid3X3 size={16} /> Generate
           </button>
-        </div>
-      </div>
+          </>
+        }
+      />
       <label className="field full">
         <span>Objective</span>
         <textarea ref={objectiveRef} value={objective} onChange={(event) => setObjective(event.currentTarget.value)} />

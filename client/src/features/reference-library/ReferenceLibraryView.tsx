@@ -4,6 +4,7 @@ import { DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { ReferenceAsset } from "../../shared/types/api";
 import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
 import { ImageUploadControl } from "../../shared/components/ImageUploadControl";
+import { ScreenGuide } from "../../shared/components/ScreenGuide";
 
 interface ReferenceLibraryViewProps {
   references: ReferenceAsset[];
@@ -73,15 +74,21 @@ export function ReferenceLibraryView({
 
   return (
     <section className="workspace-pane" aria-label="Reference Library">
-      <div className="section-header">
-        <h1>Reference Library</h1>
-        <ImageUploadControl
+      <ScreenGuide
+        step="制作の流れ 3 / 5（必要なとき）"
+        title="参考画像からヒントを得る"
+        featureName="Reference Library"
+        description="参考画像から、雰囲気・構図・質感を確認し、Promptに使える語彙を取り出します。"
+        whenToUse="表現の方向性に迷うとき、または手元の参考画像を次のPromptへ生かしたいとき。"
+        actions={
+          <ImageUploadControl
           buttonLabel="参照素材の画像を選択して追加"
           helpText="対応形式は画像ファイルです。選択した画像は参照素材としてこのプロジェクトへ追加します。"
           onUpload={onUpload}
           buttonRef={uploadButtonRef}
-        />
-      </div>
+          />
+        }
+      />
       <div
         className="drop-zone"
         role="region"
