@@ -4,13 +4,11 @@ import {
   FolderOpen,
   Grid3X3,
   Images,
-  Library,
   PenLine,
   Plus,
   RotateCcw,
   ScanSearch,
   Settings,
-  Sparkles,
   Undo2
 } from "lucide-react";
 import { KeyboardEvent as ReactKeyboardEvent, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -23,6 +21,7 @@ import {
 } from "../features/composer/ComposerView";
 import { ParameterInspector } from "../features/composer/ParameterInspector";
 import { FreeEditorView } from "../features/free-editor/FreeEditorView";
+import { HelpWidget } from "../features/help/HelpWidget";
 import { JobsPanel } from "../features/jobs/JobsPanel";
 import { MatrixLabView } from "../features/matrix-lab/MatrixLabView";
 import { PromptDoctorPanel } from "../features/prompt-doctor/PromptDoctorPanel";
@@ -88,14 +87,16 @@ interface StatusMessage {
   message: string;
 }
 
-const tabs: { id: TabId; label: string; icon: ReactNode }[] = [
-  { id: "composer", label: "Composer", icon: <PenLine size={15} /> },
-  { id: "free-editor", label: "Free Editor", icon: <FilePenLine size={15} /> },
-  { id: "matrix-lab", label: "Matrix Lab", icon: <Grid3X3 size={15} /> },
-  { id: "reference-library", label: "Reference Library", icon: <Images size={15} /> },
-  { id: "result-review", label: "Result Review", icon: <ScanSearch size={15} /> },
-  { id: "settings", label: "Settings", icon: <Settings size={15} /> }
+const tabs: { id: TabId; label: string; shortLabel: string; featureName: string; icon: ReactNode }[] = [
+  { id: "composer", label: "プロンプトを作る", shortLabel: "作る", featureName: "Composer", icon: <PenLine size={15} /> },
+  { id: "free-editor", label: "既存Promptを整える", shortLabel: "整える", featureName: "Free Editor", icon: <FilePenLine size={15} /> },
+  { id: "reference-library", label: "参考画像を使う", shortLabel: "参考画像", featureName: "Reference Library", icon: <Images size={15} /> },
+  { id: "matrix-lab", label: "複数案を比較する", shortLabel: "比較", featureName: "Matrix Lab", icon: <Grid3X3 size={15} /> },
+  { id: "result-review", label: "生成結果を見直す", shortLabel: "見直す", featureName: "Result Review", icon: <ScanSearch size={15} /> },
+  { id: "settings", label: "設定", shortLabel: "設定", featureName: "Settings", icon: <Settings size={15} /> }
 ];
+
+const workflowTabs = tabs.filter((tab) => tab.id !== "settings");
 
 const tabId = (tab: TabId): string => `main-tab-${tab}`;
 
@@ -475,7 +476,7 @@ export function App() {
               .compile(currentDocument.id, savePayload(payload))
               .then((response) => {
                 updateDocument(response.document);
-                setStatus("入力内容からCompiled Promptを作成しました。内容を確認してコピーできます。");
+                setStatus("Promptを作成しました。コピーして画像生成サービスへ手動で貼り付け、生成後は「生成結果を見直す」で画像を確認できます。");
                 return api.compileReview(response.document.id);
               })
               .then((response) => {
@@ -922,34 +923,20 @@ export function App() {
           ))}
         </section>
         <section>
-          <h2>Quick Actions</h2>
-          <button
-            type="button"
-            className={`nav-row ${activeTab === "composer" ? "active" : ""}`}
-            aria-current={activeTab === "composer" ? "page" : undefined}
-            onClick={() => requestNavigation({ kind: "tab", tab: "composer" })}
-          >
-            <Sparkles size={15} /> <span>AI Brief</span>
-            {activeTab === "composer" && <span className="nav-current" aria-hidden="true">現在</span>}
-          </button>
-          <button
-            type="button"
-            className={`nav-row ${activeTab === "reference-library" ? "active" : ""}`}
-            aria-current={activeTab === "reference-library" ? "page" : undefined}
-            onClick={() => requestNavigation({ kind: "tab", tab: "reference-library" })}
-          >
-            <Library size={15} /> <span>References</span>
-            {activeTab === "reference-library" && <span className="nav-current" aria-hidden="true">現在</span>}
-          </button>
-          <button
-            type="button"
-            className={`nav-row ${activeTab === "settings" ? "active" : ""}`}
-            aria-current={activeTab === "settings" ? "page" : undefined}
-            onClick={() => requestNavigation({ kind: "tab", tab: "settings" })}
-          >
-            <Settings size={15} /> <span>Settings</span>
-            {activeTab === "settings" && <span className="nav-current" aria-hidden="true">現在</span>}
-          </button>
+          <h2>制作の流れ</h2>
+          <p className="scope-note">必要な画面だけを順に使えます。</p>
+          {workflowTabs.map((tab, index) => (
+            <button
+              type="button"
+              className={`nav-row ${activeTab === tab.id ? "active" : ""}`}
+              key={tab.id}
+              aria-current={activeTab === tab.id ? "page" : undefined}
+              onClick={() => requestNavigation({ kind: "tab", tab: tab.id })}
+            >
+              {tab.icon} <span>{index + 1}. {tab.label}</span>
+              {activeTab === tab.id && <span className="nav-current" aria-hidden="true">現在</span>}
+            </button>
+          ))}
         </section>
       </aside>
 
@@ -961,6 +948,7 @@ export function App() {
             key={tab.id}
             id={tabId(tab.id)}
             role="tab"
+            aria-label={`${tab.label} ${tab.featureName}`}
             aria-controls="main-workspace"
             aria-selected={activeTab === tab.id}
             tabIndex={activeTab === tab.id ? 0 : -1}
@@ -969,7 +957,7 @@ export function App() {
             onClick={() => requestNavigation({ kind: "tab", tab: tab.id })}
           >
             {tab.icon}
-            {tab.label}
+            <span>{tab.shortLabel}</span>
             {activeTab === tab.id && <span className="tab-current" aria-hidden="true">現在</span>}
           </button>
           ))}
@@ -1064,6 +1052,7 @@ export function App() {
       >
         <textarea ref={manualCopyTextareaRef} value={manualCopy ?? ""} readOnly rows={8} />
       </ConfirmDialog>
+      <HelpWidget context={activeTab} />
     </div>
   );
 

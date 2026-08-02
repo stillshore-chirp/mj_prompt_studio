@@ -75,7 +75,10 @@ describe("empty action availability", () => {
     expect(screen.getByRole("button", { name: "Compile (Alt+Shift+Enter)" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "AI Brief から構造化" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "コピー (Alt+Shift+C)" })).toBeDisabled();
+    expect(screen.getByRole("heading", { name: /プロンプトを作る Composer/ })).toBeVisible();
     expect(screen.getByText("AI Briefを入力すると、構造化のjobを作成できます。")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "AI Briefを入力する" }));
+    expect(screen.getByRole("textbox", { name: "AI Brief" })).toHaveFocus();
   });
 
   it("Free Editorは入力後だけ変換を実行できる", () => {
@@ -84,6 +87,7 @@ describe("empty action availability", () => {
 
     const transform = screen.getByRole("button", { name: "英語Prompt化" });
     expect(transform).toBeDisabled();
+    expect(screen.getByRole("heading", { name: /既存Promptを整える Free Editor/ })).toBeVisible();
     expect(screen.getByText("Japanese SourceまたはEnglish Promptを入力すると、変換できます。")).toBeVisible();
 
     fireEvent.change(screen.getByLabelText("Japanese Source"), { target: { value: "朝食会場" } });
@@ -109,6 +113,7 @@ describe("empty action availability", () => {
 
     const plan = screen.getByRole("button", { name: "AI Plan" });
     expect(plan).toBeDisabled();
+    expect(screen.getByRole("heading", { name: /複数案を比較する Matrix Lab/ })).toBeVisible();
     expect(screen.getByRole("button", { name: "Generate" })).toBeDisabled();
     expect(screen.getByText("Objectiveを入力すると、AI Planを作成できます。")).toBeVisible();
 

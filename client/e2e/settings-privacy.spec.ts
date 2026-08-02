@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("explains mock mode and confirms Privacy mode before changing it", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("navigation", { name: "Main tabs" }).getByRole("tab", { name: "Settings" }).click();
+  await page.getByRole("navigation", { name: "Main tabs" }).getByRole("tab", { name: /設定/ }).click();
 
   const settings = page.getByRole("region", { name: "Settings" });
   await expect(settings).toBeVisible();

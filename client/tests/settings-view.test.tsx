@@ -45,6 +45,7 @@ describe("SettingsView", () => {
       />
     );
 
+    expect(screen.getByRole("heading", { name: /AI支援の設定を確認する Settings/ })).toBeInTheDocument();
     expect(screen.getByText("GPT-5.6 Luna")).toBeInTheDocument();
     expect(screen.getByText("High")).toBeInTheDocument();
     expect(screen.getByText("Low")).toBeInTheDocument();

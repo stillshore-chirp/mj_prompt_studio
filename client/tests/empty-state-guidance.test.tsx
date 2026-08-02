@@ -10,6 +10,7 @@ describe("empty state guidance", () => {
   it("Referenceの初回空と検索結果なしを区別し、主要操作へフォーカスできる", () => {
     const { rerender } = render(<ReferenceLibraryView {...referenceProps} references={[]} />);
 
+    expect(screen.getByRole("heading", { name: /参考画像からヒントを得る Reference Library/ })).toBeVisible();
     expect(screen.getByText("参照素材がありません")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "参照素材の画像を追加する" }));
     expect(screen.getByRole("button", { name: "参照素材の画像を選択して追加" })).toHaveFocus();
@@ -38,6 +39,7 @@ describe("empty state guidance", () => {
       />
     );
 
+    expect(screen.getByRole("heading", { name: /生成結果を見直す Result Review/ })).toBeVisible();
     expect(screen.getByText("確認する生成結果画像がありません")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "生成結果の画像を追加する" }));
     expect(screen.getByRole("button", { name: "生成結果の画像を選択して追加" })).toHaveFocus();

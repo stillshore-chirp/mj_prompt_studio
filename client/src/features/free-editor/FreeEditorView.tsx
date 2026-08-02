@@ -1,6 +1,8 @@
 import { WandSparkles } from "lucide-react";
 import { useState } from "react";
 
+import { ScreenGuide } from "../../shared/components/ScreenGuide";
+
 const transformModes = [
   "英語Prompt化",
   "専門語化",
@@ -23,9 +25,13 @@ export function FreeEditorView({ result, detail, onTransform }: FreeEditorViewPr
 
   return (
     <section className="workspace-pane" aria-label="Free Editor">
-      <div className="section-header">
-        <h1>Free Editor</h1>
-      </div>
+      <ScreenGuide
+        step="制作の流れ 2 / 5（必要なとき）"
+        title="既存Promptを整える"
+        featureName="Free Editor"
+        description="手元にある日本語メモや英語Promptを、目的に合わせて変換・短縮・詳細化します。"
+        whenToUse="新しいPromptを一から作る前ではなく、既存の文章を直したいとき。"
+      />
       <div className="free-editor-grid">
         <label className="field">
           <span>Japanese Source</span>

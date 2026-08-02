@@ -9,6 +9,10 @@ const e2eDataDir = path.join(repoRoot, ".tmp", `e2e-data-${Date.now()}`);
 const localVenvPython = path.join(repoRoot, ".venv", "bin", "python");
 const pythonCommand =
   process.env.MJPS_E2E_PYTHON ?? (fs.existsSync(localVenvPython) ? localVenvPython : "python");
+const apiPort = e2ePort("MJPS_E2E_API_PORT", 8765);
+const clientPort = e2ePort("MJPS_E2E_CLIENT_PORT", 5173);
+const apiUrl = `http://127.0.0.1:${apiPort}`;
+const clientUrl = `http://127.0.0.1:${clientPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -18,7 +22,7 @@ export default defineConfig({
   workers: 1,
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: clientUrl,
     trace: "on-first-retry"
   },
   projects: [
@@ -33,17 +37,34 @@ export default defineConfig({
       cwd: repoRoot,
       env: {
         MJPS_DATA_DIR: e2eDataDir,
-        MJPS_LLM_MODE: "mock"
+        MJPS_LLM_MODE: "mock",
+        MJPS_SERVER_PORT: String(apiPort),
+        MJPS_CORS_ORIGINS: clientUrl
       },
-      url: "http://127.0.0.1:8765/api/health",
+      url: `${apiUrl}/api/health`,
       reuseExistingServer: false,
       timeout: 30_000
     },
     {
-      command: "npm run dev -- --host 127.0.0.1 --port 5173",
-      url: "http://127.0.0.1:5173",
+      command: `MJPS_API_PROXY_TARGET=${apiUrl} npm run dev -- --host 127.0.0.1 --port ${clientPort}`,
+      url: clientUrl,
       reuseExistingServer: false,
       timeout: 30_000
     }
   ]
 });
+
+function e2ePort(name: string, fallback: number): number {
+  const configured = process.env[name];
+  if (!configured) {
+    return fallback;
+  }
+  if (!/^\d+$/.test(configured)) {
+    throw new Error(`${name} must be a numeric local port.`);
+  }
+  const port = Number(configured);
+  if (port < 1024 || port > 65_535) {
+    throw new Error(`${name} must be between 1024 and 65535.`);
+  }
+  return port;
+}
