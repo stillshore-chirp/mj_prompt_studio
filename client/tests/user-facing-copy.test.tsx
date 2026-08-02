@@ -9,7 +9,8 @@ import { displayAgentName, displayFieldName, displayValue } from "../src/shared/
 const executionProfile = {
   effective_model: "gpt-5.6-luna",
   effective_reasoning_effort: "high",
-  effective_text_verbosity: "low"
+  effective_text_verbosity: "low",
+  execution_backend: "openai" as const
 };
 
 const document = {
@@ -72,5 +73,22 @@ describe("user-facing copy", () => {
       screen.getByText(/過去の実行記録で、現在の固定AI構成とは異なります。次のAI支援は現在の固定AI構成で実行され、ここに表示した履歴は変更されません。/)
     ).toBeVisible();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("Mock実行の履歴を実APIの実行として表示しない", () => {
+    const mockDocument = {
+      llm_context: {
+        last_agent: "PromptDoctorAgent",
+        model: "gpt-5.6-luna",
+        reasoning_effort: "high",
+        text_verbosity: "low",
+        execution_backend: "mock"
+      }
+    } as PromptDocument;
+
+    render(<AIInspector document={mockDocument} agentResult={null} executionProfile={executionProfile} />);
+
+    expect(screen.getByText("Mock（外部APIは実行していません）")).toBeInTheDocument();
+    expect(screen.getByText("この履歴はMock実行です。実APIへの送信は行われていません。")).toBeVisible();
   });
 });

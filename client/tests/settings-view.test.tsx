@@ -6,6 +6,9 @@ import type { RuntimeSettingsPublic } from "../src/shared/types/api";
 
 const settings: RuntimeSettingsPublic = {
   llm_mode: "mock",
+  configured_mode: "mock",
+  execution_backend: "mock",
+  execution_error_code: null,
   response_storage: "normal",
   include_midjourney_options_in_text_output: true,
   prompt_exclusion_terms: [],
@@ -13,6 +16,8 @@ const settings: RuntimeSettingsPublic = {
   prompt_exclusion_term_max_length: 100,
   privacy_mode: false,
   api_key_configured: false,
+  api_key_source: "not_configured",
+  credential_store_status: "not_configured",
   feature_preferences: {
     VocabularyAgent: { vocabulary_amount: "standard" }
   },
@@ -52,7 +57,10 @@ describe("SettingsView", () => {
     );
 
     expect(screen.getByRole("heading", { name: /AI支援の設定を確認する Settings/ })).toBeInTheDocument();
-    expect(screen.getByText("GPT-5.6 Luna")).toBeInTheDocument();
+    expect(screen.getByText("Mock（外部APIは呼びません）")).toBeInTheDocument();
+    expect(screen.getByLabelText("AI execution profile")).toHaveTextContent("API key未設定");
+    expect(screen.getByLabelText("AI execution profile")).toHaveTextContent("資格情報ストア保存済みキーなし");
+    expect(screen.getByText("実行なし")).toBeInTheDocument();
     expect(screen.getByText("High")).toBeInTheDocument();
     expect(screen.getByText("Low")).toBeInTheDocument();
     expect(screen.getAllByRole("combobox")).toHaveLength(1);

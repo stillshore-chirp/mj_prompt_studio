@@ -98,7 +98,7 @@ React.js + TypeScript client
 
 分岐条件:
 
-- `OPENAI_API_KEY` が端末環境変数にある場合は、起動時の既定を実API利用にする。
-- `MJPS_LLM_MODE=mock` を明示した場合は、APIキーがあってもMockLLMを使う。
-- それ以外はMockLLMで同じschemaの応答を返す。
+- 起動時に `OPENAI_API_KEY`、`OPENAI_KEY`、`MJPS_OPENAI_API_KEY` とOS資格情報ストアを解決し、APIキーがあれば実APIを初期化する。
+- `MJPS_LLM_MODE=mock` を明示した場合だけ、APIキーがあってもMockLLMを使う。
+- 通常モードでAPIキーまたは実clientを利用できない場合は `unavailable` とし、Job作成前に安全な設定誘導エラーを返す。MockLLMへはフォールバックしない。
 - Privacy modeではResponses APIの保存を無効化し、会話ID継続を使わない。

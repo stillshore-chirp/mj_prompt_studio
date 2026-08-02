@@ -27,7 +27,7 @@ make client-install
 
 Node.js と npm が必要です。Apple Silicon で Python の architecture mismatch が出る場合は、Terminal の Rosetta 起動をオフにするか、`arch -arm64 python3 -m venv .venv` で venv を作り直してください。`make` は `.venv/bin/python` を優先して使います。
 
-APIキーがない場合でも、既定ではMockLLMで主要フローを確認できます。端末の環境変数 `OPENAI_API_KEY` にAPIキーがある場合は、起動時に自動で実API利用に切り替わります。
+起動時は `OPENAI_API_KEY`（互換名 `OPENAI_KEY`、`MJPS_OPENAI_API_KEY`）とOS資格情報ストアを順に解決します。APIキーが見つかれば実APIを利用し、見つからなければAI実行は開始せず、Settingsで安全な理由と設定導線を表示します。通常起動でMockLLMへ自動フォールバックすることはありません。
 
 実APIの全機能と接続テストは、`gpt-5.6-luna`、reasoning effort `high`、text verbosity `low` の固定構成を使います。モデルと推論強度は変更できません。Settingsでは実効構成を読み取り専用で確認し、機能ごとの語彙量だけを調整できます。旧 `MJPS_MODEL_*` 環境変数は無視され、起動時に削除を促す警告が出ます。
 
@@ -81,7 +81,7 @@ OpenAPI schemaを更新する場合は `make generate-openapi` を実行しま�
 - APIは既定でlocalhostにのみbindします。
 - React clientはtyped API client経由でPython Application Serviceを呼びます。
 - SQLite、asset store、settings、job queueが永続化の正本です。
-- APIキーは環境変数を優先し、標準インストールに含まれる`keyring`を通じてSettingsから利用可能なOS資格情報ストアへ保存・再読み込みできます。資格情報ストアが使えない環境ではセッション内適用に限定します。再読み込みしたキーの値はclientへ返しません。
+- APIキーは環境変数を優先し、標準インストールに含まれる`keyring`を通じてSettingsから利用可能なOS資格情報ストアへ保存・再読み込みできます。資格情報ストアが使えない環境ではセッション内適用に限定します。Settings、Health、Jobsは設定モード・実行バックエンド・キー設定有無などの安全な状態だけを表示し、キーや実Response IDをclientへ返しません。
 - Privacy modeではResponses APIの保存を無効化し、`previous_response_id` を送りません。
 - ローカルDB、asset、cache、log、export、API response dumpはgit追跡対象にしません。
 

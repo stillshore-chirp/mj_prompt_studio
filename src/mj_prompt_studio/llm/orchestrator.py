@@ -4,7 +4,7 @@ import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from time import perf_counter
-from typing import Any
+from typing import Any, Literal
 
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY, RuntimeSettings
 from mj_prompt_studio.llm.mock_client import MockLLMClient
@@ -16,6 +16,46 @@ from mj_prompt_studio.llm.openai_client import (
 from mj_prompt_studio.llm.response_schemas import schema_for_agent, validate_schema_payload
 
 logger = logging.getLogger(__name__)
+
+ExecutionBackend = Literal["openai", "mock", "unavailable"]
+ResponseIDKind = Literal["openai", "mock"]
+
+_EXECUTION_ERROR_MESSAGES = {
+    "api_key_missing": (
+        "AIを実行するにはAPI keyの設定が必要です。設定からAPI keyを読み込むか適用してから、"
+        "もう一度実行してください。"
+    ),
+    "client_initialization_failed": (
+        "実APIの準備を完了できませんでした。API keyとアプリの設定を確認してから、"
+        "もう一度実行してください。"
+    ),
+    "network_unavailable": (
+        "実APIへ接続できませんでした。ネットワークを確認してから、もう一度実行してください。"
+    ),
+    "api_authentication_failed": (
+        "実APIの認証を確認できませんでした。API keyを確認してから、もう一度実行してください。"
+    ),
+    "rate_limited": "実APIの利用上限に達しました。少し待ってから、もう一度実行してください。",
+    "api_request_failed": (
+        "実APIの処理を完了できませんでした。入力は変更されていません。もう一度実行してください。"
+    ),
+    "mock_mode": (
+        "Mockモードでは実APIへの接続テストを実行しません。実APIを使うにはMockモードを解除して"
+        "再起動してください。"
+    ),
+}
+
+
+class LLMExecutionError(RuntimeError):
+    def __init__(self, code: str) -> None:
+        self.code = code
+        super().__init__(_EXECUTION_ERROR_MESSAGES[code])
+
+
+@dataclass(frozen=True)
+class ConnectionTestResult:
+    ok: bool
+    error_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -35,6 +75,7 @@ class AgentResult:
     model: str
     reasoning_effort: str
     text_verbosity: str
+    execution_backend: ExecutionBackend
     metrics: AgentMetrics
 
 
@@ -44,8 +85,40 @@ class LLMOrchestrator:
         self.api_key = api_key
         self.mock_client = MockLLMClient()
         self.real_client: OpenAIResponsesClient | None = None
+        self._initialization_error_code: str | None = None
         if settings.llm_mode == "real" and api_key:
-            self.real_client = OpenAIResponsesClient(api_key)
+            try:
+                self.real_client = OpenAIResponsesClient(api_key)
+            except Exception:  # pragma: no cover - dependency and platform boundary
+                self._initialization_error_code = "client_initialization_failed"
+                logger.warning("llm_client_initialization_failed")
+
+    @property
+    def execution_backend(self) -> ExecutionBackend:
+        if self.settings.llm_mode == "mock":
+            return "mock"
+        if self.real_client is not None:
+            return "openai"
+        return "unavailable"
+
+    @property
+    def execution_error_code(self) -> str | None:
+        if self.execution_backend != "unavailable":
+            return None
+        if not self.api_key:
+            return "api_key_missing"
+        return self._initialization_error_code or "client_initialization_failed"
+
+    def execution_metadata(self) -> dict[str, str | bool | None]:
+        return {
+            "configured_mode": self.settings.llm_mode,
+            "execution_backend": self.execution_backend,
+            "api_key_configured": self.api_key is not None,
+        }
+
+    def require_execution(self) -> None:
+        if self.execution_backend == "unavailable":
+            raise LLMExecutionError(self.execution_error_code or "client_initialization_failed")
 
     def run_agent(
         self,
@@ -57,7 +130,9 @@ class LLMOrchestrator:
     ) -> AgentResult:
         images = image_paths or []
         effective_payload = self._payload_with_preferences(agent_name, payload)
-        if self.real_client is None:
+        backend = self.execution_backend
+        self.require_execution()
+        if backend == "mock":
             started_at = perf_counter()
             mock_response = self.mock_client.create_agent_response(agent_name, effective_payload)
             output = mock_response.output_json
@@ -65,14 +140,20 @@ class LLMOrchestrator:
             usage = TokenUsage()
             request_latency_ms = (perf_counter() - started_at) * 1000
         else:
-            openai_response = self.real_client.create_response(
-                input_payload=self._build_input(agent_name, effective_payload, images),
-                text_format=schema_for_agent(agent_name),
-                previous_response_id=(
-                    None if self.settings.privacy_mode else previous_response_id
-                ),
-                store=not self.settings.privacy_mode,
-            )
+            client = self.real_client
+            if client is None:
+                raise LLMExecutionError("client_initialization_failed")
+            try:
+                openai_response = client.create_response(
+                    input_payload=self._build_input(agent_name, effective_payload, images),
+                    text_format=schema_for_agent(agent_name),
+                    previous_response_id=(
+                        None if self.settings.privacy_mode else previous_response_id
+                    ),
+                    store=not self.settings.privacy_mode,
+                )
+            except Exception as exc:
+                raise LLMExecutionError(_execution_error_code(exc)) from exc
             output = openai_response.output_json
             response_id = openai_response.response_id
             usage = openai_response.usage
@@ -111,13 +192,22 @@ class LLMOrchestrator:
             model=LLM_EXECUTION_POLICY.model,
             reasoning_effort=LLM_EXECUTION_POLICY.reasoning_effort,
             text_verbosity=LLM_EXECUTION_POLICY.text_verbosity,
+            execution_backend=backend,
             metrics=metrics,
         )
 
-    def connection_test(self) -> bool:
-        if self.real_client is None:
-            return True
-        return self.real_client.connection_test()
+    def connection_test(self) -> ConnectionTestResult:
+        if self.execution_backend == "mock":
+            return ConnectionTestResult(False, "mock_mode")
+        if self.execution_backend == "unavailable":
+            return ConnectionTestResult(False, self.execution_error_code)
+        client = self.real_client
+        if client is None:
+            return ConnectionTestResult(False, "client_initialization_failed")
+        try:
+            return ConnectionTestResult(client.connection_test())
+        except Exception as exc:
+            return ConnectionTestResult(False, _execution_error_code(exc))
 
     def _payload_with_preferences(
         self, agent_name: str, payload: dict[str, Any]
@@ -164,6 +254,7 @@ class LLMOrchestrator:
                 "model": LLM_EXECUTION_POLICY.model,
                 "reasoning_effort": LLM_EXECUTION_POLICY.reasoning_effort,
                 "text_verbosity": LLM_EXECUTION_POLICY.text_verbosity,
+                "execution_backend": self.execution_backend,
                 **asdict(usage),
                 "request_latency_ms": round(request_latency_ms, 3),
                 "image_input_count": image_input_count,
@@ -205,3 +296,14 @@ def _agent_instruction(agent_name: str) -> str:
         ),
     }
     return instructions.get(agent_name, "")
+
+
+def _execution_error_code(exc: Exception) -> str:
+    name = type(exc).__name__.lower()
+    if "authentication" in name or "permission" in name:
+        return "api_authentication_failed"
+    if "ratelimit" in name or "rate_limit" in name:
+        return "rate_limited"
+    if "timeout" in name or "connection" in name or "network" in name:
+        return "network_unavailable"
+    return "api_request_failed"

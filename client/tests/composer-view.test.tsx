@@ -42,12 +42,14 @@ const document: PromptDocument = {
   validation_report: null,
   llm_context: {
     latest_response_id: null,
+    response_id_kind: null,
     last_agent: null,
     model: "gpt-5.6-luna",
     reasoning_effort: "high",
     text_verbosity: "low",
     user_vocab_snapshot_id: null,
-    project_style_profile_id: null
+    project_style_profile_id: null,
+    execution_backend: null
   },
   notes: "",
   tags: [],
