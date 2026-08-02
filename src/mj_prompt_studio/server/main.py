@@ -582,6 +582,11 @@ def _register_routes(app: FastAPI) -> None:
         state.context.set_session_api_key(payload.api_key)
         return {"persisted": persisted, "settings": public_settings(state.context)}
 
+    @app.post("/api/settings/load-persisted-api-key")
+    def load_persisted_api_key(state: StateDep) -> dict[str, Any]:
+        loaded = state.context.load_stored_api_key()
+        return {"loaded": loaded, "settings": public_settings(state.context)}
+
     @app.post("/api/settings/connection-test")
     def connection_test(state: StateDep) -> dict[str, Any]:
         return {"ok": state.context.orchestrator.connection_test()}

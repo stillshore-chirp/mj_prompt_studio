@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from mj_prompt_studio.config import RuntimeSettings
+from mj_prompt_studio.infra.secret_store import SecretStore
 from mj_prompt_studio.server.app_state import create_state
 from mj_prompt_studio.server.main import create_app
 
@@ -106,6 +107,44 @@ def test_settings_response_storage_persists_across_contexts(tmp_path: Path) -> N
         assert settings["privacy_mode"] is True
 
 
+def test_load_persisted_api_key_applies_without_returning_secret(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        SecretStore,
+        "read_openai_api_key_from_keyring",
+        lambda self: "stored-key",
+    )
+
+    with _client(tmp_path) as client:
+        response = client.post("/api/settings/load-persisted-api-key")
+
+        assert response.status_code == 200
+        assert response.json()["loaded"] is True
+        assert response.json()["settings"]["llm_mode"] == "real"
+        assert response.json()["settings"]["api_key_configured"] is True
+        assert "stored-key" not in response.text
+        assert "api_key" not in response.json()["settings"]
+
+
+def test_load_persisted_api_key_keeps_session_unchanged_when_missing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        SecretStore,
+        "read_openai_api_key_from_keyring",
+        lambda self: None,
+    )
+
+    with _client(tmp_path) as client:
+        response = client.post("/api/settings/load-persisted-api-key")
+
+        assert response.status_code == 200
+        assert response.json()["loaded"] is False
+        assert response.json()["settings"]["llm_mode"] == "mock"
+        assert response.json()["settings"]["api_key_configured"] is False
+
+
 def test_openapi_schema_contains_react_contract_endpoints(tmp_path: Path) -> None:
     with _client(tmp_path) as client:
         schema = client.get("/openapi.json").json()
@@ -116,6 +155,7 @@ def test_openapi_schema_contains_react_contract_endpoints(tmp_path: Path) -> Non
     assert "/api/projects/{project_id}/references/upload" in paths
     assert "/api/jobs/{job_id}" in paths
     assert "/api/settings/feature-preferences" in paths
+    assert "/api/settings/load-persisted-api-key" in paths
     assert "/api/settings/llm-profiles" not in paths
 
 

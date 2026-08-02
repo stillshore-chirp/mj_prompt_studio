@@ -40,6 +40,24 @@ def test_secret_store_reads_windows_or_shell_alias(monkeypatch) -> None:
     assert SecretStore().read_openai_api_key() == "alias-key"
 
 
+def test_secret_store_can_read_keyring_without_environment_fallback(monkeypatch) -> None:
+    class FakeKeyring:
+        @staticmethod
+        def get_password(service: str, account: str) -> str:
+            assert service == "MJ Prompt Studio"
+            assert account == "openai_api_key"
+            return "stored-key"
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_KEY", raising=False)
+    monkeypatch.delenv("MJPS_OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "mj_prompt_studio.infra.secret_store._load_keyring", lambda: FakeKeyring
+    )
+
+    assert SecretStore().read_openai_api_key_from_keyring() == "stored-key"
+
+
 def test_execution_policy_is_luna_high_with_low_verbosity() -> None:
     assert LLM_EXECUTION_POLICY.model == "gpt-5.6-luna"
     assert LLM_EXECUTION_POLICY.reasoning_effort == "high"

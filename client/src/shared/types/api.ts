@@ -237,6 +237,11 @@ export interface RuntimeSettingsPublic {
   ruleset: RulesetDisplay;
 }
 
+export interface StoredApiKeyLoadResponse {
+  loaded: boolean;
+  settings: RuntimeSettingsPublic;
+}
+
 export interface WorkspaceResponse {
   project: ProjectRecord;
   document: PromptDocument;

@@ -13,6 +13,9 @@ class SecretStore:
         value = read_openai_api_key_from_environment()
         if value:
             return value
+        return self.read_openai_api_key_from_keyring()
+
+    def read_openai_api_key_from_keyring(self) -> str | None:
         keyring = _load_keyring()
         if keyring is None:
             return None

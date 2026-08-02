@@ -6,6 +6,7 @@ test("explains mock mode and confirms Privacy mode before changing it", async ({
 
   await expect(page.getByRole("region", { name: "Settings" })).toBeVisible();
   await expect(page.getByLabel("OpenAI API key")).toBeVisible();
+  await expect(page.getByRole("button", { name: "OS資格情報ストアから読み込んで使用" })).toBeVisible();
   await expect(page.getByRole("button", { name: "このセッションだけで使用" })).toBeDisabled();
   await expect(page.getByText("Mock LLMモードです。外部APIへの接続・送信は行わず、接続テストは無効です。")).toBeVisible();
   await expect(page.getByRole("button", { name: "実APIへの接続をテスト" })).toBeDisabled();

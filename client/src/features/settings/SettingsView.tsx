@@ -8,6 +8,7 @@ interface SettingsViewProps {
   settings: RuntimeSettingsPublic;
   onSessionKey: (apiKey: string) => Promise<void>;
   onPersistKey: (apiKey: string) => Promise<{ persisted: boolean }>;
+  onLoadStoredKey: () => Promise<{ loaded: boolean }>;
   onResponseStorage: (mode: "normal" | "privacy") => Promise<void>;
   onPreferences: (preferences: Record<string, LLMFeaturePreferences>) => void;
   onConnectionTest: () => Promise<boolean>;
@@ -17,6 +18,7 @@ export function SettingsView({
   settings,
   onSessionKey,
   onPersistKey,
+  onLoadStoredKey,
   onResponseStorage,
   onPreferences,
   onConnectionTest
@@ -71,6 +73,26 @@ export function SettingsView({
       setApiKey("");
     } catch {
       setKeyStatus("適用できませんでした。入力内容は保持しています。接続と設定を確認して再試行してください。");
+    } finally {
+      setIsApplyingKey(false);
+    }
+  }
+
+  async function loadStoredApiKey(): Promise<void> {
+    if (isApplyingKey) {
+      return;
+    }
+    setIsApplyingKey(true);
+    setKeyStatus(null);
+    try {
+      const result = await onLoadStoredKey();
+      setKeyStatus(
+        result.loaded
+          ? "OS資格情報ストアから読み込み、このセッションに適用しました。キーの値は表示しません。"
+          : "保存済みのAPI keyが見つからないか、OS資格情報ストアを利用できません。設定は変更していません。"
+      );
+    } catch {
+      setKeyStatus("OS資格情報ストアから読み込めませんでした。設定は変更していません。保存またはセッション適用を使って再試行してください。");
     } finally {
       setIsApplyingKey(false);
     }
@@ -154,6 +176,16 @@ export function SettingsView({
           <button
             type="button"
             className="secondary"
+            disabled={isApplyingKey}
+            aria-busy={isApplyingKey}
+            onClick={() => void loadStoredApiKey()}
+          >
+            <KeyRound size={16} />
+            {isApplyingKey ? "OS資格情報ストアを確認中…" : "OS資格情報ストアから読み込んで使用"}
+          </button>
+          <button
+            type="button"
+            className="secondary"
             disabled={!isRealApiMode || !settings.api_key_configured || isTestingConnection}
             onClick={() => void testConnection()}
           >
@@ -162,6 +194,7 @@ export function SettingsView({
         </div>
         <p>このセッションだけで使用: アプリを閉じるまでメモリ内で利用し、OS資格情報ストアやローカルDBには保存しません。</p>
         <p>OS資格情報ストアへ保存: 利用可能な場合のみOSの資格情報ストアへ保存し、利用できない場合はこのセッションだけで使用します。</p>
+        <p>OS資格情報ストアから読み込んで使用: 保存済みのAPI keyをこのセッションへ適用します。キーの値は画面やAPI応答へ返しません。</p>
         <p>
           {isRealApiMode
             ? settings.api_key_configured

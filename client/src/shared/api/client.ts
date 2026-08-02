@@ -14,6 +14,7 @@ import type {
   ResultImage,
   ResultReview,
   RuntimeSettingsPublic,
+  StoredApiKeyLoadResponse,
   WorkspaceResponse
 } from "../types/api";
 
@@ -251,6 +252,10 @@ export const api = {
       "/api/settings/persist-api-key",
       { method: "POST", body: JSON.stringify({ api_key: apiKey }) }
     ),
+  loadPersistedApiKey: () =>
+    requestJson<StoredApiKeyLoadResponse>("/api/settings/load-persisted-api-key", {
+      method: "POST"
+    }),
   connectionTest: () =>
     requestJson<{ ok: boolean }>("/api/settings/connection-test", { method: "POST" }),
   exportFile: (

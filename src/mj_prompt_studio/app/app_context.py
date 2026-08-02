@@ -58,6 +58,13 @@ class AppContext:
         self.settings = effective_settings
         self._rebuild_services()
 
+    def load_stored_api_key(self) -> bool:
+        api_key = self.secret_store.read_openai_api_key_from_keyring()
+        if not api_key:
+            return False
+        self.set_session_api_key(api_key)
+        return True
+
     def set_llm_feature_preferences(
         self, preferences: dict[str, LLMFeaturePreferences]
     ) -> None:

@@ -83,6 +83,7 @@ Dock実装ではなくReact layoutで構成する。情報配置は旧クライ�
 
 - セッション内API key適用。
 - OS資格情報ストアへのAPI key保存。保存不可環境ではセッション内適用に留める。
+- 保存済みOS資格情報ストアからAPI keyを読み込み、値を表示せずセッションへ適用する。未発見・利用不可・失敗時は設定を変更せず、次の行動を示す。
 - Privacy mode / normal response storage。
 - AI execution profile: `GPT-5.6 Luna`、`High`、`Low` を読み取り専用表示。
 - Feature vocabulary preferences: Agentごとの語彙量だけを編集・保存。
