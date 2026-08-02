@@ -55,6 +55,7 @@ from mj_prompt_studio.server.serialization import (
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 ALLOWED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
+LOCAL_API_REQUEST_HEADER = "X-MJPS-Request"
 UploadImageFile = Annotated[UploadFile, File(...)]
 
 
@@ -76,7 +77,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
         CORSMiddleware,
         allow_origins=_cors_origins(),
         allow_methods=["GET", "POST", "PUT", "DELETE"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", LOCAL_API_REQUEST_HEADER],
         allow_credentials=False,
     )
     _register_routes(app)
@@ -582,8 +583,15 @@ def _register_routes(app: FastAPI) -> None:
         state.context.set_session_api_key(payload.api_key)
         return {"persisted": persisted, "settings": public_settings(state.context)}
 
+    @app.post("/api/settings/load-persisted-api-key")
+    def load_persisted_api_key(request: Request, state: StateDep) -> dict[str, Any]:
+        _require_local_api_request(request)
+        loaded = state.context.load_stored_api_key()
+        return {"loaded": loaded, "settings": public_settings(state.context)}
+
     @app.post("/api/settings/connection-test")
-    def connection_test(state: StateDep) -> dict[str, Any]:
+    def connection_test(request: Request, state: StateDep) -> dict[str, Any]:
+        _require_local_api_request(request)
         return {"ok": state.context.orchestrator.connection_test()}
 
     @app.post("/api/exports/prompt")
@@ -673,6 +681,11 @@ def _result_or_404(state: AppState, result_image_id: str) -> ResultImage:
 def _current_project_id(state: AppState) -> str:
     project, _document = state.ensure_workspace()
     return project.id
+
+
+def _require_local_api_request(request: Request) -> None:
+    if request.headers.get(LOCAL_API_REQUEST_HEADER) != "1":
+        raise HTTPException(status_code=403, detail="Invalid local API request")
 
 
 async def _persist_upload(file: UploadFile) -> Path:

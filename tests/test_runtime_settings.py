@@ -1,3 +1,6 @@
+import tomllib
+from pathlib import Path
+
 import pytest
 
 from mj_prompt_studio.config import (
@@ -38,6 +41,31 @@ def test_secret_store_reads_windows_or_shell_alias(monkeypatch) -> None:
     monkeypatch.setenv("OPENAI_KEY", "alias-key")
 
     assert SecretStore().read_openai_api_key() == "alias-key"
+
+
+def test_secret_store_can_read_keyring_without_environment_fallback(monkeypatch) -> None:
+    class FakeKeyring:
+        @staticmethod
+        def get_password(service: str, account: str) -> str:
+            assert service == "MJ Prompt Studio"
+            assert account == "openai_api_key"
+            return "stored-key"
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_KEY", raising=False)
+    monkeypatch.delenv("MJPS_OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(
+        "mj_prompt_studio.infra.secret_store._load_keyring", lambda: FakeKeyring
+    )
+
+    assert SecretStore().read_openai_api_key_from_keyring() == "stored-key"
+
+
+def test_project_declares_keyring_for_supported_credential_store() -> None:
+    project_root = Path(__file__).resolve().parents[1]
+    pyproject = tomllib.loads((project_root / "pyproject.toml").read_text())
+
+    assert "keyring>=25.0" in pyproject["project"]["dependencies"]
 
 
 def test_execution_policy_is_luna_high_with_low_verbosity() -> None:

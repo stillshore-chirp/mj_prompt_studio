@@ -2282,6 +2282,26 @@
         "summary": "Update Llm Feature Preferences"
       }
     },
+    "/api/settings/load-persisted-api-key": {
+      "post": {
+        "operationId": "load_persisted_api_key_api_settings_load_persisted_api_key_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Load Persisted Api Key Api Settings Load Persisted Api Key Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Load Persisted Api Key"
+      }
+    },
     "/api/settings/persist-api-key": {
       "post": {
         "operationId": "persist_api_key_api_settings_persist_api_key_post",

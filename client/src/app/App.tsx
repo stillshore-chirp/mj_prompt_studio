@@ -698,6 +698,21 @@ export function App() {
             throw error;
           }
         }}
+        onLoadStoredKey={async () => {
+          try {
+            const response = await api.loadPersistedApiKey();
+            setSettings(response.settings);
+            setStatus(
+              response.loaded
+                ? "OS資格情報ストアからAPI keyを読み込み、このセッションに適用しました。キーの値は表示しません。"
+                : "保存済みのAPI keyが見つからないか、OS資格情報ストアを利用できません。設定は変更していません。"
+            );
+            return { loaded: response.loaded };
+          } catch (error) {
+            setStatus(errorToMessage(error));
+            throw error;
+          }
+        }}
         onResponseStorage={async (mode) => {
           try {
             const response = await api.saveResponseStorage(mode);

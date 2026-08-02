@@ -14,6 +14,7 @@ import type {
   ResultImage,
   ResultReview,
   RuntimeSettingsPublic,
+  StoredApiKeyLoadResponse,
   WorkspaceResponse
 } from "../types/api";
 
@@ -29,6 +30,7 @@ export class ApiClientError extends Error {
 }
 
 const API_BASE = import.meta.env.VITE_MJPS_API_BASE ?? "";
+const LOCAL_API_REQUEST_HEADER = "X-MJPS-Request";
 
 async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
@@ -251,8 +253,16 @@ export const api = {
       "/api/settings/persist-api-key",
       { method: "POST", body: JSON.stringify({ api_key: apiKey }) }
     ),
+  loadPersistedApiKey: () =>
+    requestJson<StoredApiKeyLoadResponse>("/api/settings/load-persisted-api-key", {
+      method: "POST",
+      headers: { [LOCAL_API_REQUEST_HEADER]: "1" }
+    }),
   connectionTest: () =>
-    requestJson<{ ok: boolean }>("/api/settings/connection-test", { method: "POST" }),
+    requestJson<{ ok: boolean }>("/api/settings/connection-test", {
+      method: "POST",
+      headers: { [LOCAL_API_REQUEST_HEADER]: "1" }
+    }),
   exportFile: (
     documentId: string,
     mode: "prompt" | "markdown_record" | "json_snapshot" | "matrix_csv" | "matrix_markdown",

@@ -4,9 +4,10 @@ gitへ公開する文書、plan、Issue/PR本文、screenshot、検証log要約�
 
 ## APIキー
 
-- `OPENAI_API_KEY` は端末の環境変数またはOS資格情報ストアから読む。
+- `OPENAI_API_KEY` は端末の環境変数または標準依存の`keyring`を通じたOS資格情報ストアから読む。
 - 互換用に `OPENAI_KEY` と `MJPS_OPENAI_API_KEY` も環境変数として読み取れる。
 - 平文設定ファイルへの保存は既定にしない。
+- Settingsから保存済みのOS資格情報ストアのkeyを再読み込みする場合も、API keyはserver内でセッションへ適用し、clientの画面・HTTP response・ログへ返さない。
 - Job、ログ、エクスポート、スクリーンショットにAPIキーを出さない。
 
 ## ローカル資産
@@ -22,6 +23,7 @@ gitへ公開する文書、plan、Issue/PR本文、screenshot、検証log要約�
 
 - APIは既定で `127.0.0.1` にのみbindする。
 - CORSはReact dev / preview originに限定する。
+- OS資格情報ストアからのkey適用と実API接続テストは、React clientだけが付与する `X-MJPS-Request` headerを必須にし、通常のcross-origin form POSTを403で拒否する。
 - React UIはtyped API clientだけを使い、SQLite、AssetStore、SecretStore、OpenAI SDKを直接扱わない。
 - HTTP response、Job payload、console logにAPI key、Token、Cookie、画像本文、prompt全文を含めない。
 

@@ -8,15 +8,19 @@ interface SettingsViewProps {
   settings: RuntimeSettingsPublic;
   onSessionKey: (apiKey: string) => Promise<void>;
   onPersistKey: (apiKey: string) => Promise<{ persisted: boolean }>;
+  onLoadStoredKey: () => Promise<{ loaded: boolean }>;
   onResponseStorage: (mode: "normal" | "privacy") => Promise<void>;
   onPreferences: (preferences: Record<string, LLMFeaturePreferences>) => void;
   onConnectionTest: () => Promise<boolean>;
 }
 
+type ApiKeyAction = "session" | "keyring" | "load" | null;
+
 export function SettingsView({
   settings,
   onSessionKey,
   onPersistKey,
+  onLoadStoredKey,
   onResponseStorage,
   onPreferences,
   onConnectionTest
@@ -28,7 +32,7 @@ export function SettingsView({
   const [keyStatus, setKeyStatus] = useState<string | null>(null);
   const [privacyStatus, setPrivacyStatus] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
-  const [isApplyingKey, setIsApplyingKey] = useState(false);
+  const [apiKeyAction, setApiKeyAction] = useState<ApiKeyAction>(null);
   const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
 
@@ -49,12 +53,13 @@ export function SettingsView({
 
   const hasApiKey = apiKey.trim().length > 0;
   const isRealApiMode = settings.llm_mode === "real";
+  const isApplyingKey = apiKeyAction !== null;
 
   async function applyApiKey(kind: "session" | "keyring"): Promise<void> {
     if (!hasApiKey || isApplyingKey) {
       return;
     }
-    setIsApplyingKey(true);
+    setApiKeyAction(kind);
     setKeyStatus(null);
     try {
       if (kind === "session") {
@@ -72,7 +77,30 @@ export function SettingsView({
     } catch {
       setKeyStatus("適用できませんでした。入力内容は保持しています。接続と設定を確認して再試行してください。");
     } finally {
-      setIsApplyingKey(false);
+      setApiKeyAction(null);
+    }
+  }
+
+  async function loadStoredApiKey(): Promise<void> {
+    if (isApplyingKey) {
+      return;
+    }
+    setApiKeyAction("load");
+    setKeyStatus(null);
+    try {
+      const result = await onLoadStoredKey();
+      setKeyStatus(
+        result.loaded
+          ? "OS資格情報ストアから読み込み、このセッションに適用しました。キーの値は表示しません。"
+          : "保存済みのAPI keyが見つからないか、OS資格情報ストアを利用できません。設定は変更していません。"
+      );
+      if (result.loaded) {
+        setApiKey("");
+      }
+    } catch {
+      setKeyStatus("OS資格情報ストアから読み込めませんでした。設定は変更していません。保存またはセッション適用を使って再試行してください。");
+    } finally {
+      setApiKeyAction(null);
     }
   }
 
@@ -154,6 +182,16 @@ export function SettingsView({
           <button
             type="button"
             className="secondary"
+            disabled={isApplyingKey}
+            aria-busy={apiKeyAction === "load"}
+            onClick={() => void loadStoredApiKey()}
+          >
+            <KeyRound size={16} />
+            {apiKeyAction === "load" ? "OS資格情報ストアを確認中…" : "OS資格情報ストアから読み込んで使用"}
+          </button>
+          <button
+            type="button"
+            className="secondary"
             disabled={!isRealApiMode || !settings.api_key_configured || isTestingConnection}
             onClick={() => void testConnection()}
           >
@@ -162,6 +200,7 @@ export function SettingsView({
         </div>
         <p>このセッションだけで使用: アプリを閉じるまでメモリ内で利用し、OS資格情報ストアやローカルDBには保存しません。</p>
         <p>OS資格情報ストアへ保存: 利用可能な場合のみOSの資格情報ストアへ保存し、利用できない場合はこのセッションだけで使用します。</p>
+        <p>OS資格情報ストアから読み込んで使用: 保存済みのAPI keyをこのセッションへ適用します。キーの値は画面やAPI応答へ返しません。</p>
         <p>
           {isRealApiMode
             ? settings.api_key_configured
