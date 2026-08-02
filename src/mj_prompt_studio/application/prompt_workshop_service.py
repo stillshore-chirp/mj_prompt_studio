@@ -16,7 +16,7 @@ from mj_prompt_studio.domain.prompt_workshop import (
     sanitize_generated_prompt,
 )
 from mj_prompt_studio.domain.ruleset import GenerationRuleset
-from mj_prompt_studio.llm.orchestrator import LLMOrchestrator
+from mj_prompt_studio.llm.orchestrator import LLMOrchestrator, LLMOutputValidationError
 
 
 class PromptWorkshopService:
@@ -66,7 +66,7 @@ class PromptWorkshopService:
         seen: set[str] = set()
         excluded_count = 0
         for item in result["prompts"]:
-            text = sanitize_generated_prompt(str(item["text"]))
+            text = self._sanitize_llm_prompt(str(item["text"]))
             if matching_exclusion_terms(text, self.exclusion_terms):
                 excluded_count += 1
                 continue
@@ -78,9 +78,7 @@ class PromptWorkshopService:
             if len(prompts) == count:
                 break
         if not prompts:
-            raise ValueError(
-                "生成結果を表示できませんでした。除外語句またはガイダンスを確認して再試行してください。"
-            )
+            raise LLMOutputValidationError()
         warnings = [str(item) for item in result["warnings"]]
         if len(prompts) < count:
             warnings.append("指定件数に届かなかったため、条件を確認して再実行できます。")
@@ -121,11 +119,11 @@ class PromptWorkshopService:
             },
         ).output_json
         if result["mode"] != mode:
-            raise ValueError("変換結果のモードが一致しません。再試行してください。")
-        body = sanitize_generated_prompt(str(result["transformed_prompt"]))
+            raise LLMOutputValidationError()
+        body = self._sanitize_llm_prompt(str(result["transformed_prompt"]))
         self._require_no_exclusion_match(body)
         if max_characters is not None and len(body) > max_characters:
-            raise ValueError("指定した文字数上限を超えたため、結果は適用していません。")
+            raise LLMOutputValidationError()
         return self._single_result(
             operation=mode,
             body=body,
@@ -204,8 +202,8 @@ class PromptWorkshopService:
             },
         ).output_json
         if result["applied_preset_id"] != preset_id or result["strength"] != strength:
-            raise ValueError("アレンジ条件と結果が一致しません。再試行してください。")
-        body = sanitize_generated_prompt(str(result["arranged_prompt"]))
+            raise LLMOutputValidationError()
+        body = self._sanitize_llm_prompt(str(result["arranged_prompt"]))
         self._require_no_exclusion_match(body)
         repair_attempts = 0
         warnings = [str(item) for item in result["warnings"]]
@@ -264,7 +262,7 @@ class PromptWorkshopService:
                 "anchors": anchors,
             },
         ).output_json
-        body = sanitize_generated_prompt(str(result["adjusted_prompt"]))
+        body = self._sanitize_llm_prompt(str(result["adjusted_prompt"]))
         assessment = assess_length(source_body, body, length_ratio, max_characters)
         repair_attempts = 0
         if max_characters is not None and not assessment.within_hard_limit:
@@ -280,10 +278,10 @@ class PromptWorkshopService:
                     "repair_required": True,
                 },
             ).output_json
-            body = sanitize_generated_prompt(str(result["adjusted_prompt"]))
+            body = self._sanitize_llm_prompt(str(result["adjusted_prompt"]))
             assessment = assess_length(source_body, body, length_ratio, max_characters)
         if not assessment.within_hard_limit:
-            raise ValueError("文字数上限を満たせなかったため、結果は適用していません。")
+            raise LLMOutputValidationError()
         warnings = [str(item) for item in result["warnings"]]
         if not assessment.within_ratio_tolerance:
             warnings.append("文字数目標との差が大きいため、結果文字数を確認して再実行できます。")
@@ -330,6 +328,10 @@ class PromptWorkshopService:
 
     def _require_no_exclusion_match(self, body: str) -> None:
         if matching_exclusion_terms(body, self.exclusion_terms):
-            raise ValueError(
-                "除外語句に一致する結果のため、表示・コピー・適用していません。設定を確認して再試行してください。"
-            )
+            raise LLMOutputValidationError()
+
+    def _sanitize_llm_prompt(self, value: str) -> str:
+        try:
+            return sanitize_generated_prompt(value)
+        except ValueError as exc:
+            raise LLMOutputValidationError() from exc

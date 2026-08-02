@@ -27,6 +27,10 @@ class OpenAIResponse:
     request_latency_ms: float
 
 
+class StructuredOutputResponseError(RuntimeError):
+    """Raised when a response cannot be used as the requested structured output."""
+
+
 class OpenAIResponsesClient:
     def __init__(self, api_key: str | None = None) -> None:
         try:
@@ -60,9 +64,15 @@ class OpenAIResponsesClient:
         latency_ms = (perf_counter() - started_at) * 1000
         output_text = getattr(response, "output_text", None)
         if not output_text:
-            raise ValueError("OpenAI response did not include output_text")
+            raise StructuredOutputResponseError("response did not include output_text")
+        try:
+            output_json = json.loads(output_text)
+        except json.JSONDecodeError as exc:
+            raise StructuredOutputResponseError("response was not valid JSON") from exc
+        if not isinstance(output_json, dict):
+            raise StructuredOutputResponseError("response JSON was not an object")
         return OpenAIResponse(
-            output_json=json.loads(output_text),
+            output_json=output_json,
             response_id=getattr(response, "id", None),
             usage=_extract_usage(getattr(response, "usage", None)),
             request_latency_ms=latency_ms,

@@ -73,7 +73,7 @@ OpenAPI schemaを更新する場合は `make generate-openapi` を実行しま�
 - Matrix Lab: 実験目的からvariantを生成し、選択コピー、一括コピー、CSV/Markdownで出力。
 - Result Review: 手動取り込み画像を元プロンプトと比較し、画像プレビュー、parameters snapshot、改善候補をComposerへPatchとして戻す。
 - Export: Prompt only、Markdown record、JSON snapshot、CSV/Markdown matrix variants。
-- Jobs: LLM処理の状態、固定実効構成、キャンセル、再実行を表示。
+- Jobs: LLM処理の状態、固定実効構成、原因別の安全な復旧案内、キャンセル、明示的な再実行を表示。
 - Text output policy: Settingsで構造化オプションをテキストPromptへ含めるかを全出力で切り替え、Prompt除外語句を創作系の生成・変換へ適用。
 
 ## データとセキュリティ

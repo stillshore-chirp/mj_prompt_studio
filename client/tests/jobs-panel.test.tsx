@@ -15,6 +15,7 @@ function createJob(status: LLMJob["status"], overrides: Partial<LLMJob> = {}): L
     input_snapshot: {},
     output_json: status === "succeeded" ? {} : null,
     error_message: null,
+    failure_code: null,
     created_at: "2026-08-01T00:00:00Z",
     finished_at: null,
     retry_count: 0,
@@ -41,6 +42,7 @@ describe("JobsPanel", () => {
             input_snapshot: {},
             output_json: {},
             error_message: null,
+            failure_code: null,
             created_at: "2026-08-01T00:00:00Z",
             finished_at: "2026-08-01T00:00:01Z",
             retry_count: 0,
@@ -53,6 +55,7 @@ describe("JobsPanel", () => {
         onRefresh={vi.fn()}
         onCancel={vi.fn()}
         onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
       />
     );
 
@@ -72,6 +75,7 @@ describe("JobsPanel", () => {
         onRefresh={vi.fn()}
         onCancel={vi.fn()}
         onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
       />
     );
 
@@ -93,12 +97,16 @@ describe("JobsPanel status feedback", () => {
           createJob("queued"),
           createJob("running"),
           createJob("succeeded"),
-          createJob("failed", { error_message: "internal provider trace must not be shown" }),
+          createJob("failed", {
+            error_message: "internal provider trace must not be shown",
+            failure_code: "api_authentication_failed"
+          }),
           createJob("cancelled")
         ]}
         onRefresh={vi.fn()}
         onCancel={vi.fn()}
         onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
       />
     );
 
@@ -107,7 +115,7 @@ describe("JobsPanel status feedback", () => {
     expect(screen.getByText("失敗")).toBeInTheDocument();
     expect(screen.getByText("取消済み")).toBeInTheDocument();
     expect(
-      screen.getByText("この処理を完了できませんでした。結果は適用されていません。入力や接続設定を確認して、再試行してください。")
+      screen.getByText("実APIの認証を確認できませんでした。結果は適用されていません。設定でAPI keyを確認または適用してから、再試行してください。")
     ).toHaveAttribute("role", "status");
     expect(screen.queryByText("internal provider trace must not be shown")).not.toBeInTheDocument();
     expect(
@@ -120,12 +128,14 @@ describe("JobsPanel status feedback", () => {
   it("uses accessible cancel and retry controls for the matching states only", () => {
     const onCancel = vi.fn();
     const onRetry = vi.fn();
+    const onOpenSettings = vi.fn();
     render(
       <JobsPanel
         jobs={[createJob("queued", { id: "queued_job" }), createJob("failed", { id: "failed_job" })]}
         onRefresh={vi.fn()}
         onCancel={onCancel}
         onRetry={onRetry}
+        onOpenSettings={onOpenSettings}
       />
     );
 
@@ -135,6 +145,41 @@ describe("JobsPanel status feedback", () => {
     expect(onCancel).toHaveBeenCalledWith("queued_job");
     expect(onRetry).toHaveBeenCalledWith("failed_job");
     expect(screen.getByRole("button", { name: "AI処理の状態を更新" })).toBeInTheDocument();
+  });
+
+  it("guides setting-related failures to Settings and avoids retry for a rate limit", () => {
+    const onOpenSettings = vi.fn();
+    render(
+      <JobsPanel
+        jobs={[
+          createJob("failed", {
+            id: "auth_failure",
+            failure_code: "api_authentication_failed"
+          }),
+          createJob("failed", {
+            id: "rate_limit",
+            failure_code: "rate_limited"
+          }),
+          createJob("failed", {
+            id: "quota_exhausted",
+            failure_code: "api_quota_exhausted"
+          })
+        ]}
+        onRefresh={vi.fn()}
+        onCancel={vi.fn()}
+        onRetry={vi.fn()}
+        onOpenSettings={onOpenSettings}
+      />
+    );
+
+    expect(screen.getAllByRole("button", { name: "再試行する" })).toHaveLength(2);
+    expect(screen.getByText(/少し待ってから、元の操作をもう一度実行してください。/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/OpenAI Platformで利用枠・請求状態を確認し、必要な更新後に再試行してください。/)
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "設定を開く" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "設定を開く" }));
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
 
   it("優先順位・絞り込み・段階的な完了履歴によって復帰対象を先に見せる", () => {
@@ -156,6 +201,7 @@ describe("JobsPanel status feedback", () => {
         onRefresh={vi.fn()}
         onCancel={vi.fn()}
         onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
       />
     );
 
@@ -179,10 +225,16 @@ describe("JobsPanel status feedback", () => {
   it("詳細で対象と安全な失敗概要を表示し、生のbackend errorを出さない", () => {
     render(
       <JobsPanel
-        jobs={[createJob("failed", { error_message: "internal provider trace must not be shown" })]}
+        jobs={[
+          createJob("failed", {
+            error_message: "internal provider trace must not be shown",
+            failure_code: "response_storage_rejected"
+          })
+        ]}
         onRefresh={vi.fn()}
         onCancel={vi.fn()}
         onRetry={vi.fn()}
+        onOpenSettings={vi.fn()}
       />
     );
 
@@ -191,7 +243,9 @@ describe("JobsPanel status feedback", () => {
 
     expect(detail).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("入力中のテキスト")).toBeInTheDocument();
-    expect(screen.getByText("失敗の概要")).toBeInTheDocument();
+    expect(screen.getByText("原因")).toBeInTheDocument();
+    expect(screen.getByText("現在の応答保存設定では実APIがこの処理を受け付けませんでした。")).toBeInTheDocument();
+    expect(screen.getByText("次にできること")).toBeInTheDocument();
     expect(screen.queryByText("internal provider trace must not be shown")).not.toBeInTheDocument();
   });
 });

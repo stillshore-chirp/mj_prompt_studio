@@ -9,6 +9,7 @@ from typing import Any, Literal
 
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY
 from mj_prompt_studio.domain.prompt_document import new_id, utc_now
+from mj_prompt_studio.llm.failure import LLMFailureCode, failure_code_for_exception, failure_message
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 ExecutionBackend = Literal["openai", "mock", "unavailable"]
@@ -28,6 +29,7 @@ class LLMJob:
     input_snapshot: dict[str, Any]
     output_json: dict[str, Any] | None = None
     error_message: str | None = None
+    failure_code: LLMFailureCode | None = None
     created_at: datetime = field(default_factory=utc_now)
     finished_at: datetime | None = None
     retry_count: int = 0
@@ -99,6 +101,7 @@ class LLMJobQueue:
         job.retry_count += 1
         job.status = "queued"
         job.error_message = None
+        job.failure_code = None
         job.finished_at = None
         job.response_id_kind = None
         future = self._executor.submit(self._run, job.id, work)
@@ -151,7 +154,8 @@ class LLMJobQueue:
         except Exception as exc:  # pragma: no cover - exercised by tests via behavior
             if job.status != "cancelled":
                 job.status = "failed"
-                job.error_message = _safe_error_message(exc)
+                job.failure_code = failure_code_for_exception(exc)
+                job.error_message = failure_message(job.failure_code)
         job.finished_at = utc_now()
         self._notify(job)
         callback = self._callbacks.get(job.id)
@@ -161,11 +165,6 @@ class LLMJobQueue:
     def _notify(self, job: LLMJob) -> None:
         if self._on_change:
             self._on_change(job)
-
-
-def _safe_error_message(exc: Exception) -> str:
-    message = str(exc)
-    return message.replace("OPENAI_API_KEY", "API key")
 
 
 def _response_id_kind_for_backend(backend: ExecutionBackend) -> ResponseIDKind | None:

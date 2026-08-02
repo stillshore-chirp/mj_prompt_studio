@@ -1,10 +1,13 @@
 from pathlib import Path
 
+import pytest
+
 from mj_prompt_studio.app.app_context import AppContext
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY, RuntimeSettings
+from mj_prompt_studio.llm.failure import failure_code_for_exception
 from mj_prompt_studio.llm.mock_client import MockLLMClient
 from mj_prompt_studio.llm.openai_client import OpenAIResponse, TokenUsage
-from mj_prompt_studio.llm.orchestrator import LLMOrchestrator
+from mj_prompt_studio.llm.orchestrator import LLMExecutionError, LLMOrchestrator
 
 
 def _settings(
@@ -66,6 +69,42 @@ class _CapturingResponsesClient:
         )
 
 
+class _ProviderFailure(RuntimeError):
+    def __init__(
+        self,
+        status_code: int,
+        detail: str,
+        provider_code: str | None = None,
+        code_on_exception: bool = False,
+    ) -> None:
+        self.status_code = status_code
+        self.body = {"error": {"message": detail}}
+        if provider_code is not None:
+            if code_on_exception:
+                self.code = provider_code
+            else:
+                self.body["error"]["code"] = provider_code
+        super().__init__(detail)
+
+
+class _FailingResponsesClient:
+    def __init__(
+        self,
+        status_code: int,
+        detail: str,
+        provider_code: str | None = None,
+        code_on_exception: bool = False,
+    ) -> None:
+        self.error = _ProviderFailure(status_code, detail, provider_code, code_on_exception)
+
+    def create_response(self, **_kwargs):
+        raise self.error
+
+
+class _RateLimitError(_ProviderFailure):
+    """Matches the OpenAI SDK exception name without calling the real SDK."""
+
+
 def test_orchestrator_preserves_images_and_normal_continuation(tmp_path: Path) -> None:
     orchestrator = LLMOrchestrator(_settings(tmp_path, llm_mode="real"))
     client = _CapturingResponsesClient()
@@ -90,9 +129,7 @@ def test_orchestrator_preserves_images_and_normal_continuation(tmp_path: Path) -
 
 
 def test_privacy_mode_always_removes_continuation_id(tmp_path: Path) -> None:
-    orchestrator = LLMOrchestrator(
-        _settings(tmp_path, response_storage="privacy", llm_mode="real")
-    )
+    orchestrator = LLMOrchestrator(_settings(tmp_path, response_storage="privacy", llm_mode="real"))
     client = _CapturingResponsesClient()
     orchestrator.real_client = client
 
@@ -104,3 +141,94 @@ def test_privacy_mode_always_removes_continuation_id(tmp_path: Path) -> None:
 
     assert client.calls[0]["previous_response_id"] is None
     assert client.calls[0]["store"] is False
+
+
+@pytest.mark.parametrize(
+    ("status_code", "detail", "provider_code", "code_on_exception", "expected_code"),
+    [
+        (
+            400,
+            "provider diagnostic: invalid response_format schema",
+            None,
+            False,
+            "structured_output_schema_invalid",
+        ),
+        (
+            400,
+            "provider diagnostic: store setting is not accepted",
+            None,
+            False,
+            "response_storage_rejected",
+        ),
+        (429, "provider diagnostic: too many requests", None, False, "rate_limited"),
+        (
+            429,
+            "provider diagnostic: quota",
+            "credit_balance_exhausted",
+            False,
+            "api_quota_exhausted",
+        ),
+        (
+            429,
+            "provider diagnostic: quota",
+            "organization_spend_limit_exceeded",
+            False,
+            "api_quota_exhausted",
+        ),
+        (
+            429,
+            "provider diagnostic: quota",
+            "project_spend_limit_exceeded",
+            False,
+            "api_quota_exhausted",
+        ),
+        (
+            429,
+            "provider diagnostic: quota",
+            "organization_usage_limit_exceeded",
+            False,
+            "api_quota_exhausted",
+        ),
+        (429, "provider diagnostic: quota", "insufficient_quota", False, "api_quota_exhausted"),
+        (429, "provider diagnostic: quota", "insufficient_quota", True, "api_quota_exhausted"),
+    ],
+)
+def test_orchestrator_classifies_provider_failures_without_exposing_raw_detail(
+    tmp_path: Path,
+    status_code: int,
+    detail: str,
+    provider_code: str | None,
+    code_on_exception: bool,
+    expected_code: str,
+) -> None:
+    orchestrator = LLMOrchestrator(_settings(tmp_path, llm_mode="real"))
+    orchestrator.real_client = _FailingResponsesClient(
+        status_code, detail, provider_code, code_on_exception
+    )
+
+    with pytest.raises(LLMExecutionError) as exc_info:
+        orchestrator.run_agent("VocabularyAgent", {"text": "safe fixture"})
+
+    assert exc_info.value.code == expected_code
+    assert detail not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("provider_code", "code_on_exception", "expected_code"),
+    [
+        ("insufficient_quota", False, "api_quota_exhausted"),
+        ("credit_balance_exhausted", True, "api_quota_exhausted"),
+        ("rate_limit_exceeded", False, "rate_limited"),
+    ],
+)
+def test_rate_limit_error_name_still_checks_safe_quota_code(
+    provider_code: str, code_on_exception: bool, expected_code: str
+) -> None:
+    error = _RateLimitError(
+        429,
+        "provider diagnostic: quota",
+        provider_code,
+        code_on_exception=code_on_exception,
+    )
+
+    assert failure_code_for_exception(error) == expected_code

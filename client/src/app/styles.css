@@ -466,6 +466,12 @@ svg {
   padding: 7px 12px;
 }
 
+@media (min-width: 761px) {
+  .bottom-panel {
+    padding-right: 150px;
+  }
+}
+
 .app-status {
   margin: 0;
   align-items: center;
@@ -1885,6 +1891,7 @@ section[aria-label="Settings"] .profiles-grid {
     grid-template-columns: 1fr;
     min-height: 104px;
     overflow: visible;
+    padding-bottom: 62px;
   }
 
   section[aria-label="Settings"],

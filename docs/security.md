@@ -26,7 +26,7 @@ gitへ公開する文書、plan、Issue/PR本文、screenshot、検証log要約�
 - OS資格情報ストアからのkey適用と実API接続テストは、React clientだけが付与する `X-MJPS-Request` headerを必須にし、通常のcross-origin form POSTを403で拒否する。
 - React UIはtyped API clientだけを使い、SQLite、AssetStore、SecretStore、OpenAI SDKを直接扱わない。
 - HTTP response、Job payload、console logにAPI key、Token、Cookie、画像本文、prompt全文を含めない。
-- Settings、Health、Jobs、公開用証跡には、設定モード・実行バックエンド・キー設定有無・応答ID種別だけを出す。APIキー、実Response ID、OS資格情報ストア由来の値や例外原文は出さない。
+- Settings、Health、Jobs、公開用証跡には、設定モード・実行バックエンド・キー設定有無・応答ID種別と、安全な失敗分類だけを出す。APIキー、実Response ID、OS資格情報ストア由来の値や例外原文は出さない。
 - Prompt WorkshopのJob入力snapshotは、Prompt本文・任意ガイダンス・除外語句を含めず、文字数、件数、mode、設定有無だけを保存する。除外語句の文字列はJobログ、公開文書、スクリーンショットのfixtureに含めない。
 
 ## 外部送信

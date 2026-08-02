@@ -1,3 +1,5 @@
+import pytest
+
 from mj_prompt_studio.config import (
     LLM_EXECUTION_POLICY,
     LLMFeaturePreferences,
@@ -5,7 +7,13 @@ from mj_prompt_studio.config import (
 )
 from mj_prompt_studio.llm.mock_client import MockLLMClient
 from mj_prompt_studio.llm.orchestrator import LLMOrchestrator
-from mj_prompt_studio.llm.response_schemas import schema_for_agent, validate_schema_payload
+from mj_prompt_studio.llm.response_schemas import (
+    SCHEMAS,
+    StructuredOutputSchemaError,
+    schema_for_agent,
+    validate_schema_payload,
+    validate_strict_response_schema,
+)
 
 
 def test_mock_intent_agent_returns_schema_valid_payload(tmp_path) -> None:
@@ -46,9 +54,7 @@ def test_orchestrator_uses_fixed_execution_policy_and_vocabulary_preference(tmp_
         llm_mode="mock",
         response_storage="normal",
     ).with_feature_preferences(
-        {
-            "VocabularyAgent": LLMFeaturePreferences(vocabulary_amount="compact")
-        }
+        {"VocabularyAgent": LLMFeaturePreferences(vocabulary_amount="compact")}
     )
     orchestrator = LLMOrchestrator(settings)
 
@@ -65,11 +71,7 @@ def test_rich_vocabulary_setting_expands_mock_suggestions(tmp_path) -> None:
         data_dir=tmp_path,
         llm_mode="mock",
         response_storage="normal",
-    ).with_feature_preferences(
-        {
-            "VocabularyAgent": LLMFeaturePreferences(vocabulary_amount="rich")
-        }
-    )
+    ).with_feature_preferences({"VocabularyAgent": LLMFeaturePreferences(vocabulary_amount="rich")})
     orchestrator = LLMOrchestrator(settings)
 
     result = orchestrator.run_agent("VocabularyAgent", {"text": "上質"})
@@ -147,6 +149,23 @@ def test_mock_agent_payloads_match_strict_response_schemas(tmp_path) -> None:
         assert result.reasoning_effort == "high"
         assert result.text_verbosity == "low"
         _assert_matches_json_schema(result.output_json, schema_for_agent(agent_name)["schema"])
+
+
+def test_all_agent_response_schemas_pass_strict_structured_output_preflight() -> None:
+    for agent_name in SCHEMAS:
+        assert schema_for_agent(agent_name)["name"]
+
+
+def test_strict_schema_preflight_rejects_objects_with_optional_fields() -> None:
+    with pytest.raises(StructuredOutputSchemaError, match="require every property"):
+        validate_strict_response_schema(
+            {
+                "type": "object",
+                "properties": {"value": {"type": "string"}},
+                "required": [],
+                "additionalProperties": False,
+            }
+        )
 
 
 def _assert_matches_json_schema(value: object, schema: dict[str, object]) -> None:

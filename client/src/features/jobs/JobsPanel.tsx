@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp, RefreshCw, RotateCcw, X } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import type { LLMJob } from "../../shared/types/api";
+import { displayJobFailure } from "../../shared/utils/job-failure";
 import { displayAgentName, displayExecutionDetails } from "../../shared/utils/user-facing";
 
 interface JobsPanelProps {
@@ -9,13 +10,14 @@ interface JobsPanelProps {
   onRefresh: () => void;
   onCancel: (jobId: string) => void;
   onRetry: (jobId: string) => void;
+  onOpenSettings: () => void;
 }
 
 type JobFilter = "attention" | "all" | "processing" | "failed" | "cancelled" | "succeeded";
 
 const completedPreviewLimit = 5;
 
-export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps) {
+export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }: JobsPanelProps) {
   const [filter, setFilter] = useState<JobFilter>("attention");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
@@ -76,7 +78,8 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps
 
       <div className="job-list" aria-live="polite">
         {visibleJobs.map((job) => {
-          const status = jobStatusDetails(job.status);
+          const status = jobStatusDetails(job.status, job.failure_code);
+          const failure = job.status === "failed" ? displayJobFailure(job.failure_code) : null;
           const expanded = expandedJobId === job.id;
           const detailsId = `job-details-${job.id}`;
           const agentName = displayAgentName(job.agent_name);
@@ -128,8 +131,14 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps
                     )}
                     {job.status === "failed" && (
                       <div className="job-safe-error">
-                        <dt>失敗の概要</dt>
-                        <dd>結果は適用されていません。入力や接続設定を確認して、再試行できます。</dd>
+                        <dt>原因</dt>
+                        <dd>{failure?.summary}</dd>
+                      </div>
+                    )}
+                    {job.status === "failed" && (
+                      <div className="job-safe-error">
+                        <dt>次にできること</dt>
+                        <dd>{failure?.recovery}</dd>
                       </div>
                     )}
                   </dl>
@@ -155,7 +164,12 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry }: JobsPanelProps
                     <X size={14} /> 取り消す
                   </button>
                 )}
-                {job.status === "failed" && (
+                {job.status === "failed" && failure?.requiresSettings && (
+                  <button type="button" className="tiny secondary" onClick={onOpenSettings}>
+                    設定を開く
+                  </button>
+                )}
+                {job.status === "failed" && failure?.canRetry && (
                   <button
                     type="button"
                     className="tiny"
@@ -248,7 +262,10 @@ function formatJobTime(value: string): string {
   return Number.isNaN(date.getTime()) ? "記録時刻を取得できません" : date.toLocaleString("ja-JP");
 }
 
-function jobStatusDetails(status: LLMJob["status"]): { label: string; detail: string } {
+function jobStatusDetails(
+  status: LLMJob["status"],
+  failureCode: LLMJob["failure_code"]
+): { label: string; detail: string } {
   if (status === "queued") {
     return { label: "待機中", detail: "処理待ちです。必要がなければ取り消せます。" };
   }
@@ -259,9 +276,10 @@ function jobStatusDetails(status: LLMJob["status"]): { label: string; detail: st
     return { label: "完了", detail: "処理が完了しました。結果は対象画面で確認できます。" };
   }
   if (status === "failed") {
+    const failure = displayJobFailure(failureCode);
     return {
       label: "失敗",
-      detail: "この処理を完了できませんでした。結果は適用されていません。入力や接続設定を確認して、再試行してください。"
+      detail: `${failure.summary}結果は適用されていません。${failure.recovery}`
     };
   }
   return {

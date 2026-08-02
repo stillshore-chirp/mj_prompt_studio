@@ -7,6 +7,11 @@ from time import perf_counter
 from typing import Any, Literal
 
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY, RuntimeSettings
+from mj_prompt_studio.llm.failure import (
+    LLMFailureCode,
+    failure_code_for_exception,
+    failure_message,
+)
 from mj_prompt_studio.llm.mock_client import MockLLMClient
 from mj_prompt_studio.llm.openai_client import (
     OpenAIResponsesClient,
@@ -20,42 +25,24 @@ logger = logging.getLogger(__name__)
 ExecutionBackend = Literal["openai", "mock", "unavailable"]
 ResponseIDKind = Literal["openai", "mock"]
 
-_EXECUTION_ERROR_MESSAGES = {
-    "api_key_missing": (
-        "AIを実行するにはAPI keyの設定が必要です。設定からAPI keyを読み込むか適用してから、"
-        "もう一度実行してください。"
-    ),
-    "client_initialization_failed": (
-        "実APIの準備を完了できませんでした。API keyとアプリの設定を確認してから、"
-        "もう一度実行してください。"
-    ),
-    "network_unavailable": (
-        "実APIへ接続できませんでした。ネットワークを確認してから、もう一度実行してください。"
-    ),
-    "api_authentication_failed": (
-        "実APIの認証を確認できませんでした。API keyを確認してから、もう一度実行してください。"
-    ),
-    "rate_limited": "実APIの利用上限に達しました。少し待ってから、もう一度実行してください。",
-    "api_request_failed": (
-        "実APIの処理を完了できませんでした。入力は変更されていません。もう一度実行してください。"
-    ),
-    "mock_mode": (
-        "Mockモードでは実APIへの接続テストを実行しません。実APIを使うにはMockモードを解除して"
-        "再起動してください。"
-    ),
-}
-
 
 class LLMExecutionError(RuntimeError):
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: LLMFailureCode) -> None:
         self.code = code
-        super().__init__(_EXECUTION_ERROR_MESSAGES[code])
+        super().__init__(failure_message(code))
+
+
+class LLMOutputValidationError(LLMExecutionError):
+    """A schema-valid agent response failed an application semantic check."""
+
+    def __init__(self) -> None:
+        super().__init__("structured_output_invalid")
 
 
 @dataclass(frozen=True)
 class ConnectionTestResult:
     ok: bool
-    error_code: str | None = None
+    error_code: LLMFailureCode | Literal["mock_mode"] | None = None
 
 
 @dataclass(frozen=True)
@@ -85,7 +72,7 @@ class LLMOrchestrator:
         self.api_key = api_key
         self.mock_client = MockLLMClient()
         self.real_client: OpenAIResponsesClient | None = None
-        self._initialization_error_code: str | None = None
+        self._initialization_error_code: LLMFailureCode | None = None
         if settings.llm_mode == "real" and api_key:
             try:
                 self.real_client = OpenAIResponsesClient(api_key)
@@ -102,7 +89,7 @@ class LLMOrchestrator:
         return "unavailable"
 
     @property
-    def execution_error_code(self) -> str | None:
+    def execution_error_code(self) -> LLMFailureCode | None:
         if self.execution_backend != "unavailable":
             return None
         if not self.api_key:
@@ -153,14 +140,16 @@ class LLMOrchestrator:
                     store=not self.settings.privacy_mode,
                 )
             except Exception as exc:
-                raise LLMExecutionError(_execution_error_code(exc)) from exc
+                failure_code = failure_code_for_exception(exc)
+                logger.warning("llm_request_failed", extra={"failure_code": failure_code})
+                raise LLMExecutionError(failure_code) from exc
             output = openai_response.output_json
             response_id = openai_response.response_id
             usage = openai_response.usage
             request_latency_ms = openai_response.request_latency_ms
         try:
             validate_schema_payload(agent_name, output)
-        except Exception:
+        except Exception as exc:
             self._log_metrics(
                 agent_name,
                 usage,
@@ -169,7 +158,10 @@ class LLMOrchestrator:
                 schema_valid=False,
                 response_id_present=response_id is not None,
             )
-            raise
+            logger.warning(
+                "llm_output_validation_failed", extra={"failure_code": "structured_output_invalid"}
+            )
+            raise LLMExecutionError("structured_output_invalid") from exc
         metrics = AgentMetrics(
             usage=usage,
             request_latency_ms=request_latency_ms,
@@ -207,11 +199,9 @@ class LLMOrchestrator:
         try:
             return ConnectionTestResult(client.connection_test())
         except Exception as exc:
-            return ConnectionTestResult(False, _execution_error_code(exc))
+            return ConnectionTestResult(False, failure_code_for_exception(exc))
 
-    def _payload_with_preferences(
-        self, agent_name: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _payload_with_preferences(self, agent_name: str, payload: dict[str, Any]) -> dict[str, Any]:
         preferences = self.settings.feature_preferences_for(agent_name)
         return {
             **payload,
@@ -296,14 +286,3 @@ def _agent_instruction(agent_name: str) -> str:
         ),
     }
     return instructions.get(agent_name, "")
-
-
-def _execution_error_code(exc: Exception) -> str:
-    name = type(exc).__name__.lower()
-    if "authentication" in name or "permission" in name:
-        return "api_authentication_failed"
-    if "ratelimit" in name or "rate_limit" in name:
-        return "rate_limited"
-    if "timeout" in name or "connection" in name or "network" in name:
-        return "network_unavailable"
-    return "api_request_failed"

@@ -177,6 +177,20 @@ export interface MatrixVariant {
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 export type ExecutionBackend = "openai" | "mock" | "unavailable";
+export type LLMFailureCode =
+  | "api_key_missing"
+  | "client_initialization_failed"
+  | "api_authentication_failed"
+  | "api_permission_denied"
+  | "api_quota_exhausted"
+  | "rate_limited"
+  | "network_unavailable"
+  | "api_unavailable"
+  | "api_request_invalid"
+  | "response_storage_rejected"
+  | "structured_output_schema_invalid"
+  | "structured_output_invalid"
+  | "unexpected";
 
 export interface LLMJob {
   id: string;
@@ -188,6 +202,7 @@ export interface LLMJob {
   input_snapshot: JsonObject;
   output_json: JsonObject | null;
   error_message: string | null;
+  failure_code: LLMFailureCode | null;
   created_at: string;
   finished_at: string | null;
   retry_count: number;

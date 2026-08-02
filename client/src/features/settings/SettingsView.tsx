@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
 import { ScreenGuide } from "../../shared/components/ScreenGuide";
 import type { LLMFeaturePreferences, RuntimeSettingsPublic } from "../../shared/types/api";
+import { displayJobFailure, isLLMFailureCode } from "../../shared/utils/job-failure";
 
 interface SettingsViewProps {
   settings: RuntimeSettingsPublic;
@@ -263,6 +264,7 @@ export function SettingsView({
             type="button"
             className="secondary"
             disabled={!isRealApiMode || !settings.api_key_configured || isTestingConnection}
+            aria-describedby="connection-test-help"
             onClick={() => void testConnection()}
           >
             実APIへの接続をテスト
@@ -271,6 +273,7 @@ export function SettingsView({
         <p>このセッションだけで使用: アプリを閉じるまでメモリ内で利用し、OS資格情報ストアやローカルDBには保存しません。</p>
         <p>OS資格情報ストアへ保存: 利用可能な場合のみOSの資格情報ストアへ保存し、利用できない場合はこのセッションだけで使用します。</p>
         <p>OS資格情報ストアから読み込んで使用: 保存済みのAPI keyをこのセッションへ適用します。キーの値は画面やAPI応答へ返しません。</p>
+        <p id="connection-test-help">実APIへの接続をテスト: API keyと基本的な接続だけを確認します。構造化の各AI処理や現在の応答保存設定まで成功することは保証しません。</p>
         <p>
           {executionStatusMessage(settings)}
         </p>
@@ -559,14 +562,9 @@ function connectionFailureMessage(errorCode: string | null): string {
   if (errorCode === "mock_mode") {
     return "Mockモードでは実APIへの接続テストを実行しません。";
   }
-  if (errorCode === "api_key_missing") {
-    return "API keyが未設定のため接続を確認できません。OS資格情報ストアから読み込むか、このセッションへ適用してください。";
-  }
-  if (errorCode === "api_authentication_failed") {
-    return "実APIの認証を確認できませんでした。API keyを確認して再試行してください。";
-  }
-  if (errorCode === "rate_limited") {
-    return "実APIの利用上限に達しました。少し待ってから再試行してください。";
+  if (isLLMFailureCode(errorCode)) {
+    const failure = displayJobFailure(errorCode);
+    return `${failure.summary}${failure.recovery}`;
   }
   return "接続を確認できませんでした。API keyとネットワークを確認して再試行してください。";
 }

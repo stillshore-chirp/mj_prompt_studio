@@ -7,6 +7,10 @@ from pydantic import BaseModel, ConfigDict
 JsonDict = dict[str, Any]
 
 
+class StructuredOutputSchemaError(ValueError):
+    """Raised before a schema that strict Structured Outputs rejects is sent."""
+
+
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -433,4 +437,29 @@ def validate_schema_payload(agent_name: str, payload: JsonDict) -> None:
 def schema_for_agent(agent_name: str) -> JsonDict:
     if agent_name not in SCHEMAS:
         raise KeyError(f"Unknown LLM agent: {agent_name}")
-    return SCHEMAS[agent_name]
+    schema_config = SCHEMAS[agent_name]
+    validate_strict_response_schema(schema_config["schema"])
+    return schema_config
+
+
+def validate_strict_response_schema(schema_config: JsonDict) -> None:
+    schema_type = schema_config.get("type")
+    allowed_types = schema_type if isinstance(schema_type, list) else [schema_type]
+    if "object" in allowed_types:
+        properties = schema_config.get("properties")
+        required = schema_config.get("required")
+        if not isinstance(properties, dict) or not isinstance(required, list):
+            raise StructuredOutputSchemaError("object schema requires properties and required")
+        if schema_config.get("additionalProperties") is not False:
+            raise StructuredOutputSchemaError("object schema must disallow additional properties")
+        if set(required) != set(properties):
+            raise StructuredOutputSchemaError("object schema must require every property")
+        for child_schema in properties.values():
+            if not isinstance(child_schema, dict):
+                raise StructuredOutputSchemaError("property schema must be an object")
+            validate_strict_response_schema(child_schema)
+    if "array" in allowed_types:
+        item_schema = schema_config.get("items")
+        if not isinstance(item_schema, dict):
+            raise StructuredOutputSchemaError("array schema requires an item schema")
+        validate_strict_response_schema(item_schema)
