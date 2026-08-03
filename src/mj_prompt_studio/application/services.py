@@ -34,7 +34,7 @@ from mj_prompt_studio.domain.validator import PromptValidator
 from mj_prompt_studio.infra.asset_store import AssetStore
 from mj_prompt_studio.infra.image_probe import probe_image
 from mj_prompt_studio.infra.sqlite_repository import ProjectRecord, SQLiteRepository
-from mj_prompt_studio.llm.orchestrator import AgentResult, LLMOrchestrator
+from mj_prompt_studio.llm.orchestrator import AgentResult, ExecutionBackend, LLMOrchestrator
 
 
 class PromptWorkflowService:
@@ -84,7 +84,9 @@ class PromptWorkflowService:
         result = self.orchestrator.run_agent(
             "IntentIntakeAgent",
             {"brief": brief, "ruleset_display_name": self.ruleset.display_name},
-            previous_response_id=_continuable_response_id(document),
+            previous_response_id=_continuable_response_id(
+                document, self.orchestrator.execution_backend
+            ),
         )
         document.user_brief = brief
         document.blocks = _blocks_from_llm(result.output_json.get("prompt_blocks", {}))
@@ -122,7 +124,9 @@ class PromptWorkflowService:
         result = self.orchestrator.run_agent(
             "PromptDoctorAgent",
             payload,
-            previous_response_id=_continuable_response_id(document),
+            previous_response_id=_continuable_response_id(
+                document, self.orchestrator.execution_backend
+            ),
         )
         _record_llm_context(document, result)
         self.repository.save_prompt_document(document)
@@ -147,7 +151,9 @@ class PromptWorkflowService:
                 else {},
                 "ruleset": self.ruleset.display_name,
             },
-            previous_response_id=_continuable_response_id(document),
+            previous_response_id=_continuable_response_id(
+                document, self.orchestrator.execution_backend
+            ),
         )
         _record_llm_context(document, result)
         self.repository.save_prompt_document(document)
@@ -370,7 +376,9 @@ class ResultReviewWorkflowService:
                 if document.validation_report
                 else {},
             },
-            previous_response_id=_continuable_response_id(document),
+            previous_response_id=_continuable_response_id(
+                document, self.orchestrator.execution_backend
+            ),
         )
         _record_llm_context(document, result)
         self.repository.save_prompt_document(document)
@@ -402,8 +410,12 @@ class ExportService:
         return json.dumps(document.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
 
 
-def _continuable_response_id(document: PromptDocument) -> str | None:
+def _continuable_response_id(
+    document: PromptDocument, target_backend: ExecutionBackend
+) -> str | None:
     if document.llm_context.model != LLM_EXECUTION_POLICY.model:
+        return None
+    if document.llm_context.execution_backend != target_backend:
         return None
     return document.llm_context.latest_response_id
 
