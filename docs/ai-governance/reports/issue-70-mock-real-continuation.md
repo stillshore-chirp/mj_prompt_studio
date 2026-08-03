@@ -57,7 +57,7 @@
 - [x] UI描画変更がないためscreenshot対象外であることを記録した。
 - [x] 未実行検証と残リスクを明示した。
 - [x] lint、typecheck、test、build、client検証を完了した。
-- [ ] CI、Codex review、未解決review thread確認を完了する。
+- [x] push / pull_request CI、Codex review、未解決review thread 0件を確認した。
 
 ## 未実行・残課題
 

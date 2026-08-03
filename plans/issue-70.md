@@ -33,7 +33,7 @@ mock由来または由来不明の会話継続IDをreal OpenAI APIへ送らず�
 - [x] Task 2: target backendと保存済みbackendを照合して継続IDを選択する。
 - [x] Task 3: 関連docsとUI/UX証跡を更新する。
 - [x] Task 4: lint、typecheck、test、build、公開安全性を検証する。
-- [ ] Task 5: 日本語commit、push、Ready PR、push/PR CI、Codex review、review thread確認を完了する。
+- [x] Task 5: 日本語commit、push、Ready PR、push/PR CI、Codex review、review thread確認を完了する。
 
 ## 受け入れ条件
 
@@ -91,10 +91,10 @@ mock由来または由来不明の会話継続IDをreal OpenAI APIへ送らず�
 ## PR / CI / review 記録
 
 - Branch: `codex/issue-70-mock-real-continuation`
-- Commit:
-- PR:
-- Push CI:
-- PR CI:
-- Codex review:
-- 未解決 review thread:
-- レビュー往復回数: 0
+- Commit: `50cf44e`（実装・test・docs）
+- PR: `#71` Ready / MERGEABLE
+- Push CI: success（Quality and package、macOS、Windows）
+- PR CI: success（Quality and package、macOS、Windows）
+- Codex review: `50cf44e`をreviewし、重大な問題なし
+- 未解決 review thread: 0件（GraphQL `reviewThreads`）
+- レビュー往復回数: 1
