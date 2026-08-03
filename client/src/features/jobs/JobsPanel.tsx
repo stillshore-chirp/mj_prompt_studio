@@ -1,8 +1,15 @@
-import { ChevronDown, ChevronUp, RefreshCw, RotateCcw, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ClipboardCopy, RefreshCw, RotateCcw, X } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import type { LLMJob } from "../../shared/types/api";
-import { displayJobFailure } from "../../shared/utils/job-failure";
+import { copyText } from "../../shared/utils/clipboard";
+import {
+  displayFailureStage,
+  displayJobFailure,
+  formatSafeJobDiagnostics,
+  safeProviderErrorCode,
+  safeProviderStatusCode
+} from "../../shared/utils/job-failure";
 import { displayAgentName, displayExecutionDetails } from "../../shared/utils/user-facing";
 
 interface JobsPanelProps {
@@ -10,6 +17,7 @@ interface JobsPanelProps {
   onRefresh: () => void;
   onCancel: (jobId: string) => void;
   onRetry: (jobId: string) => void;
+  retryingJobIds?: ReadonlySet<string>;
   onOpenSettings: () => void;
 }
 
@@ -17,10 +25,19 @@ type JobFilter = "attention" | "all" | "processing" | "failed" | "cancelled" | "
 
 const completedPreviewLimit = 5;
 
-export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }: JobsPanelProps) {
+export function JobsPanel({
+  jobs,
+  onRefresh,
+  onCancel,
+  onRetry,
+  onOpenSettings,
+  retryingJobIds = new Set()
+}: JobsPanelProps) {
   const [filter, setFilter] = useState<JobFilter>("attention");
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [manualCopy, setManualCopy] = useState<{ jobId: string; text: string } | null>(null);
   const orderedJobs = useMemo(() => [...jobs].sort(compareJobs), [jobs]);
   const counts = useMemo(() => countJobs(jobs), [jobs]);
   const filteredJobs = orderedJobs.filter((job) => matchesFilter(job, filter));
@@ -34,6 +51,19 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }
     setFilter(nextFilter);
     setExpandedJobId(null);
     setShowAllCompleted(false);
+  };
+
+  const copyDiagnostics = (job: LLMJob) => {
+    const text = formatSafeJobDiagnostics(job);
+    copyText(text).then((copied) => {
+      if (copied) {
+        setCopyFeedback("安全な診断情報をコピーしました。入力内容や識別子は含まれていません。");
+        setManualCopy(null);
+        return;
+      }
+      setCopyFeedback("自動コピーできませんでした。下の診断情報を手動でコピーしてください。");
+      setManualCopy({ jobId: job.id, text });
+    });
   };
 
   return (
@@ -77,10 +107,14 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }
       </div>
 
       <div className="job-list" aria-live="polite">
+        {copyFeedback && <p className="job-copy-feedback" role="status">{copyFeedback}</p>}
         {visibleJobs.map((job) => {
-          const status = jobStatusDetails(job.status, job.failure_code);
-          const failure = job.status === "failed" ? displayJobFailure(job.failure_code) : null;
+          const failure = job.status === "failed"
+            ? displayJobFailure(job.failure_code, job.provider_error_code, job.retry_count)
+            : null;
+          const status = jobStatusDetails(job.status, failure);
           const expanded = expandedJobId === job.id;
+          const retrying = retryingJobIds.has(job.id);
           const detailsId = `job-details-${job.id}`;
           const agentName = displayAgentName(job.agent_name);
           return (
@@ -131,6 +165,24 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }
                     )}
                     {job.status === "failed" && (
                       <div className="job-safe-error">
+                        <dt>失敗段階</dt>
+                        <dd>{displayFailureStage(job.failure_stage)}</dd>
+                      </div>
+                    )}
+                    {job.status === "failed" && safeProviderStatusCode(job.provider_status_code) && (
+                      <div className="job-safe-error">
+                        <dt>HTTP状態</dt>
+                        <dd>{safeProviderStatusCode(job.provider_status_code)}</dd>
+                      </div>
+                    )}
+                    {job.status === "failed" && safeProviderErrorCode(job.provider_error_code) && (
+                      <div className="job-safe-error">
+                        <dt>Providerコード</dt>
+                        <dd>{safeProviderErrorCode(job.provider_error_code)}</dd>
+                      </div>
+                    )}
+                    {job.status === "failed" && (
+                      <div className="job-safe-error">
                         <dt>原因</dt>
                         <dd>{failure?.summary}</dd>
                       </div>
@@ -141,7 +193,25 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }
                         <dd>{failure?.recovery}</dd>
                       </div>
                     )}
+                    {job.status === "failed" && (
+                      <div className="job-safe-error">
+                        <dt>再試行判断</dt>
+                        <dd>{failure?.retryGuidance}</dd>
+                      </div>
+                    )}
                   </dl>
+                )}
+                {manualCopy?.jobId === job.id && (
+                  <div className="job-manual-copy">
+                    <label htmlFor={`job-diagnostics-${job.id}`}>手動コピー用の安全な診断情報</label>
+                    <textarea
+                      id={`job-diagnostics-${job.id}`}
+                      readOnly
+                      rows={8}
+                      value={manualCopy.text}
+                      onFocus={(event) => event.currentTarget.select()}
+                    />
+                  </div>
                 )}
               </div>
               <div className="job-actions">
@@ -169,13 +239,19 @@ export function JobsPanel({ jobs, onRefresh, onCancel, onRetry, onOpenSettings }
                     設定を開く
                   </button>
                 )}
+                {job.status === "failed" && (
+                  <button type="button" className="tiny secondary" onClick={() => copyDiagnostics(job)}>
+                    <ClipboardCopy size={14} /> 診断情報をコピー
+                  </button>
+                )}
                 {job.status === "failed" && failure?.canRetry && (
                   <button
                     type="button"
                     className="tiny"
+                    disabled={retrying}
                     onClick={() => onRetry(job.id)}
                   >
-                    <RotateCcw size={14} /> 再試行する
+                    <RotateCcw size={14} /> {retrying ? "再試行中" : "再試行する"}
                   </button>
                 )}
               </div>
@@ -264,7 +340,7 @@ function formatJobTime(value: string): string {
 
 function jobStatusDetails(
   status: LLMJob["status"],
-  failureCode: LLMJob["failure_code"]
+  failure: ReturnType<typeof displayJobFailure> | null
 ): { label: string; detail: string } {
   if (status === "queued") {
     return { label: "待機中", detail: "処理待ちです。必要がなければ取り消せます。" };
@@ -276,10 +352,10 @@ function jobStatusDetails(
     return { label: "完了", detail: "処理が完了しました。結果は対象画面で確認できます。" };
   }
   if (status === "failed") {
-    const failure = displayJobFailure(failureCode);
+    const details = failure ?? displayJobFailure(null);
     return {
       label: "失敗",
-      detail: `${failure.summary}結果は適用されていません。${failure.recovery}`
+      detail: `${details.summary}結果は適用されていません。${details.recovery}`
     };
   }
   return {

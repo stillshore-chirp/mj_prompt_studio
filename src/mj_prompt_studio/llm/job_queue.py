@@ -9,7 +9,12 @@ from typing import Any, Literal
 
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY
 from mj_prompt_studio.domain.prompt_document import new_id, utc_now
-from mj_prompt_studio.llm.failure import LLMFailureCode, failure_code_for_exception, failure_message
+from mj_prompt_studio.llm.failure import (
+    LLMFailureCode,
+    LLMFailureStage,
+    failure_diagnostics_for_exception,
+    failure_message,
+)
 
 JobStatus = Literal["queued", "running", "succeeded", "failed", "cancelled"]
 ExecutionBackend = Literal["openai", "mock", "unavailable"]
@@ -30,6 +35,9 @@ class LLMJob:
     output_json: dict[str, Any] | None = None
     error_message: str | None = None
     failure_code: LLMFailureCode | None = None
+    failure_stage: LLMFailureStage | None = None
+    provider_status_code: int | None = None
+    provider_error_code: str | None = None
     created_at: datetime = field(default_factory=utc_now)
     finished_at: datetime | None = None
     retry_count: int = 0
@@ -91,23 +99,29 @@ class LLMJobQueue:
         return job
 
     def retry(self, job_id: str) -> LLMJob:
-        job = self.get(job_id)
-        if job is None:
-            raise KeyError(job_id)
         with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                raise KeyError(job_id)
+            if job.status != "failed":
+                raise ValueError("Job can only be retried after failure")
+            if job.failure_code == "structured_output_invalid" and job.retry_count >= 1:
+                raise ValueError("Job retry limit reached")
             work = self._work_items.get(job_id)
-        if work is None:
-            raise ValueError(f"Job cannot be retried because work is not retained: {job_id}")
-        job.retry_count += 1
-        job.status = "queued"
-        job.error_message = None
-        job.failure_code = None
-        job.finished_at = None
-        job.response_id_kind = None
-        future = self._executor.submit(self._run, job.id, work)
-        future.add_done_callback(lambda completed: self._complete(job.id, completed))
-        with self._lock:
+            if work is None:
+                raise ValueError(f"Job cannot be retried because work is not retained: {job_id}")
+            job.retry_count += 1
+            job.status = "queued"
+            job.error_message = None
+            job.failure_code = None
+            job.failure_stage = None
+            job.provider_status_code = None
+            job.provider_error_code = None
+            job.finished_at = None
+            job.response_id_kind = None
+            future = self._executor.submit(self._run, job.id, work)
             self._futures[job.id] = future
+        future.add_done_callback(lambda completed: self._complete(job.id, completed))
         self._notify(job)
         return job
 
@@ -144,21 +158,30 @@ class LLMJobQueue:
         return work()
 
     def _complete(self, job_id: str, future: Future[dict[str, Any]]) -> None:
-        job = self.get(job_id)
-        if job is None:
-            return
+        output: dict[str, Any] | None = None
+        diagnostics = None
         try:
-            job.output_json = future.result()
-            job.status = "succeeded"
-            job.response_id_kind = _response_id_kind_for_backend(job.execution_backend)
+            output = future.result()
         except Exception as exc:  # pragma: no cover - exercised by tests via behavior
-            if job.status != "cancelled":
-                job.status = "failed"
-                job.failure_code = failure_code_for_exception(exc)
+            diagnostics = failure_diagnostics_for_exception(exc)
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job is None:
+                return
+            if diagnostics is None:
+                job.output_json = output
+                job.status = "succeeded"
+                job.response_id_kind = _response_id_kind_for_backend(job.execution_backend)
+            elif job.status != "cancelled":
+                job.failure_code = diagnostics.code
+                job.failure_stage = diagnostics.stage
+                job.provider_status_code = diagnostics.provider_status_code
+                job.provider_error_code = diagnostics.provider_error_code
                 job.error_message = failure_message(job.failure_code)
-        job.finished_at = utc_now()
+                job.status = "failed"
+            job.finished_at = utc_now()
+            callback = self._callbacks.get(job.id)
         self._notify(job)
-        callback = self._callbacks.get(job.id)
         if callback:
             callback(job)
 

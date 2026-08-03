@@ -317,6 +317,9 @@ def test_failed_ai_job_returns_a_safe_classification_without_provider_detail(
 
     assert job["status"] == "failed"
     assert job["failure_code"] == "structured_output_schema_invalid"
+    assert job["failure_stage"] == "request"
+    assert job["provider_status_code"] == 400
+    assert job["provider_error_code"] is None
     assert job["error_message"] == "この操作に必要な構造化形式を実APIが受け付けませんでした。"
     assert "provider diagnostic" not in str(job)
     assert "test-key" not in str(job)

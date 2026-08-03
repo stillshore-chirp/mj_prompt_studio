@@ -1,5 +1,8 @@
 from threading import Event
 
+import pytest
+
+import mj_prompt_studio.llm.job_queue as job_queue_module
 from mj_prompt_studio.llm.job_queue import LLMJobQueue
 from mj_prompt_studio.llm.orchestrator import LLMOutputValidationError
 
@@ -39,6 +42,8 @@ def test_job_queue_retries_retained_work() -> None:
 
     def work():
         calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("safe retry fixture")
         return {"count": calls["count"]}
 
     first = queue.submit(
@@ -57,6 +62,100 @@ def test_job_queue_retries_retained_work() -> None:
     assert first.reasoning_effort == "high"
     assert first.text_verbosity == "low"
     assert first.retry_count == 1
+    queue.shutdown()
+
+
+def test_job_queue_rejects_a_second_retry_while_the_first_is_running() -> None:
+    done = Event()
+    release_retry = Event()
+    calls = {"count": 0}
+    queue = LLMJobQueue(max_workers=1)
+
+    def work() -> dict[str, bool]:
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("safe retry fixture")
+        assert release_retry.wait(3)
+        return {"ok": True}
+
+    job = queue.submit(
+        agent_name="VocabularyAgent",
+        input_snapshot={},
+        work=work,
+        callback=lambda _job: done.set(),
+    )
+    assert done.wait(3)
+    done.clear()
+
+    queue.retry(job.id)
+    with pytest.raises(ValueError, match="only be retried after failure"):
+        queue.retry(job.id)
+
+    release_retry.set()
+    assert done.wait(3)
+    assert job.retry_count == 1
+    queue.shutdown()
+
+
+def test_job_queue_enforces_one_retry_for_structured_output_failure() -> None:
+    done = Event()
+    queue = LLMJobQueue(max_workers=1)
+
+    job = queue.submit(
+        agent_name="PromptTransformAgent",
+        input_snapshot={},
+        work=lambda: (_ for _ in ()).throw(LLMOutputValidationError()),
+        callback=lambda _job: done.set(),
+    )
+    assert done.wait(3)
+    done.clear()
+    queue.retry(job.id)
+    assert done.wait(3)
+
+    with pytest.raises(ValueError, match="retry limit reached"):
+        queue.retry(job.id)
+    assert job.retry_count == 1
+    queue.shutdown()
+
+
+def test_job_queue_does_not_publish_failed_before_failure_classification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    classifying = Event()
+    release_classification = Event()
+    release_work = Event()
+    done = Event()
+    original_classifier = job_queue_module.failure_diagnostics_for_exception
+
+    def delayed_classifier(exc: Exception):
+        classifying.set()
+        assert release_classification.wait(3)
+        return original_classifier(exc)
+
+    monkeypatch.setattr(job_queue_module, "failure_diagnostics_for_exception", delayed_classifier)
+    queue = LLMJobQueue(max_workers=1)
+
+    def work() -> dict[str, object]:
+        assert release_work.wait(3)
+        raise LLMOutputValidationError()
+
+    job = queue.submit(
+        agent_name="PromptTransformAgent",
+        input_snapshot={},
+        work=work,
+        callback=lambda _job: done.set(),
+    )
+
+    release_work.set()
+    assert classifying.wait(3)
+    assert job.status == "running"
+    with pytest.raises(ValueError, match="only be retried after failure"):
+        queue.retry(job.id)
+
+    release_classification.set()
+    assert done.wait(3)
+    assert job.status == "failed"
+    assert job.failure_code == "structured_output_invalid"
     queue.shutdown()
 
 
@@ -81,6 +180,9 @@ def test_job_queue_exposes_a_safe_failure_code_and_clears_it_before_retry() -> N
     assert done.wait(3)
     assert job.status == "failed"
     assert job.failure_code == "structured_output_schema_invalid"
+    assert job.failure_stage == "request"
+    assert job.provider_status_code == 400
+    assert job.provider_error_code is None
     assert job.error_message == "この操作に必要な構造化形式を実APIが受け付けませんでした。"
     assert "provider diagnostic" not in str(job.to_dict())
 
@@ -89,6 +191,9 @@ def test_job_queue_exposes_a_safe_failure_code_and_clears_it_before_retry() -> N
     assert done.wait(3)
     assert job.status == "succeeded"
     assert job.failure_code is None
+    assert job.failure_stage is None
+    assert job.provider_status_code is None
+    assert job.provider_error_code is None
     assert job.error_message is None
     queue.shutdown()
 
@@ -110,5 +215,8 @@ def test_job_queue_maps_semantic_llm_output_validation_to_structured_recovery() 
     assert done.wait(3)
     assert job.status == "failed"
     assert job.failure_code == "structured_output_invalid"
+    assert job.failure_stage == "semantic_validation"
+    assert job.provider_status_code is None
+    assert job.provider_error_code is None
     assert job.error_message == "実APIの応答をこの操作に必要な形式として確認できませんでした。"
     queue.shutdown()

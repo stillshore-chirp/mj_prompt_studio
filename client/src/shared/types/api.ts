@@ -192,6 +192,13 @@ export type LLMFailureCode =
   | "structured_output_invalid"
   | "unexpected";
 
+export type LLMFailureStage =
+  | "execution_setup"
+  | "request"
+  | "response_validation"
+  | "semantic_validation"
+  | "unknown";
+
 export interface LLMJob {
   id: string;
   agent_name: string;
@@ -203,6 +210,9 @@ export interface LLMJob {
   output_json: JsonObject | null;
   error_message: string | null;
   failure_code: LLMFailureCode | null;
+  failure_stage: LLMFailureStage | null;
+  provider_status_code: number | null;
+  provider_error_code: string | null;
   created_at: string;
   finished_at: string | null;
   retry_count: number;

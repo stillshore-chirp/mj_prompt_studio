@@ -4,7 +4,10 @@ import pytest
 
 from mj_prompt_studio.app.app_context import AppContext
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY, RuntimeSettings
-from mj_prompt_studio.llm.failure import failure_code_for_exception
+from mj_prompt_studio.llm.failure import (
+    failure_code_for_exception,
+    failure_diagnostics_for_exception,
+)
 from mj_prompt_studio.llm.mock_client import MockLLMClient
 from mj_prompt_studio.llm.openai_client import OpenAIResponse, TokenUsage
 from mj_prompt_studio.llm.orchestrator import LLMExecutionError, LLMOrchestrator
@@ -210,6 +213,9 @@ def test_orchestrator_classifies_provider_failures_without_exposing_raw_detail(
         orchestrator.run_agent("VocabularyAgent", {"text": "safe fixture"})
 
     assert exc_info.value.code == expected_code
+    assert exc_info.value.failure_stage == "request"
+    assert exc_info.value.provider_status_code == status_code
+    assert exc_info.value.provider_error_code == provider_code
     assert detail not in str(exc_info.value)
 
 
@@ -232,3 +238,22 @@ def test_rate_limit_error_name_still_checks_safe_quota_code(
     )
 
     assert failure_code_for_exception(error) == expected_code
+
+
+def test_failure_diagnostics_only_retain_allowlisted_provider_values() -> None:
+    class UnsafeProviderError(RuntimeError):
+        status_code = 418
+        body = {
+            "error": {
+                "code": "tenant-secret-123",
+                "message": "SENSITIVE_FIXTURE_DO_NOT_RETAIN",
+            }
+        }
+
+    diagnostics = failure_diagnostics_for_exception(UnsafeProviderError())
+
+    assert diagnostics.code == "unexpected"
+    assert diagnostics.stage == "request"
+    assert diagnostics.provider_status_code == 418
+    assert diagnostics.provider_error_code is None
+    assert "SENSITIVE_FIXTURE_DO_NOT_RETAIN" not in str(diagnostics)

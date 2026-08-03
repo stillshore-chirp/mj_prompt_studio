@@ -21,7 +21,7 @@ test("shows an actionable, safe recovery screen when workspace loading fails", a
   await expect(page.getByText("internal server trace must not be exposed")).toBeHidden();
 });
 
-test("shows a failed Job's state, impact, and retry path without backend error detail", async ({
+test("shows a failed Job's state, impact, and safe diagnostic path without backend error detail", async ({
   page
 }) => {
   await page.route("**/api/jobs", async (route) => {
@@ -40,6 +40,9 @@ test("shows a failed Job's state, impact, and retry path without backend error d
             output_json: null,
             error_message: "internal provider trace must not be exposed",
             failure_code: "structured_output_schema_invalid",
+            failure_stage: "request",
+            provider_status_code: 400,
+            provider_error_code: null,
             created_at: "2026-08-01T00:00:00Z",
             finished_at: "2026-08-01T00:00:01Z",
             retry_count: 0,
@@ -57,11 +60,11 @@ test("shows a failed Job's state, impact, and retry path without backend error d
   const job = page.getByRole("article").filter({ hasText: "Prompt Doctorの確認" });
   await expect(job).toContainText("失敗");
   await expect(job).toContainText(
-    "この操作に必要な構造化形式を実APIが受け付けませんでした。結果は適用されていません。入力は保持されています。再試行しても続く場合は、アプリを更新してから再試行してください。"
+    "この操作に必要な構造化形式を実APIが受け付けませんでした。結果は適用されていません。入力は保持されています。再試行せず、アプリを更新してから元の操作を新しく実行してください。"
   );
-  await expect(job.getByRole("button", { name: "再試行する" })).toBeVisible();
+  await expect(job.getByRole("button", { name: "再試行する" })).toHaveCount(0);
+  await expect(job.getByRole("button", { name: "診断情報をコピー" })).toBeVisible();
   await expect(page.getByText("internal provider trace must not be exposed")).toBeHidden();
-  await job.getByRole("button", { name: "再試行する" }).click();
 });
 
 test("guides quota exhaustion to account recovery instead of wait-only guidance", async ({ page }) => {

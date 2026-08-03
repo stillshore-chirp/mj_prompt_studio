@@ -7,7 +7,7 @@
 - UIはLLM結果を直接保存せず、Application ServiceがPatch、Suggestion、Reviewとして扱う。
 - Patchは適用前に差分確認を必須にする。
 - MockLLMは `MJPS_LLM_MODE=mock` を明示した場合だけ同じschemaで応答する。通常モードでAPIキーまたは実clientを利用できない場合は、Jobを作成せず安全な設定誘導エラーを返す。
-- LLM Jobは `queued`、`running`、`succeeded`、`failed`、`cancelled` の状態を持ち、UIからキャンセルと再実行を操作できる。失敗時は安全な `failure_code` と定型メッセージだけを記録し、provider例外原文、入力本文、API key、response IDをJob DTO・画面・ログへ出さない。
+- LLM Jobは `queued`、`running`、`succeeded`、`failed`、`cancelled` の状態を持ち、UIからキャンセルと再実行を操作できる。失敗時は安全な `failure_code`、失敗段階、400–599のHTTP状態、allowlist済みproviderコードと定型メッセージだけを記録し、provider例外原文、入力本文、API key、response IDをJob DTO・画面・ログへ出さない。
 - 実APIの全Agent、画像入力、再試行、接続テストは `config.py` の固定実行ポリシーを参照し、`gpt-5.6-luna`、reasoning effort `high`、text verbosity `low` を使う。
 - 呼び出し側はモデルと推論強度をOpenAI clientへ渡せない。`reasoning.mode`、`temperature`、別モデルへのフォールバックは送信・実装しない。
 - SettingsでAgentごとに保存できるのはモデル非依存の語彙量だけとする。旧機能別プロファイルは起動時に語彙量だけを残して移行する。
@@ -48,9 +48,9 @@ text.format: Agent別strict JSON Schema
 
 `Privacy mode` の場合は `store=false` とし、`previous_response_id` を送らない。通常モードでも、PromptDocumentに保存されたモデルが `gpt-5.6-luna` と一致する場合だけ継続IDを送る。最初のLuna応答後にモデル、推論強度、応答詳細、response IDを更新する。継続に必要な実Response IDはserver内の永続化にだけ保持し、public API・Jobs・HealthではIDの種別だけを返す。
 
-usageからinput tokens、cached input tokens、output tokens、reasoning tokensを取得し、request latency、Agent名、画像入力数、schema成否、response ID有無とともに安全な計測情報として扱う。価格はコードへ埋め込まない。Jobは設定モード、実行バックエンド、応答ID種別、再試行数、失敗時の安全な `failure_code` を履歴へ記録する。
+usageからinput tokens、cached input tokens、output tokens、reasoning tokensを取得し、request latency、Agent名、画像入力数、schema成否、response ID有無とともに安全な計測情報として扱う。価格はコードへ埋め込まない。Jobは設定モード、実行バックエンド、応答ID種別、再試行数、失敗時の安全な `failure_code`、`failure_stage`、`provider_status_code`、`provider_error_code` を履歴へ記録する。失敗段階は実行準備、APIリクエスト、応答形式確認、応答内容確認、判定不能に限定する。HTTP状態は400–599の整数だけ、providerコードは秘密値を含まない固定allowlistに一致する値だけを保持する。
 
-失敗分類は、API key未設定、client初期化、認証、権限、利用枠または請求上限、一時的なリクエスト制限、ネットワーク、実API一時障害、リクエスト、応答保存、構造化schema、構造化応答、未分類とする。HTTP 429はproviderの安全な`error.code`/`error.type`から利用枠・請求上限を判定し、それ以外だけを一時的なリクエスト制限として扱う。schemaに通った応答でも、要求した変換モード・除外語句・文字数上限などのアプリケーション検証に失敗した場合は、型付きの`structured_output_invalid`として分類する。どちらの場合も生のエラー本文は保持・表示しない。すべてのAgent schemaは送信前にStrict Structured Outputsの必須条件を検証する。接続テストはAPI keyと基本接続の確認だけであり、Agent schemaまたはresponse storageを含む各Jobの成功保証ではない。
+失敗分類は、API key未設定、client初期化、認証、権限、利用枠または請求上限、一時的なリクエスト制限、ネットワーク、実API一時障害、リクエスト、応答保存、構造化schema、構造化応答、未分類とする。HTTP 429はproviderの安全な`error.code`/`error.type`から利用枠・請求上限を判定し、それ以外だけを一時的なリクエスト制限として扱う。schemaに通った応答でも、要求した変換モード・除外語句・文字数上限などのアプリケーション検証に失敗した場合は、型付きの`structured_output_invalid`として分類する。固定モデル不在や非対応parameterなど、同じJobを再実行しても回復しないallowlist済みproviderコードでは再試行を案内しない。どの場合も生のエラー本文は保持・表示しない。診断情報のない旧履歴は原因を復元できないため、そのJobの再試行を案内しない。すべてのAgent schemaは送信前にStrict Structured Outputsの必須条件を検証する。接続テストはAPI keyと基本接続の確認だけであり、Agent schemaまたはresponse storageを含む各Jobの成功保証ではない。
 
 ## Job API
 
@@ -80,6 +80,8 @@ usageからinput tokens、cached input tokens、output tokens、reasoning tokens
 - `/api/settings/exclusion-terms`
 
 SSEが使えない環境でもReact clientは1秒pollingでJob状態を更新する。
+
+Jobの再試行はserverのJob Queueがロック内で現在状態を確認し、`failed`以外を拒否する。失敗完了時の分類・状態公開も同じロックで一括して行い、分類前の`failed`を観測させない。`structured_output_invalid`は同じJobにつき1回までとし、同時リクエストと上限超過をHTTP 409で拒否する。clientも再試行リクエスト中のJobを即時に無効化する。
 
 ## 実API手動検証
 

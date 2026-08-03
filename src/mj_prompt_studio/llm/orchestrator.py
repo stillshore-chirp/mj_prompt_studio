@@ -9,7 +9,9 @@ from typing import Any, Literal
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY, RuntimeSettings
 from mj_prompt_studio.llm.failure import (
     LLMFailureCode,
+    LLMFailureStage,
     failure_code_for_exception,
+    failure_diagnostics_for_exception,
     failure_message,
 )
 from mj_prompt_studio.llm.mock_client import MockLLMClient
@@ -27,8 +29,18 @@ ResponseIDKind = Literal["openai", "mock"]
 
 
 class LLMExecutionError(RuntimeError):
-    def __init__(self, code: LLMFailureCode) -> None:
+    def __init__(
+        self,
+        code: LLMFailureCode,
+        *,
+        failure_stage: LLMFailureStage = "unknown",
+        provider_status_code: int | None = None,
+        provider_error_code: str | None = None,
+    ) -> None:
         self.code = code
+        self.failure_stage = failure_stage
+        self.provider_status_code = provider_status_code
+        self.provider_error_code = provider_error_code
         super().__init__(failure_message(code))
 
 
@@ -36,7 +48,7 @@ class LLMOutputValidationError(LLMExecutionError):
     """A schema-valid agent response failed an application semantic check."""
 
     def __init__(self) -> None:
-        super().__init__("structured_output_invalid")
+        super().__init__("structured_output_invalid", failure_stage="semantic_validation")
 
 
 @dataclass(frozen=True)
@@ -105,7 +117,10 @@ class LLMOrchestrator:
 
     def require_execution(self) -> None:
         if self.execution_backend == "unavailable":
-            raise LLMExecutionError(self.execution_error_code or "client_initialization_failed")
+            raise LLMExecutionError(
+                self.execution_error_code or "client_initialization_failed",
+                failure_stage="execution_setup",
+            )
 
     def run_agent(
         self,
@@ -129,7 +144,9 @@ class LLMOrchestrator:
         else:
             client = self.real_client
             if client is None:
-                raise LLMExecutionError("client_initialization_failed")
+                raise LLMExecutionError(
+                    "client_initialization_failed", failure_stage="execution_setup"
+                )
             try:
                 openai_response = client.create_response(
                     input_payload=self._build_input(agent_name, effective_payload, images),
@@ -140,9 +157,14 @@ class LLMOrchestrator:
                     store=not self.settings.privacy_mode,
                 )
             except Exception as exc:
-                failure_code = failure_code_for_exception(exc)
-                logger.warning("llm_request_failed", extra={"failure_code": failure_code})
-                raise LLMExecutionError(failure_code) from exc
+                diagnostics = failure_diagnostics_for_exception(exc)
+                logger.warning("llm_request_failed", extra={"failure_code": diagnostics.code})
+                raise LLMExecutionError(
+                    diagnostics.code,
+                    failure_stage="request",
+                    provider_status_code=diagnostics.provider_status_code,
+                    provider_error_code=diagnostics.provider_error_code,
+                ) from exc
             output = openai_response.output_json
             response_id = openai_response.response_id
             usage = openai_response.usage
@@ -161,7 +183,9 @@ class LLMOrchestrator:
             logger.warning(
                 "llm_output_validation_failed", extra={"failure_code": "structured_output_invalid"}
             )
-            raise LLMExecutionError("structured_output_invalid") from exc
+            raise LLMExecutionError(
+                "structured_output_invalid", failure_stage="response_validation"
+            ) from exc
         metrics = AgentMetrics(
             usage=usage,
             request_latency_ms=request_latency_ms,
