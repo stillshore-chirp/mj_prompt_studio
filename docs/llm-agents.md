@@ -46,7 +46,7 @@ text.verbosity: low
 text.format: Agent別strict JSON Schema
 ```
 
-`Privacy mode` の場合は `store=false` とし、`previous_response_id` を送らない。通常モードでも、PromptDocumentに保存されたモデルが `gpt-5.6-luna` と一致する場合だけ継続IDを送る。最初のLuna応答後にモデル、推論強度、応答詳細、response IDを更新する。継続に必要な実Response IDはserver内の永続化にだけ保持し、public API・Jobs・HealthではIDの種別だけを返す。
+`Privacy mode` の場合は `store=false` とし、`previous_response_id` を送らない。通常モードでも、PromptDocumentに保存されたモデルが `gpt-5.6-luna` と一致し、保存元と実行先のbackendが同じ場合だけ継続IDを送る。mock由来またはbackend由来不明のIDを実APIへ送らず、新規応答として実行する。最初のLuna応答後にモデル、推論強度、応答詳細、response ID、execution backendを更新する。継続に必要な実Response IDはserver内の永続化にだけ保持し、public API・Jobs・HealthではIDの種別だけを返す。
 
 usageからinput tokens、cached input tokens、output tokens、reasoning tokensを取得し、request latency、Agent名、画像入力数、schema成否、response ID有無とともに安全な計測情報として扱う。価格はコードへ埋め込まない。Jobは設定モード、実行バックエンド、応答ID種別、再試行数、失敗時の安全な `failure_code`、`failure_stage`、`provider_status_code`、`provider_error_code` を履歴へ記録する。失敗段階は実行準備、APIリクエスト、応答形式確認、応答内容確認、判定不能に限定する。HTTP状態は400–599の整数だけ、providerコードは秘密値を含まない固定allowlistに一致する値だけを保持する。
 

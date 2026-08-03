@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from mj_prompt_studio.app.app_context import AppContext
+from mj_prompt_studio.application.services import _continuable_response_id
 from mj_prompt_studio.config import LLM_EXECUTION_POLICY, RuntimeSettings
 from mj_prompt_studio.llm.failure import (
     failure_code_for_exception,
@@ -46,6 +47,59 @@ def test_document_continuation_stops_at_legacy_model_boundary(tmp_path: Path) ->
     document.llm_context.latest_response_id = "resp_luna"
     context.prompt_service.run_prompt_doctor(document)
     assert seen_previous_ids[-1] == "resp_luna"
+    context.shutdown()
+
+
+@pytest.mark.parametrize(
+    ("saved_backend", "target_backend", "expected_response_id"),
+    [
+        ("openai", "openai", "resp_luna"),
+        ("mock", "openai", None),
+        (None, "openai", None),
+        ("mock", "mock", "mock_response"),
+    ],
+)
+def test_document_continuation_respects_execution_backend_boundary(
+    tmp_path: Path,
+    saved_backend: str | None,
+    target_backend: str,
+    expected_response_id: str | None,
+) -> None:
+    context = AppContext(_settings(tmp_path))
+    _project, document = context.ensure_workspace()
+    document.llm_context.latest_response_id = (
+        "mock_response" if saved_backend == "mock" else "resp_luna"
+    )
+    document.llm_context.model = LLM_EXECUTION_POLICY.model
+    document.llm_context.execution_backend = saved_backend
+
+    assert (
+        _continuable_response_id(document, target_backend) == expected_response_id
+    )
+    context.shutdown()
+
+
+def test_mock_document_drops_continuation_when_targeting_openai(tmp_path: Path) -> None:
+    context = AppContext(_settings(tmp_path))
+    _project, document = context.ensure_workspace()
+    document, _result = context.prompt_service.build_from_brief(document, "朝食広告")
+    assert document.llm_context.execution_backend == "mock"
+    assert document.llm_context.latest_response_id is not None
+
+    seen_previous_ids: list[str | None] = []
+    mock_run_agent = context.orchestrator.run_agent
+
+    class _OpenAITarget:
+        execution_backend = "openai"
+
+        def run_agent(self, agent_name, payload, **kwargs):
+            seen_previous_ids.append(kwargs.get("previous_response_id"))
+            return mock_run_agent(agent_name, payload, **kwargs)
+
+    context.prompt_service.orchestrator = _OpenAITarget()
+    context.prompt_service.run_prompt_doctor(document)
+
+    assert seen_previous_ids == [None]
     context.shutdown()
 
 
