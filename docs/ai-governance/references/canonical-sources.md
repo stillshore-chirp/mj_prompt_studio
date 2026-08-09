@@ -1,20 +1,46 @@
-# 参照する標準・実務知見
+# Canonical Sources
 
-参照名だけでreviewを終えず、画面上の観察点、Pass/Fail、証跡、修正案へ変換します。
+MJ Prompt StudioのAIエージェントハーネスとUI/UXガバナンスは、次の原本と外部標準を参照しています。
 
-## 標準・ガイド
+## Wordpack原本
 
-- W3C WCAG 2.2: <https://www.w3.org/TR/WCAG22/>
-- W3C Cognitive and Learning Disabilities Accessibility: <https://www.w3.org/TR/coga-usable/>
-- Digital Agency Design System タイポグラフィ: <https://design.digital.go.jp/dads/foundations/typography/accessibility/>
-- Nielsen Norman Group usability heuristics: <https://www.nngroup.com/articles/ten-usability-heuristics/>
-- OpenAI Codex AGENTS.md: <https://developers.openai.com/codex/guides/agents-md>
-- OpenAI Codex Agent Skills: <https://developers.openai.com/codex/skills>
+- Repository: `stillshore-chirp/wordpack-for-english`
+- 同期基準commit: `d7d4e3ca9d40e2c54ca9fa430a05dce721b2c2d9`
+- 同期日: 2026-08-09
+- 主な原本:
+  - `AGENTS.md`
+  - `docs/agent-harness.md`
+  - `docs/agent-principles.md`
+  - `.agents/skills/`
+  - `docs/ai-governance/`
+  - `scripts/verify-agent-harness.sh`
+  - `scripts/verify-ai-governance.sh`
 
-## 移植元
+前回の同期基準はcommit `51f042a9af3d24245a4aa0aae51d070d09fbf56d` でした。今回の同期では、Codex・Claude Code・Cursorの3製品を対象とするcommon / path / task / machineの4層構成、instruction budget、thin adapter、tool中立なGitHub配送、latest meaningful changeに基づくreview収束を取り込みました。
 
-本ガバナンスは `stillshore-chirp/wordpack-for-english` の `main`、commit `51f042a9af3d24245a4aa0aae51d070d09fbf56d` にある運用・UI/UXルールを基準に、MJ Prompt StudioのReact client、localhost API、固定LLM policy、ローカル資産境界へ適合しました。参照元固有のCloud Run、Firebase、Firestore、認証、過去report/evidenceは移植していません。
+## MJ Prompt Studio向け適合
 
-## 研究の扱い
+次は原本から概念を採用し、MJ Prompt Studioの実構成へ読み替えています。
 
-対象ユーザー・task・環境を確認し、既存標準と整合させ、観察点とPass/Failへ変換できるかを判断します。出典不明blog、SNS、極端な単発実験、流行だけの記事、tool都合だけの規約はP0の根拠にしません。
+- `apps/frontend/` -> `client/`
+- `apps/backend/` -> `src/mj_prompt_studio/`
+- Cloud Run / Firebase / Firestoreの本番調査 -> package artifact、installed app、real OpenAI API、SQLite、asset store、OS資格情報ストアの実環境調査
+- Web認証・認可 -> localhost app、API key、Privacy mode、local credential境界
+- Wordpack固有の画面・E2E command -> MJ Prompt StudioのVite / Vitest / Playwright / Make targets
+
+次は適用していません。
+
+- Cloud Run、Firebase Hosting、Firestore、Web認証の運用契約
+- Wordpackの製品機能、domain、DB、deployment設定
+- 過去のUI/UX report、screenshot、plan
+- 特定review botや特定GitHub clientを前提にする規則
+
+## 外部仕様
+
+- Codex `AGENTS.md`: https://developers.openai.com/codex/guides/agents-md
+- Claude Code memory / rules: https://code.claude.com/docs/ja/memory
+- Claude Code Skills: https://code.claude.com/docs/ja/skills
+- Cursor Rules: https://docs.cursor.com/context/rules
+- Web Content Accessibility Guidelines (WCAG): https://www.w3.org/WAI/standards-guidelines/wcag/
+
+外部仕様の一時的な製品挙動を、確認なしにhard gateへ格上げしません。仕様変更時はadapterと検証scriptを同じ変更内で更新します。

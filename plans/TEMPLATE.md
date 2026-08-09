@@ -4,9 +4,9 @@
 
 - Issue: `#N` / `N/A — 理由`
 
-## タスク分類
+## Task分類
 
-- UI/UX / アクセシビリティ / frontend挙動 / コピー / 状態・エラー・待機 / backendのみ / 文書のみ / ガバナンス変更
+- アプリ本体UI / GitHub共同作業面 / 混在 / backend / LLM / local data / operations / 文書 / ガバナンス
 
 ## 目的
 
@@ -14,7 +14,7 @@
 
 ## 対象範囲
 
-## マイルストーン
+## Milestone
 
 - [ ] Task:
 
@@ -22,14 +22,12 @@
 
 - [ ] 条件:
 
-## 検証コマンド
+## 検証command
 
-- `make lint`
-- `make typecheck`
-- `make test`
-- `make build`
+- 変更範囲に必要なcommandを記載する。
+- 未実行項目は理由と残るリスクを書く。
 
-## 既知 blocker
+## 既知blocker
 
 - なし
 
@@ -37,27 +35,28 @@
 
 - なし
 
-## UI/UX 証跡
+## 対象面と証跡
 
-- N/A — UI変更なし
-- UI変更時はstate matrix、初見、a11y、前後スクリーンショット、反証レビューの保存先を記載する。
+- 対象面: アプリ本体UI / GitHub共同作業面 / 混在 / N/A
+- アプリ本体UI: state matrix、初見、accessibility、前後screenshot、反証reviewの保存先。
+- GitHub共同作業面: Markdown / form / YAML / frontmatter、link、公開安全性の確認方法。
 
-## feature flag / rollback
+## Feature flag / rollback
 
 - 変更は通常のgit revertで戻せる単位にまとめる。
 
 ## 検証記録
 
-| 日時 | コマンド | 結果 | メモ |
+| 日時 | command | 結果 | メモ |
 |---|---|---|---|
 
-## PR / CI / review 記録
+## PR / CI / Review記録
 
 - Branch:
 - Commit:
 - PR:
-- Push CI:
-- PR CI:
-- Codex review:
-- 未解決 review thread:
-- レビュー往復回数:
+- latest head:
+- Required CI:
+- 利用可能な自動・手動review:
+- 未解決review thread:
+- review未提供時の代替自己review:

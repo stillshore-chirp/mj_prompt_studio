@@ -1,0 +1,7 @@
+---
+description: "Client固有ruleを必要な時だけ読み込むrouter"
+globs: "client/**,tests/e2e/**,docs/ui-spec.md,docs/user-manual.md,docs/quick-start.md"
+alwaysApply: false
+---
+
+Clientまたは関連E2E・利用者文書を扱う前に、@AGENTS.md と @client/AGENTS.md を読んで適用してください。このruleへ品質基準を複製しません。
