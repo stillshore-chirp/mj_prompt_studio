@@ -1,0 +1,7 @@
+---
+description: "Python backend・LLM・local data固有ruleを必要な時だけ読み込むrouter"
+globs: "src/mj_prompt_studio/**,tests/**/*.py,docs/architecture.md,docs/llm-agents.md,docs/rulesets.md,docs/security.md"
+alwaysApply: false
+---
+
+Python backend、LLM、local dataまたは関連test・文書を扱う前に、@AGENTS.md と @src/mj_prompt_studio/AGENTS.md を読んで適用してください。このruleへ品質基準を複製しません。

@@ -9,12 +9,25 @@ MJ Prompt Studioは、画像生成向けプロンプトの設計、語彙補助�
 
 ## 開発ガバナンス
 
-- [`AGENTS.md`](AGENTS.md): 作業開始、Issue-first、PR/CI/review、MJ Prompt Studio固有制約の入口。
-- [`docs/ai-governance/`](docs/ai-governance/00-index.md): UI/UX、アクセシビリティ、証跡、Issue品質、完了条件の詳細正本。
-- [`docs/security-publication-checklist.md`](docs/security-publication-checklist.md): 公開文書、PR、スクリーンショット、ログ要約の安全確認。
-- `make verify-governance`: ガバナンス構造と必須ゲートの検証。
+- [`AGENTS.md`](AGENTS.md): Codex・Claude Code・Cursorが共有する短い常時読込契約とpath / taskの入口。
+- [`docs/agent-harness.md`](docs/agent-harness.md): common / path / task / machineの4層、instruction budget、3製品のadapter設計。
+- [`docs/agent-principles.md`](docs/agent-principles.md): 設計・実装・test判断のheuristic。
+- [`client/AGENTS.md`](client/AGENTS.md): React clientと関連E2E・利用者文書の契約。
+- [`src/mj_prompt_studio/AGENTS.md`](src/mj_prompt_studio/AGENTS.md): Python API、Application / Domain / Infrastructure / LLMの契約。
+- [`docs/operations/AGENTS.md`](docs/operations/AGENTS.md): CI、package、release、実環境調査の契約。
+- [`.agents/skills/`](.agents/skills/): UI/UX review、GitHub配送、実環境調査、公開安全性のtask手順。
+- [`docs/ai-governance/`](docs/ai-governance/00-index.md): UI/UX、accessibility、証跡、Issue品質、完了条件の詳細正本。
+- [`docs/security-publication-checklist.md`](docs/security-publication-checklist.md): 公開文書、PR、screenshot、log要約の安全確認。
 
-ここでいうAIガバナンスは、本リポジトリ内のAIエージェント支援開発の品質管理を指し、企業全体の法務・倫理・モデル監査を意味しません。
+ハーネス・ガバナンスを変更した場合は次を実行します。
+
+```bash
+python -m pip install -r requirements-agent-harness.txt
+bash scripts/verify-agent-harness.sh
+bash scripts/verify-ai-governance.sh
+```
+
+`make verify-governance` からもハーネスとAIガバナンスの検証を実行できます。ここでいうAIガバナンスは、本リポジトリ内のAIエージェント支援開発の品質管理を指し、企業全体の法務・倫理・model監査を意味しません。
 
 ## セットアップ
 
@@ -90,4 +103,4 @@ OpenAPI schemaを更新する場合は `make generate-openapi` を実行しま�
 - 生成サービスのWeb、Discord、Botの自動操作。
 - ログイン自動化、Cookie、Token、Session取得。
 - 非公式API、自動投稿、ブラウザ自動クリック。
-- ユーザー向けUIやエクスポートに特定のMidjourneyモデルバージョン番号を表示すること。
+- ユーザー向けUIやexportに特定の画像生成サービスmodel version番号を表示すること。
