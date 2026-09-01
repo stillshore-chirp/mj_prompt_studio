@@ -1,8 +1,8 @@
 ---
 name: production-investigation
-description: "配布artifact・実API・local data調査の共有SkillをClaude Codeから呼び出す。"
+description: "共有実環境調査SkillをClaude Codeから発動する。"
 ---
 
 # production-investigation adapter
 
-このfileはClaude Code向けの薄いadapterです。実行時はリポジトリルートの [`.agents/skills/production-investigation/SKILL.md`](../../../.agents/skills/production-investigation/SKILL.md) を読み、そちらを唯一の手順正本として適用してください。このadapterへ手順本文を複製しません。
+手順の唯一の正本は [canonical production-investigation Skill](../../../.agents/skills/production-investigation/SKILL.md) です。

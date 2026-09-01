@@ -1,8 +1,8 @@
 # AIガバナンス文書インデックス
 
-このdirectoryは、AIエージェント支援開発の作業品質、UI/UX review、検証証跡、完了条件、残リスクを扱う詳細正本です。企業全体のAI統制、法務・倫理審査、model監査を意味しません。
+このdirectoryは、AI agent支援開発のUI/UX、証跡、完了条件、Issue品質、残るriskを扱う詳細正本です。企業全体の法務・倫理審査やmodel監査を意味しません。
 
-共通の作業契約は [`AGENTS.md`](../../AGENTS.md)、3製品へのrule配置は [`docs/agent-harness.md`](../agent-harness.md)、task固有の実行順序は [`.agents/skills/`](../../.agents/skills/) を優先します。
+共通契約は [AGENTS.md](../../AGENTS.md)、3製品の読者・adapter・委任・evidence・task-state・runtimeは [docs/agent-harness.md](../agent-harness.md)、task手順は [.agents/skills/](../../.agents/skills/) を優先します。
 
 ## 読み方
 
@@ -10,62 +10,46 @@
 
 ### 全作業
 
-- ルート `AGENTS.md`
-- 変更対象に最も近い `AGENTS.md`
+- root AGENTS.md
+- 変更対象に最も近い AGENTS.md
 - 発動条件に該当するSkill
 
 ### UI/UX変更
 
-最低限、次を読みます。
+1. .agents/skills/ui-ux-review/SKILL.md
+2. 02-uiux-review-framework.md
+3. 03-evidence-and-completion-gates.md
 
-1. `.agents/skills/ui-ux-review/SKILL.md`
-2. `02-uiux-review-framework.md`
-3. `03-evidence-and-completion-gates.md`
+必要に応じて、04 cognitive、05 accessibility、06 visual hierarchy、07 copy、08 state、09 review、10 utility、11 efficiency、12 trustを追加で読みます。
 
-変更内容に応じて次も読みます。
+### Issue・rule・配送
 
-- 認知負荷、初見理解: `04-cognitive-psychology-principles.md`
-- accessibility: `05-accessibility-and-inclusive-design.md`
-- 視覚階層、情報設計: `06-visual-hierarchy-and-information-architecture.md`
-- copy、label、error文: `07-ui-copy-and-microcopy.md`
-- 状態、error回復: `08-state-design-and-error-recovery.md`
-- review手順: `09-ai-agent-review-protocol.md`
-- ユーザー価値: `10-utility-user-goal-and-product-fit.md`
-- 熟練者効率: `11-efficiency-and-expert-use.md`
-- 満足感、安心感、信頼感: `12-satisfaction-trust-and-emotional-ux.md`
-- rule変更: `13-maintenance-policy.md`
-- Issue品質: `14-issue-quality-gate.md`
-- 3製品互換性: `15-agent-harness-compatibility.md`
+- Issueの作成・更新: 14-issue-quality-gate.md
+- rule、Skill、adapter、validatorの変更: 13-maintenance-policy.md と docs/agent-harness.md
+- evidenceと完了判定: 03-evidence-and-completion-gates.md
+- GitHub配送: .agents/skills/github-delivery/SKILL.md
+- 公開物の安全性: docs/security-publication-checklist.md
 
 ## 対象面
 
-- **アプリ本体UI**: React clientがlayout、操作、状態、focus、accessibilityを実装する画面。UI/UX Skillの全手順を適用する。
-- **GitHub共同作業面**: Issue / PR template、repository Markdown、workflow説明など。変更した文言、構造、表示、link、公開安全性だけを範囲に比例して確認する。
-- **混在**: 両方を別々に確認し、一方の証跡で他方を代用しない。
+- アプリ本体UI: React clientがlayout、操作、状態、focus、accessibilityを実装する画面。
+- GitHub共同作業面: Issue / PR template、repository Markdown、workflow説明など。変更した文言、構造、表示、link、公開安全性を範囲に比例して確認します。
+- 混在: 両方を別々に確認し、一方の証跡で他方を代用しません。
+- N/A: UIまたはGitHub共同作業面を変更しない理由を短く示します。
 
-## Template
+## TemplateとChecklist
 
-- `templates/uiux-review-report.md`: UI/UX review全体
-- `templates/state-matrix.md`: 状態網羅
-- `templates/novice-simulation.md`: 初見simulation
-- `templates/counter-review.md`: 反証review
-- `templates/user-goal-assessment.md`: ユーザー価値
-- `templates/efficiency-review.md`: 熟練者効率
-- `templates/trust-satisfaction-review.md`: 満足感・信頼感
-- `templates/completion-gate-report.md`: 完了判定
-- `templates/agent-task-prompt.md`: UI/UX taskの最小入口
-
-## Checklist
-
-`checklists/` にP0/P1/P2、accessibility、認知的walkthrough、視覚階層、content stress、ユーザー価値、効率、信頼感の確認表を置きます。
+- templates/uiux-review-report.md、state-matrix.md、novice-simulation.md、counter-review.md
+- templates/completion-gate-report.md、user-goal-assessment.md、efficiency-review.md、trust-satisfaction-review.md、agent-task-prompt.md
+- checklists/ のP0/P1/P2、accessibility、認知、視覚階層、content、utility、efficiency、trust
 
 ## MJ Prompt Studioでの適用
 
-- React clientはWeb accessibility、狭幅、文字拡大、keyboard、E2Eを確認する。
-- localhost Python APIやLLM変更でも、ユーザーが見る結果、待機、error、保存、送信対象が変わればUI/UX変更として扱う。
-- prompt、参照画像、生成画像、API key、SQLite、assetなどの扱いは `docs/security.md` と公開安全性Skillを優先する。
-- ユーザー可視領域の禁止表記と画像生成サービス自動操作禁止は `docs/process/mj-prompt-studio-rules.md` を優先する。
+- React clientはWeb accessibility、狭幅、文字拡大、keyboard、E2Eを確認します。
+- localhost Python API、固定LLM policy、保存、Privacy、local assetの変更でユーザーが見る結果、待機、error、送信対象が変わればUI/UX対象として扱います。
+- prompt、参照画像、生成画像、API key、SQLite、assetの扱いは docs/security.md と公開安全性Skillを優先します。
+- version非依存の表記と画像生成サービス自動操作禁止は docs/process/mj-prompt-studio-rules.md を優先します。
 
-## 言語方針
+## 言語
 
-本文は日本語を正式版とします。英語は外部標準、file名、toolが読むkeyword、一般的な技術用語に限り、必要なら `glossary.md` へ意味を追加します。
+本文は日本語を正式版とします。英語は外部標準、file名、toolが読むkeyword、一般的な技術用語に限ります。

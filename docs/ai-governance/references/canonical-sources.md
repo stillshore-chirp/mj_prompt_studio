@@ -1,46 +1,43 @@
 # Canonical Sources
 
-MJ Prompt StudioのAIエージェントハーネスとUI/UXガバナンスは、次の原本と外部標準を参照しています。
+MJ Prompt StudioのAI agent harnessとUI/UX governanceは、WordPack原本、各製品の公式仕様、本repositoryの製品契約を参照します。
 
-## Wordpack原本
+## WordPack原本
 
-- Repository: `stillshore-chirp/wordpack-for-english`
-- 同期基準commit: `d7d4e3ca9d40e2c54ca9fa430a05dce721b2c2d9`
-- 同期日: 2026-08-09
-- 主な原本:
-  - `AGENTS.md`
-  - `docs/agent-harness.md`
-  - `docs/agent-principles.md`
-  - `.agents/skills/`
-  - `docs/ai-governance/`
-  - `scripts/verify-agent-harness.sh`
-  - `scripts/verify-ai-governance.sh`
+- Repository: stillshore-chirp/wordpack-for-english
+- 現行同期基準commit: c40782e15a8799ea74e68414d97ddd4f6a9166fa
+- 同期対象: main
+- 同期日: 2026-09-01
+- 主な原本: AGENTS.md、docs/agent-harness.md、docs/agent-principles.md、.agents/skills/、docs/ai-governance/
 
-前回の同期基準はcommit `51f042a9af3d24245a4aa0aae51d070d09fbf56d` でした。今回の同期では、Codex・Claude Code・Cursorの3製品を対象とするcommon / path / task / machineの4層構成、instruction budget、thin adapter、tool中立なGitHub配送、latest meaningful changeに基づくreview収束を取り込みました。
+3製品の正本とthin adapter、bounded delegation、stable evidence / volatile delivery state、task-state、runtimeとstatic検査の境界、checkpointとlatest meaningful changeの扱いをこの現行mainへ合わせています。
 
 ## MJ Prompt Studio向け適合
 
-次は原本から概念を採用し、MJ Prompt Studioの実構成へ読み替えています。
+次は原本の構造を採用し、本repositoryの実構成へ読み替えています。
 
-- `apps/frontend/` -> `client/`
-- `apps/backend/` -> `src/mj_prompt_studio/`
-- Cloud Run / Firebase / Firestoreの本番調査 -> package artifact、installed app、real OpenAI API、SQLite、asset store、OS資格情報ストアの実環境調査
-- Web認証・認可 -> localhost app、API key、Privacy mode、local credential境界
-- Wordpack固有の画面・E2E command -> MJ Prompt StudioのVite / Vitest / Playwright / Make targets
+- frontend -> client/ のReact + TypeScript client
+- backend -> src/mj_prompt_studio/ のlocalhost Python API
+- UI runtime -> React clientとlocalhost APIのboundedなlocal実行
+- storage -> SQLite、local asset store、settings、job queue
+- external AI -> 固定LLM execution policy、mock / fake / contract test、明示manual opt-inの実API調査
+- security boundary -> API key、Privacy mode、prompt・画像・local assetの最小送信と非公開境界
 
-次は適用していません。
+## 適用しない原本事項
 
-- Cloud Run、Firebase Hosting、Firestore、Web認証の運用契約
-- Wordpackの製品機能、domain、DB、deployment設定
-- 過去のUI/UX report、screenshot、plan
-- 特定review botや特定GitHub clientを前提にする規則
+- Cloud Run、Firebase Hosting、Firestore、Web認証、production deployment固有の運用契約
+- WordPack固有の製品機能、domain、DB、deployment設定、画面名
+- 過去のUI/UX report、screenshot、plan、evidence artifact
+- 特定review bot、特定GitHub client、固定回数のreviewを前提にする規則
+
+過去のreports、evidence、plansは履歴と証跡として保全し、現行正本へ取り込みません。
 
 ## 外部仕様
 
-- Codex `AGENTS.md`: https://developers.openai.com/codex/guides/agents-md
+- Codex AGENTS.md: https://developers.openai.com/codex/guides/agents-md
 - Claude Code memory / rules: https://code.claude.com/docs/ja/memory
 - Claude Code Skills: https://code.claude.com/docs/ja/skills
 - Cursor Rules: https://docs.cursor.com/context/rules
-- Web Content Accessibility Guidelines (WCAG): https://www.w3.org/WAI/standards-guidelines/wcag/
+- Web Content Accessibility Guidelines: https://www.w3.org/WAI/standards-guidelines/wcag/
 
-外部仕様の一時的な製品挙動を、確認なしにhard gateへ格上げしません。仕様変更時はadapterと検証scriptを同じ変更内で更新します。
+外部仕様の一時的な製品挙動を確認なしにhard gateへ格上げしません。仕様変更時は本repositoryのadapterとstatic検証の影響を確認します。

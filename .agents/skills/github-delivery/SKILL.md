@@ -9,45 +9,38 @@ description: "Issue、branch、commit、push、PR、CI、review、release準備�
 
 リポジトリ変更をIssue、commit、push、PR、CI、reviewまで運ぶ作業で使います。read-only調査や回答だけでは発動しません。
 
-## 1. 開始前
+## Issue-first
 
-- ルート `AGENTS.md` と変更対象に最も近い `AGENTS.md` を読む。
-- default branch、作業branch、未commit差分、直近履歴を確認する。
-- 無関係な差分の所有者と範囲を確認し、巻き込まない。
-- GitHub CLI、GitHub API、connectorなど、利用可能で認証済みのclientを使う。一つのclientが使えなくても、同等clientで完了ゲートを満たせる場合は作業を止めない。
+1. ルートと対象pathの `AGENTS.md`、関連Skill、現行のIssue・PR・CI状態を読む。
+2. 既存Issueの受入条件、履歴、重複を確認し、なければIssueを先に作る。[Issue quality gate](../../../docs/ai-governance/14-issue-quality-gate.md)に従い、Issueには目的、根拠、scope、非対象、受入条件、verification、riskを短く置く。
+3. 最新のdefault branchから作業branchを作り、対象pathとwrite ownershipを固定する。現在のHEAD、base、branch、変更しないpathを記録する。
+4. Issueの受入条件を実装・検証・公開へ結び付け、未確認事項を完了扱いにしない。
 
-## 2. Issue
+## Checkpointとinput closure
 
-- 既存Issueを検索し、依頼を完全に含むものがあれば使う。
-- 非軽微な新機能、改修、不具合、設計、セキュリティ、運用、文書、ガバナンス変更に既存Issueがなければ作成する。
-- [`docs/ai-governance/14-issue-quality-gate.md`](../../../docs/ai-governance/14-issue-quality-gate.md) に従い、理由、根拠、現在と目標のユーザー体験、範囲、非対象、受け入れ条件、検証、リスクを書く。
-- typoや同一PR内の局所修正など、Issueを省略する場合はPR本文へ短い理由を書く。
+チェックポイントは `implementation → focused_verification → code_freeze → measurement → publication_freeze → external_gate → review_fix → accepted` の順で進める。各checkpointで、少なくとも `gate / HEAD・base / input paths / 関連設定・生成物 / 実行条件 / result / artifact reference` を記録する。
 
-## 3. Branchと実装
+gateのinput closureは、変更pathだけでなく、関連する設定、schema、生成物、fixture、依存関係、実行条件を含む。受入条件に必要な最小gateを既存の変更種別mapから選び、full suite、coverage、外部CI、包括reviewなど高コストgateはcode・測定scope・公開境界をfreezeしてから開始する。closure内のHEAD/base、path、設定、生成物、条件が変わったgateだけを、失効理由と再取得対象を明示して再実行する。同一HEAD・同一closure・同一条件の証跡は再利用し、同じ長時間検証やclean reviewを根拠なく重ねない。base変更はbase依存のexternal gateだけを失効させる。
 
-- default branchの最新状態から作業branchを作る。標準名は `agent/<purpose>` とし、既存branchやユーザー指定がある場合はそれを尊重する。
-- 複数工程でも、真のblockerがない限り調査、実装、検証、配送まで継続する。
-- 意味のある変更単位で、日本語のcommit messageを付ける。
-- commit前に差分、追加ファイル、secret混入、無関係な変更を確認する。
+開発中は変更pathに対応するfocused verificationを使い、最終HEADではclosureへ束縛した必要gateを一度実行する。回数だけを固定する追加ルールは設けず、判定不能時はskipせずfallback理由と範囲を記録する。
 
-## 4. PR
+## 委任・証跡・待機
 
-- 完成した変更のPRを求められている場合は、原則として非ドラフトPRを作成または更新する。
-- 主Issueは1つに絞る。完全解決は `Closes #123`、部分対応は `Refs #123` を使う。
-- PR本文には、変更内容、保持した挙動、検証、未実行項目、対象面の証跡、公開安全性、残るリスクを書く。
-- UI変更ではUI/UX Skill、公開物では公開安全性Skillの成果を反映する。
+subagentへ渡す最小文脈は、目的、acceptance、risk、HEAD/base、target paths、write ownership、phase、依存するgate、停止条件、cleanup、output capだけにする。完了時のevidence packageは `scope/acceptance / changed paths / conclusion / verification / unperformed checks / remaining risks / snapshot・diff / artifact reference` を含める。進展しないlaneはscopeを縮小して再割当し、primary回収が必要なら `specific_reason / evidence_subagent_cannot_continue / scope_shrink_history / reassignment_history / primary_only_question / target_paths / output_cap` を残す。
 
-## 5. CIとreview
+waitはイベント駆動を優先し、状態変化がない間は同じ照会を繰り返さない。timeoutはfailureではなく、実行中のownerを維持してbackoff後に再waitする。長いraw outputは一時artifactへ置き、返すのはexit code、pass/fail/skip、coverage総計、warning、失敗箇所、参照先に限る。
 
-- latest headに紐づく必須CIを確認する。失敗時はログから原因を特定し、修正、commit、push、再確認する。
-- CI成功後、利用可能な自動review、手動review、review thread、review commentをlatest headで確認する。
-- actionableな指摘はまとめて修正し、変更後のheadでCIと該当reviewを再確認する。
-- latest meaningful changeに対するclean reviewが1回得られ、未解決threadがなく、CIと必須条件を満たせばreviewを終了する。
-- 変更のないheadでclean結果を増やすためだけの再レビューを行わない。
-- reviewが提供されない環境では、実施した自己レビュー、未確認範囲、残るリスクを報告する。
+## Commit・PR・review
 
-## 6. 権限境界と終了
+- commitは独立してreview・revertできる一つの論理責務または受入条件の単位にする。対応するtest、docs、schema、client、生成物は同じcommitに含める。
+- `git add` は対象pathを明示し、staged file、staged diff、`git diff --check`、秘密情報・実データ・無関係差分の不在を確認する。`git add .` と `git add -A` は使わない。
+- PRはIssue、scope、非対象、verification、input closure、残るriskを短く示す。latest HEADに対してCI、review、unresolved thread、mergeabilityを確認し、古いHEADの証跡を現在の根拠にしない。
+- review修正は責務単位でcommit・pushし、latest HEADの関連gateが成功した後にだけ返信・解決する。コード変更が不要なthreadも根拠と公開安全性を確認する。
+- PR監視では各runの冒頭に軽量状態キー（`state`、`headRefOid`、`updatedAt`、`reviewDecision`、`mergeStateStatus`）を取得し、`state`を最優先で判定する。`MERGED` または `CLOSED` ならpolling・詳細取得・再依頼を止め、監視resourceをcleanupする。`OPEN` ではhead、更新時刻、review、CIの変化を境界と期限付きで待ち、イベントがない間はbackoffする。
+- `OPEN` の無変化待ちは固定timeout回数を完了条件にせず、logical checkpointまたはdeadlineで継続要否を再評価する。継続不要なら監視を停止し、停止理由と未確認範囲を記録する。timeoutだけでは証跡を失効させない。
 
-- merge、close、release、artifact公開、破壊的変更は、別の明示指示がある場合だけ行う。
-- blocker報告には、失敗しているcheckまたは操作、証跡、試した対応、未完了範囲、次の最短アクションを含める。
-- 最終報告には、Issue、branch、commit、PR、local verification、CI、review、remaining risksのうち今回に関係するものを示す。
+## 権限境界と終了
+
+commit、push、PR、Issue更新は依頼された配送範囲で行う。merge、Issue/PRのclose、release、deploy、外部への実データ送信、force-push、破壊的操作は対象と明示指示がある場合だけ行う。通常テストから実OpenAI API、画像生成サービス、Cookie、Token、非公式APIを操作しない。
+
+終了報告には、Issue、branch、commit、PR、latest HEAD、local verification、CI、review、mergeability、未実行確認、残るriskとblockerを含め、unverifiedを明記する。

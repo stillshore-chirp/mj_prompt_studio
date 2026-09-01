@@ -1,7 +1,13 @@
-## Issue
+<!--
+PRのタイトルと本文は日本語を原則とします。固有名詞、製品名・ライブラリ名、code identifier、version/path、GitHub構文は正確な識別のため原表記を維持できます。
+Issue / PRの判断に必要な説明、受け入れ条件、検証、未実行項目、リスクは日本語で記録してください。
+-->
 
-<!-- 完全解決: Closes #123 / 部分対応: Refs #123 / 省略時は短い理由 -->
-- Issue:
+## 関連Issue
+
+<!-- 完全解決: Closes #123 / 部分対応: Refs #123 / ソースコード変更では主Issue必須 -->
+- 主Issue:
+- 関連Issue:
 - 対応範囲:
 - 対応していないこと:
 
@@ -9,42 +15,50 @@
 
 -
 
-## 保持した既存挙動
+## 維持した既存挙動
 
 -
 
 ## 検証結果
 
-<!-- 実行したcommand、test件数、手動確認、結果を書く。 -->
+<!-- 実行したcommand、test件数、手動確認、結果を書く。command名やtest名は原表記を維持できる。 -->
 -
 
 ## UI/UX・GitHub共同作業面の証跡
 
 <!-- 対象面を「アプリ本体UI / GitHub共同作業面 / 混在 / N/A」から選ぶ。 -->
+<!-- 前後screenshotはアプリ本体UIを変更した場合だけ。GitHub共同作業面やUI以外ではscreenshot不要で、内容・構造・表示・リンクの確認を書く。 -->
 - 対象面:
 - アプリ本体UIの対象画面・状態:
-- 変更前 / 変更後screenshot:
-- state matrix・accessibility・反証review:
-- GitHub共同作業面の文言・構造・表示・link確認:
+- 変更前 / 変更後のスクリーンショット (screenshot; アプリ本体UI変更時のみ):
+- 状態マトリクス (state matrix)・アクセシビリティ・反証レビュー:
+- GitHub共同作業面の文言・構造・表示・リンク確認:
 
 ## 公開安全性・運用
 
 <!-- 関係する項目だけ記載し、secretや実識別子を貼らない。 -->
 - 公開安全性の確認:
-- 認証・権限:
-- API key / prompt / 画像 / local data:
+- 認証・認可・権限:
+- API key / token / prompt / 画像 / local data:
+- API / DB / LLM / local asset:
+- 実行・確認対象: local source / packaged app / installed app / CI / live OpenAI API:
+- LLM実行面 (mock / real):
 - workflow / secrets / 外部依存:
-- 実環境・実data確認:
+- 実環境・実OpenAI API・実data確認:
 
-## CI / Review
+<!-- 実OpenAI APIの確認は通常のtest / CIと分け、secret・prompt・画像・response全文を貼らない。 -->
 
-- latest commit:
-- required CI:
-- 利用可能な自動・手動review:
-- 未解決review thread:
-- review未提供時の代替自己review:
+## CI / レビュー
 
-## 未実行項目
+- 最新コミット:
+- push時CI (push CI):
+- pull_request時CI (pull_request CI):
+- 最新の意味ある変更への自動・人間レビュー (latest meaningful changeへの自動・人間review):
+- 未解決レビューthread:
+- GitHubのマージ可能性 (GitHub mergeability):
+- レビュー未提供（ソースコード変更では未完了blocker）:
+
+## 未実行の検証
 
 -
 
