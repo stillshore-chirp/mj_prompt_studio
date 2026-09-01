@@ -1,8 +1,8 @@
 ---
 name: github-delivery
-description: "Issue、PR、CI、reviewの共有配送SkillをClaude Codeから呼び出す。"
+description: "共有GitHub配送SkillをClaude Codeから発動する。"
 ---
 
 # github-delivery adapter
 
-このfileはClaude Code向けの薄いadapterです。実行時はリポジトリルートの [`.agents/skills/github-delivery/SKILL.md`](../../../.agents/skills/github-delivery/SKILL.md) を読み、そちらを唯一の手順正本として適用してください。このadapterへ手順本文を複製しません。
+手順の唯一の正本は [canonical github-delivery Skill](../../../.agents/skills/github-delivery/SKILL.md) です。

@@ -1,156 +1,55 @@
 # エージェントハーネス設計・保守ガイド
 
-この文書は、MJ Prompt StudioをCodex・Claude Code・Cursorのいずれで扱っても、同じ品質基準を過不足なく適用するための構成を定義する正本です。
+この文書は、Codex、Claude Code、Cursorで共有する、正本の読者・配置、委任、evidence、task-state、runtimeの最小契約です。説明文であり、機械検査や製品runtimeの代替ではありません。
 
-## 目的
+## 正本、読者、責務
 
-エージェント向け指示は、増やすほど安全になるとは限りません。常時読み込まれる長文、同じ規則の複数正本、taskと無関係な手順は、重要な指示への注意を薄め、過剰実装や見落としを増やします。
-
-本リポジトリでは、品質基準を次の4層へ分けます。
-
-| 層 | 役割 | 主な配置 |
+| 正本 | 主な読者 | 責務 |
 |---|---|---|
-| 常時読込の共通核 | 全作業で必要な安全境界、証跡、基本進行 | `AGENTS.md`, `CLAUDE.md` |
-| path固有ルール | client、Python backend、operationsなど領域固有の契約 | nested `AGENTS.md`, `.claude/rules/`, `.cursor/rules/` |
-| task固有ワークフロー | UIレビュー、GitHub配送、実環境調査、公開安全性 | `.agents/skills/`, `.claude/skills/` |
-| 機械検証 | 形式、参照、instruction budget、禁止された重複 | `scripts/verify-agent-harness.sh`, CI |
+| AGENTS.md、最寄りのAGENTS.md | 3製品 | hard gate、権限、path契約、最小実行 |
+| CLAUDE.md、.claude/、.cursor/ | Claude Code / Cursor | 共通正本へ接続する薄いadapter |
+| .agents/skills/<name>/SKILL.md | 3製品 | task固有の発動条件、手順、handoff |
+| docs/ai-governance/ | agent、reviewer | UI/UX、Issue、evidence、完了判定 |
+| この文書 | agent、reviewer、保守者 | 配置、委任、証跡、task-state、runtime境界 |
+| scripts/validate_governance.py と focused tests | CI、保守者 | 正本、参照、入力分類、task-state、budgetのstatic検査 |
 
-## 正本とadapter
+Codexはrootと最寄りのAGENTS.md、該当Skillを読みます。Claude CodeはCLAUDE.mdとpath ruleから同じ正本へ接続し、CursorはrootとMDC routerから接続します。adapterは本文を複製せず、共通hard gateを弱めません。
 
-- 共有ルールの原点はルート `AGENTS.md`。
-- 領域固有ルールの正本は、対象directoryに最も近い `AGENTS.md`。
-- task固有手順の正本は `.agents/skills/<name>/SKILL.md`。
-- UI/UXの詳細判定基準は `docs/ai-governance/`。
-- MJ Prompt Studio固有の禁止事項と品質契約は `docs/process/mj-prompt-studio-rules.md` と関連設計docs。
-- `.claude/rules/`、`.claude/skills/`、`.cursor/rules/` は、正本を各製品の読込機構へ接続する薄いadapter。
-- adapterへ正本の本文をcopyしない。対象fileと読むべき正本だけを示す。
+## 読み分けと変更影響
 
-## 3製品の接続方法
+全体の安全境界と権限はroot、path契約は最寄りのAGENTS.md、task手順はSkillに置きます。設計heuristicは [docs/agent-principles.md](agent-principles.md)、rule変更基準は [docs/ai-governance/13-maintenance-policy.md](ai-governance/13-maintenance-policy.md) が正本です。logic、API、schema、data契約、複数layerを変える場合は参照追跡と実code・契約・関連testで影響を確認します。
 
-### Codex
+## 配送checkpoint
 
-- ルートから現在の作業directoryまでの `AGENTS.md` を階層的に利用する。
-- ルートから複数領域を編集する場合も、変更対象に最も近い `AGENTS.md` を明示的に確認する。
-- `tests/`、root文書、`.github/workflows/`、関連scriptなど、祖先pathだけでは領域正本へ到達しない対象は、ルート `AGENTS.md` のpath bridgeから追加正本を読む。
-- task固有手順は `.agents/skills/` から読む。
+改修は必要なcheckpointを次の順で通過します。各段階でHEAD / base、入力閉包、owner、終了条件を固定します。
 
-公式資料: [CodexのAGENTS.md](https://developers.openai.com/codex/guides/agents-md)
+1. implementation: scope、acceptance、非対象、owner、変更pathを確定。
+2. focused_verification: 変更pathに対応する最小十分なtest・構造確認。
+3. code_freeze: source、test、設定、生成物とgateの入力閉包を固定。
+4. measurement: 受入条件または計測taskで必要な場合だけ、固定snapshot・scopeで必要な実測を記録。
+5. publication_freeze: Issue、PR、report、artifactの公開内容と安全性を固定。
+6. external_gate: 必要なCI、review、thread、mergeabilityを確認。
+7. review_fix: actionableな修正後、交差するgateだけを再取得。
+8. accepted: latest HEAD / base、CI、review、thread、受入条件を同一snapshotで照合。
 
-### Claude Code
+measurementは全taskの必須checkpointではありません。受入条件または明示された計測taskに必要な場合だけ選択し、不要な計測やtoken telemetryを要求しません。
 
-- `CLAUDE.md` は `@AGENTS.md` だけをimportし、共通核を一重に共有する。
-- `.claude/rules/*.md` の `paths` で、領域固有の正本を必要な時だけ案内する。
-- `.claude/skills/<name>/SKILL.md` は、対応する `.agents/skills/` を読む薄いadapterにする。
-- `@` importで長文を分割しても常時読込量は減らないため、task手順はSkillへ置く。
+## evidence、snapshot、task-state
 
-公式資料: [Claude Codeのメモリとrules](https://code.claude.com/docs/ja/memory)、[Claude CodeのSkills](https://code.claude.com/docs/ja/skills)
+stable evidenceはHEAD / base、変更path、関連設定、生成物、実行条件、結果、artifact参照へ束縛します。CI、review / thread、mergeability、待機中statusはvolatile delivery stateとして分けます。base、path、設定、生成物、条件が入力閉包と交差したgateだけを失効・再取得し、latest meaningful changeへ結び付けます。
 
-### Cursor
+task-stateはcross-sessionの現在状態、completed evidence packageは一回のlane結果の要約です。packageにはstatus、scope / revision、verification、unperformed checks、remaining risks、stop reason、snapshot/diff、artifact referenceを含め、raw logやfile全文を通常報告へ含めません。timeoutはfailureやevidence失効ではなく、laneをrunningのままbackoffして再待機します。
 
-- 共通核はルート `AGENTS.md` から読む。
-- `.cursor/rules/*.mdc` の `globs` と `alwaysApply: false` でpath固有の正本を案内する。
-- task固有手順はAgent Skills互換の `.agents/skills/` を正本として使う。
-- `.cursor/rules/` に長い共通ルールを再掲しない。
+## 委任契約
 
-公式資料: [Cursor Rules](https://docs.cursor.com/context/rules)、[Cursor Agent Skills](https://cursor.com/changelog/2-4)
+委任時にrisk lane、owner、target HEAD / base、target paths、acceptance、depends_on、snapshot phase、write ownership、runtime resources、ports、cleanup、output cap、verification、reuse_evidence、invalidation conditionを固定します。同一risk laneのcompleted packageは短く一回だけ返し、partial / unverifiedは未確認範囲と再開条件を保持します。checkpointを逃した時は同じownerへ一度確認し、進展がなければscope shrink、次にreassignします。
 
-## ルール配置の判断
+## runtimeとadvisoryの境界
 
-新しい規則を追加する前に、次の順で判断します。
+runtimeまたはdev serverを使うlaneは、起動前にowner、PID、process group、port、readiness、cleanupを決め、終了時にprocess groupとport解放を確認します。不明なruntime証跡は完了根拠にしません。runtimeを使わない場合はその旨を記録します。
 
-1. 全taskで毎回必要か。
-   - 必要: ルート `AGENTS.md`。
-   - 不要: 次へ。
-2. 特定のpathだけに必要か。
-   - 必要: 最寄りのnested `AGENTS.md`。Claude/Cursorには薄いpath adapterを追加する。
-   - 不要: 次へ。
-3. 特定の作業種類だけに必要か。
-   - 必要: `.agents/skills/`。Claudeには薄いSkill adapterを追加する。
-   - 不要: 次へ。
-4. 自動判定できるか。
-   - できる: script、test、lint、CIへ置く。
-   - できない: 人間とエージェントが判断できる短いheuristicとして文書化する。
-5. 既存の正本へ統合できるか。
-   - できる場合は新規文書を増やさず、既存正本を更新する。
+static validator、Hook、adapter、rule発見、sandbox、権限、runtime routingの観測範囲を混同しません。configured、observed、unverifiedを分け、static PASSをruntime成功と表現しません。
 
-## Hard gateとheuristic
+## Instruction budgetと完了
 
-### Hard gate
-
-違反時に作業を停止または未完了扱いにする、客観的に判定可能な条件です。
-
-例:
-
-- secret、個人情報、ユーザー資産を公開しない
-- 未実施検証を成功扱いしない
-- P0を残してUI/UX完了としない
-- latest headの必須CIが失敗中ならマージ可能と報告しない
-- merge、close、release、破壊的操作は明示された権限内だけで行う
-- 画像生成サービスの自動操作と非公式APIを追加しない
-- 固定LLM policyとPrivacy modeの公開契約を意図せず破らない
-
-### Heuristic
-
-複数の目的が競合する場面で、設計判断を助ける目安です。
-
-例:
-
-- DRY、KISS、SRP、OCP、YAGNI
-- function、file、componentの大きさ
-- 抽象化する重複回数
-- Unit / Integration / E2Eの配分
-- comment量
-
-heuristicを「常に」「必ず」と書く場合は、例外が成立しない理由を示します。数値だけをPass / Failへ変換しません。
-
-## Instruction budget
-
-次をhard upper boundとします。短いほど常に良いという意味ではなく、超過時に構造を見直すための上限です。
-
-| 対象 | 行数 | UTF-8 bytes |
-|---|---:|---:|
-| ルート `AGENTS.md` | 180以下 | 16 KiB以下 |
-| nested `AGENTS.md` | 100以下 | 8 KiB以下 |
-| `.claude/rules/` / `.cursor/rules/` adapter | 30以下 | 4 KiB以下 |
-| `.claude/skills/` adapter | 30以下 | 4 KiB以下 |
-| canonical Skill | 180以下 | 16 KiB以下 |
-| ルート + 1つのnested `AGENTS.md` | - | 24 KiB以下 |
-
-超過を正当化する場合は、常時読込でなければならない理由、分割できない理由、3製品への影響をIssueとPRへ記録し、検証scriptの上限を黙って緩和しません。
-
-## 禁止する構造
-
-- tool別fileへ同じ長文を複製する
-- `AGENTS.md`、Skill、詳細docsで同じchecklistをそれぞれ正本化する
-- GitHub CLIなど一つのclientだけを、同等clientが使える状況でも必須化する
-- Codex固有のreview名やbranch prefixを、Claude CodeとCursorにも共通の完了条件として課す
-- 変更のない同一headに対して、clean結果を得るためだけにreviewを反復する
-- read-onlyの回答へIssue / branch / PR欄の定型出力を要求する
-- path scopeで解決できる規則を常時読込へ戻す
-- 形式で検査できる条件を自然言語だけで維持する
-- Wordpack固有のCloud Run、Firebase、Firestore契約を本リポジトリへ持ち込む
-
-## GitHub reviewの収束
-
-- latest meaningful changeに対する必須CIと、利用可能な自動・手動reviewを確認する。
-- actionableな指摘を修正した場合は、最新headでCIと該当reviewを再確認する。
-- 変更のないheadで追加のclean reviewを複数回集めない。
-- reviewが提供されない環境では、未確認範囲と代替自己レビューを報告する。
-- mergeまたはcloseは別の明示指示がある場合だけ行う。
-
-## ルール変更時の確認
-
-1. 変更を `common / path / task / machine` のどこへ置くか決めた。
-2. Codexのroot / nested `AGENTS.md`で必要なルールへ到達できる。
-3. Claude Codeの`CLAUDE.md`、path rule、Skill adapterで必要時だけ到達できる。
-4. Cursorの`AGENTS.md`、MDC rule、Agent Skillで必要時だけ到達できる。
-5. adapterは正本を参照するだけで、長文を複製していない。
-6. hard gateとheuristicを区別した。
-7. instruction budgetを満たした。
-8. 旧正本、循環参照、壊れたlinkを残していない。
-9. `bash scripts/verify-agent-harness.sh`を実行した。
-10. UI/UXガバナンスを変えた場合は`bash scripts/verify-ai-governance.sh`も実行した。
-
-## 既知の限界
-
-各製品のversion、Remote SSH、sandbox、権限、Skill discoveryの実装差まではリポジトリ内の静的検証だけで保証できません。adapterと正本の構造をCIで固定し、実環境で発見できない場合は製品名、version、実行形態、再現pathをIssueへ残します。
+root、nested、adapter、canonical Skillの常時読込量はvalidatorのbudgetで確認します。estimateをobserved token usageと混同しません。正本へ到達でき、adapterが本文を複製せず、必要なgateと公開安全性を満たし、未確認範囲を報告できる時だけ完了候補とします。Hard gateとheuristic、未解決のP0 / P1、security、data integrity、受入証跡の矛盾は明示して止めます。

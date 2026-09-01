@@ -66,7 +66,7 @@ e2e:
 	cd client && MJPS_E2E_PYTHON="$(PYTHON)" npm run e2e
 
 verify-governance:
-	bash scripts/verify-ai-governance.sh
+	$(PYTHON) scripts/validate_governance.py
 
 clean:
 	rm -rf build dist *.egg-info .pytest_cache .ruff_cache .mypy_cache htmlcov client/dist client/playwright-report client/test-results

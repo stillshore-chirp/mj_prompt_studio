@@ -10,7 +10,7 @@ MJ Prompt Studioは、画像生成向けプロンプトの設計、語彙補助�
 ## 開発ガバナンス
 
 - [`AGENTS.md`](AGENTS.md): Codex・Claude Code・Cursorが共有する短い常時読込契約とpath / taskの入口。
-- [`docs/agent-harness.md`](docs/agent-harness.md): common / path / task / machineの4層、instruction budget、3製品のadapter設計。
+- [`docs/agent-harness.md`](docs/agent-harness.md): 3製品の正本・adapter、委任、checkpoint、evidence、task-state、runtime境界、instruction budget。
 - [`docs/agent-principles.md`](docs/agent-principles.md): 設計・実装・test判断のheuristic。
 - [`client/AGENTS.md`](client/AGENTS.md): React clientと関連E2E・利用者文書の契約。
 - [`src/mj_prompt_studio/AGENTS.md`](src/mj_prompt_studio/AGENTS.md): Python API、Application / Domain / Infrastructure / LLMの契約。
@@ -22,12 +22,11 @@ MJ Prompt Studioは、画像生成向けプロンプトの設計、語彙補助�
 ハーネス・ガバナンスを変更した場合は次を実行します。
 
 ```bash
-python -m pip install -r requirements-agent-harness.txt
-bash scripts/verify-agent-harness.sh
-bash scripts/verify-ai-governance.sh
+python -m pip install -e ".[dev]"
+python scripts/validate_governance.py
 ```
 
-`make verify-governance` からもハーネスとAIガバナンスの検証を実行できます。ここでいうAIガバナンスは、本リポジトリ内のAIエージェント支援開発の品質管理を指し、企業全体の法務・倫理・model監査を意味しません。
+`make verify-governance` からもハーネスとAIガバナンスのstatic検証を実行できます。static PASSは、製品runtime、Hookの実挙動、実API、権限、production状態を保証しません。ここでいうAIガバナンスは、本リポジトリ内のAIエージェント支援開発の品質管理を指し、企業全体の法務・倫理・model監査を意味しません。
 
 ## セットアップ
 
@@ -92,7 +91,7 @@ OpenAPI schemaを更新する場合は `make generate-openapi` を実行しま�
 ## データとセキュリティ
 
 - APIは既定でlocalhostにのみbindします。
-- React clientはtyped API client経由でPython Application Serviceを呼びます。
+- React clientはtyped API client経由でlocalhost Python Application Serviceを呼びます。
 - SQLite、asset store、settings、job queueが永続化の正本です。
 - APIキーは環境変数を優先し、標準インストールに含まれる`keyring`を通じてSettingsから利用可能なOS資格情報ストアへ保存・再読み込みできます。資格情報ストアが使えない環境ではセッション内適用に限定します。Settings、Health、Jobsは設定モード・実行バックエンド・キー設定有無などの安全な状態だけを表示し、キーや実Response IDをclientへ返しません。
 - Privacy modeではResponses APIの保存を無効化し、`previous_response_id` を送りません。

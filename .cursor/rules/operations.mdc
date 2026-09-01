@@ -1,7 +1,7 @@
 ---
-description: "CI・package・release・実環境調査固有ruleを必要な時だけ読み込むrouter"
-globs: "docs/operations/**,.github/workflows/**,Makefile,scripts/package*,scripts/release*,scripts/build*"
+description: "運用とworkflowの正本pathを案内する。"
+globs: "docs/operations/**,.github/workflows/**,Makefile,scripts/run*,scripts/generate_openapi.py,scripts/package*,scripts/release*,scripts/build*"
 alwaysApply: false
 ---
 
-CI、package、release、配布・実環境調査を扱う前に、@AGENTS.md、@docs/operations/AGENTS.md、該当する @.agents/skills/ のSkillを読んで適用してください。
+追加で `docs/operations/AGENTS.md` を読む。

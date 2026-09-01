@@ -3,58 +3,28 @@ name: security-publication
 description: "公開リポジトリへpushされる文書、Issue、PR、レポート、ログ要約、サンプル、スクリーンショットを作成・更新する時に、秘密情報や追跡可能な運用情報の露出を防ぐ。"
 ---
 
-# 公開安全性 Skill
+# 公開安全 Skill
 
 ## 発動条件
 
-gitへpushされる文書、Issue / PR本文、運用記録、調査レポート、sample、fixture、screenshot、traceの追加・更新で使います。詳細正本は [`docs/security-publication-checklist.md`](../../../docs/security-publication-checklist.md) です。
+公開repoのdiff、Issue、PR、docs、report、log summary、sample、fixture、screenshot、trace、workflow説明を作成・更新・レビューするときに使います。公開先、branch、変更path、想定読者を先に固定します。
 
-## 1. 対象の棚卸し
+## 公開前インベントリ
 
-- 公開先と、追加・更新する全ファイル、Issue / PR本文、添付物を列挙する。
-- source、generated artifact、log、screenshot、sample dataを区別する。
-- 外部入力をそのまま転載していないか確認する。
+新規・変更・生成ファイルを列挙し、source、fixture、ログ、画像、metadata、リンク、環境設定、埋め込み出力を確認します。秘密情報、API key、access token、Cookie、authorization header、private key、credential、個人情報、prompt、参照画像、生成画像、local DB/asset、raw log、query、絶対path、時刻、request/response ID、環境ID、追跡可能な識別子を公開物へ残しません。
 
-## 2. 公開禁止または最小化する情報
+## 検査
 
-- secret、API key、token、Cookie、認証header、private key
-- 個人情報、ユーザー入力全文、メールアドレス、内部連絡先
-- prompt全文、参照画像、生成画像、ローカルDB、asset内容
-- 実ログ原文、完全なquery、正確なlocal path、秒単位時刻
-- 実request / response / trace / job / session ID
-- 不要なservice、database、credential storeなどの環境識別子
-- 攻撃に直接使える未修正脆弱性の過剰な再現情報
+- staged/unstaged diff、新規ファイル、ignore漏れ、履歴由来の生成物を確認する。
+- secret scannerと文字列検索を実行し、hidden file、コメント、metadata、alt text、fixture、screenshot、URL queryにも同じ基準を適用する。
+- Markdown link、Issue/PR本文、YAML、code block、sampleのsyntaxと公開先を確認する。
+- logはraw貼付を避け、必要な事象をsyntheticな値と最小の時刻・分類へ置換する。スクリーンショットは画像内容、OCR可能な文字、metadataを確認する。
+- `git diff --check` と、対象path・artifact・実行条件に結び付いた検査結果を記録する。
 
-必要な事実だけを要約し、識別子は一般化またはマスクする。
+## 検出時の扱い
 
-## 3. 検査
+漏えい候補を見つけたら公開を止め、値そのものを再掲せず、種類・場所・影響だけを記録します。実credentialなら公開範囲を確定し、rotation/revocationを担当者へ直ちに引き継ぎます。削除後も履歴、artifact、cache、Issue/PR、添付画像への残存を確認するまで安全扱いにしません。
 
-- 差分と新規ファイルを目視する。
-- secret scanner、不可視文字、`git diff --check`、link確認など利用可能な検査を実行する。
-- screenshot、trace、video、test artifactは、画面外やmetadataも確認する。
-- sample / fixtureは実データのコピーを避け、匿名の最小データを使う。
-- 公開判断が不明な値は、公開しない側に倒す。
+## 報告と境界
 
-## 4. 承認が必要な場合
-
-公開操作が安全審査で停止した場合、許可だけを求めない。値そのものを再表示せず、次を先に示す。
-
-- 公開先と操作
-- 対象の完全な一覧
-- マスク済みの差分または安全な説明
-- 具体的な疑いか、予防的停止か
-- 実施済み検査
-- 未確認範囲
-- 推奨判断と必要な安全措置
-
-## 5. 漏洩を発見した場合
-
-- 追加の公開・pushを止める。
-- 値を回答やIssueへ再掲しない。
-- secretならrotate / revokeを優先する。
-- 履歴、cache、artifact、forkへの残存範囲を評価する。
-- 文書修正だけで完了扱いにしない。
-
-## 6. 報告
-
-公開安全性の確認範囲、実行した検査、検出結果、一般化した値、未確認項目、残るリスクをPRへ記載する。
+報告には公開先、対象revision、検査範囲、pass/fail、除去・マスク方針、未確認、残るriskを含めます。未確認のscanner、履歴、外部権限、公開状態を成功と断定しません。公開文面・workflow・Issue/PRはコードと別のGitHub共同作業面としても確認し、実OpenAI API、画像生成サービス、Cookie、Token、非公式APIを操作しません。

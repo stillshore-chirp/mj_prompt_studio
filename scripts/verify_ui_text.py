@@ -12,10 +12,19 @@ FORBIDDEN_PATTERNS = [
     re.compile(r"Midjourney\s+V\s*\d+(?:\.\d+)?", re.IGNORECASE),
 ]
 
+MACHINE_READABLE_PATHS = frozenset(
+    {Path("docs/ai-governance/templates/task-state.json")}
+)
+
+
+def is_user_visible_scan_path(path: Path) -> bool:
+    return path not in MACHINE_READABLE_PATHS
+
 
 def verify() -> None:
     texts = list(USER_VISIBLE_STRINGS)
     for root in [
+        Path(".github/ISSUE_TEMPLATE"),
         Path("src/mj_prompt_studio/ui"),
         Path("src/mj_prompt_studio/resources"),
         Path("client/src"),
@@ -25,8 +34,19 @@ def verify() -> None:
         if not root.exists():
             continue
         for path in root.rglob("*"):
-            if path.suffix in {".css", ".json", ".md", ".py", ".qss", ".ts", ".tsx"}:
+            if is_user_visible_scan_path(path) and path.suffix in {
+                ".css",
+                ".json",
+                ".md",
+                ".py",
+                ".qss",
+                ".ts",
+                ".tsx",
+            }:
                 texts.append(path.read_text(encoding="utf-8"))
+    pull_request_template = Path(".github/pull_request_template.md")
+    if pull_request_template.exists():
+        texts.append(pull_request_template.read_text(encoding="utf-8"))
     readme = Path("README.md")
     if readme.exists():
         texts.append(readme.read_text(encoding="utf-8"))
