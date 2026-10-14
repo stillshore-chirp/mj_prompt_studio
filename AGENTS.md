@@ -1,10 +1,10 @@
 # AGENTS.md
 
-この文書は、Codex・Claude Code・Cursor が共有する短い常時読込契約です。読者・委任・証跡・task-state・runtimeの境界は [docs/agent-harness.md](docs/agent-harness.md)、設計判断の heuristic は [docs/agent-principles.md](docs/agent-principles.md)、製品固有契約は [docs/process/mj-prompt-studio-rules.md](docs/process/mj-prompt-studio-rules.md) を正本とします。
+Codexの共通業務運用は利用者ローカルの `AGENTS.md` を正本とします。このrepositoryはMJ Prompt Studio固有の契約とpath routingを定め、読者・adapter・静的検査・任意のtask-state資料は [docs/agent-harness.md](docs/agent-harness.md)、製品固有の不変条件は [docs/process/mj-prompt-studio-rules.md](docs/process/mj-prompt-studio-rules.md) に置きます。設計判断のheuristicは [docs/agent-principles.md](docs/agent-principles.md) を参照します。
 
 ## 適用とルール探索
 
-- ユーザーの依頼と制約を最優先し、root AGENTS.md、対象に最も近い AGENTS.md、発動した Skill の順に適用します。
+- Codexの共通業務運用は利用者ローカルの `AGENTS.md` を優先し、このrepositoryのAGENTS.mdとSkillはMJ Prompt Studio固有の契約を追加します。
 - 編集前に対象pathまでの AGENTS.md を読み、関連pathには次の bridge を使います。
 
 | 対象 path | 追加で読む正本 |
@@ -14,21 +14,7 @@
 | .github/workflows/**、配布・package・release関連の scripts/** と文書 | docs/operations/AGENTS.md |
 
 - .claude/ と .cursor/ は共有正本へ接続する薄い adapter です。本文や新しい品質基準を複製しません。
-- 競合は、対象範囲が狭く具体的な契約を優先し、解消できない場合は実装前に明示します。
-
-## 最小実行
-
-1. 目的、受け入れ条件、非対象、依存、検証方法を固定します。
-2. 現在のコード、設定、test、文書、履歴を読み、影響範囲を確認します。
-3. scope、owner、変更path、入力閉包、停止条件を計画します。
-4. 既存挙動を保つ最小十分な差分を実装し、関連する文書・test・生成物を同期します。
-5. focused verificationを実行し、未実行検証と残るriskを報告します。
-
-## 権限境界
-
-- source、test、script、workflow、schema、文書の変更は依頼されたscope内で行います。
-- merge、Issue / PRのclose、release、deploy、secret・権限変更、破壊的操作は、対象を特定した別の明示的な権限なしに行いません。
-- credential、production data、外部system、公開物は対象・範囲・権限を確定してから扱います。
+- 製品固有契約のpath別差分は、対象に最も近いAGENTS.mdを参照します。
 
 ## タスク別ルーティング
 
@@ -51,4 +37,4 @@
 
 ## ガバナンス変更
 
-rule、Skill、adapter、検証scriptを変更する場合は、docs/agent-harness.md と maintenance policyを読み、3製品の到達性、path scope、正本重複、instruction budget、公開安全性を確認します。詳細な配送手順はSkill、判定基準は詳細governance文書へ置き、常時読込へ複製しません。
+rule、Skill、adapter、検証scriptを変更する場合は、docs/agent-harness.md と maintenance policyを読み、3製品の到達性、path scope、正本重複、instruction budget、公開安全性を確認します。共通業務手順は利用者ローカルのCodex `AGENTS.md` に従い、このrepositoryへ複製しません。

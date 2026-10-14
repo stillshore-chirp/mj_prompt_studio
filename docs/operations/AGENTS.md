@@ -1,6 +1,6 @@
 # Operations AGENTS.md
 
-ルート [AGENTS.md](../../AGENTS.md) を先に適用し、この文書はCI、配布、package、release、実行環境調査に固有の契約だけを追加します。
+Codexの共通業務運用は利用者ローカルの `AGENTS.md`、repository共通の製品契約はルート [AGENTS.md](../../AGENTS.md) に従います。この文書はCI、配布、package、release、実行環境調査に固有の契約だけを追加します。
 
 実環境を調査・記録する場合は [実環境調査Skill](../../.agents/skills/production-investigation/SKILL.md)、公開記録やPR本文を作る場合は [公開安全性Skill](../../.agents/skills/security-publication/SKILL.md) を適用します。
 

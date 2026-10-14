@@ -48,15 +48,10 @@ Issue / PRの判断に必要な説明、受け入れ条件、検証、未実行�
 
 <!-- 実OpenAI APIの確認は通常のtest / CIと分け、secret・prompt・画像・response全文を貼らない。 -->
 
-## CI / レビュー
+## CI / Review (任意の参考情報)
 
-- 最新コミット:
-- push時CI (push CI):
-- pull_request時CI (pull_request CI):
-- 最新の意味ある変更への自動・人間レビュー (latest meaningful changeへの自動・人間review):
-- 未解決レビューthread:
-- GitHubのマージ可能性 (GitHub mergeability):
-- レビュー未提供（ソースコード変更では未完了blocker）:
+<!-- 必要な場合だけ、確認したCI・reviewの状況を記載します。 -->
+- CI / reviewの参考情報:
 
 ## 未実行の検証
 

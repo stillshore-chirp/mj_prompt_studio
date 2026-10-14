@@ -1,6 +1,6 @@
 # Agent Principles
 
-この文書は、MJ Prompt Studioの設計・実装判断に使う heuristic だけを定めます。hard gateと権限境界は [AGENTS.md](../AGENTS.md)、委任・証跡・task-stateは [docs/agent-harness.md](agent-harness.md)、作業手順は該当Skillを優先します。
+この文書は、MJ Prompt Studioの設計・実装判断に使うheuristicだけを定めます。Codexの共通業務運用は利用者ローカルの `AGENTS.md`、製品固有のhard gateとpath routingは [AGENTS.md](../AGENTS.md)、task固有契約は該当Skillを参照します。optional task-state形式とstatic contractは [docs/agent-harness.md](agent-harness.md) にあります。
 
 複数の原則が競合する場合は、要件、既存構造、変更容易性、誤用リスク、検証可能性を比較します。数値目安だけでFailにせず、安全に変更・利用できるかで判断します。
 

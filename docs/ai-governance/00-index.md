@@ -2,7 +2,7 @@
 
 このdirectoryは、AI agent支援開発のUI/UX、証跡、完了条件、Issue品質、残るriskを扱う詳細正本です。企業全体の法務・倫理審査やmodel監査を意味しません。
 
-共通契約は [AGENTS.md](../../AGENTS.md)、3製品の読者・adapter・委任・evidence・task-state・runtimeは [docs/agent-harness.md](../agent-harness.md)、task手順は [.agents/skills/](../../.agents/skills/) を優先します。
+Codexの共通業務運用は利用者ローカルの `AGENTS.md` に従います。repository固有の製品契約とroutingは [AGENTS.md](../../AGENTS.md)、3製品のadapter・static contract・任意task-state資料は [docs/agent-harness.md](../agent-harness.md)、MJ固有のtask条件は [.agents/skills/](../../.agents/skills/) を参照します。
 
 ## 読み方
 
