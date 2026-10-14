@@ -1,6 +1,6 @@
 # Python Backend AGENTS.md
 
-ルート [AGENTS.md](../../AGENTS.md) を先に適用し、この文書は src/mj_prompt_studio/ 固有の契約だけを追加します。
+Codexの共通業務運用は利用者ローカルの `AGENTS.md`、repository共通の製品契約はルート [AGENTS.md](../../AGENTS.md) に従います。この文書は `src/mj_prompt_studio/` 固有の契約だけを追加します。
 
 ## Hard gate
 

@@ -35,15 +35,13 @@ GitHubが所有しrepositoryが変更していないlayout、focus、permission 
 
 変更範囲に応じて、対象ユーザー、目的、画面、component、入力、出力、初見理解、state matrix、accessibility、視覚階層、copy、熟練者効率、trust、反証review、test、手動確認を記録します。
 
-アプリ本体UIの変更では、該当画面・stateの変更前と変更後のscreenshotを添付します。beforeはbase snapshotのref、surface、state、viewport、runtime条件へ束縛します。afterは実装と包括reviewが収束したlatest HEADだけをfinalとし、途中のものはprovisionalと明記します。HEAD、base、owned path、review state、finding / fix、runtime条件が変わればafterを失効させます。
+アプリ本体UIの変更では、該当画面・stateの変更前と変更後のscreenshotを添付します。両方に対象画面、state、viewportなど表示条件を結び付け、UIに影響する変更後は画像を取り直します。
 
 取得できない時は、未実行検証、理由、代替証跡、残るrisk、次の確認を示します。受け入れ条件上必須のscreenshotがない場合は完了扱いにしません。
 
-## 4. runtimeとフロー監査
+## 4. フロー監査
 
-runtimeまたはdev serverを使う場合は、起動前にowner、PID、process group、port、readiness、cleanupを決め、終了時にprocess groupの停止とport解放を確認します。owner不明、port衝突、readiness未確認、cleanup未確認の実行はcurrent-run証跡に使いません。runtimeを使わない場合はその旨を記録します。
-
-フロー監査では、対象surface、ユーザー目的、開始・完了state、順序付き重要step、各stepの操作・到達state・現在の監査で取得したscreenshotまたは取得不能の具体的blockerを記録します。screenshotだけでaccessible name、contrast、focus順序、keyboard完走、時間変化、回復を確認済みとしません。完走不能または重要stepの証跡不足は、監査できた範囲と分けたblockerです。
+フロー監査では、対象surface、ユーザー目的、開始・完了state、重要step、各stepの操作・到達stateを確認します。screenshotだけでaccessible name、contrast、focus順序、keyboard完走、時間変化、回復を確認済みとしません。完走不能または重要stepの証跡不足は、監査できた範囲と分けます。
 
 ## 5. findingの由来
 <!-- agent-harness:uiux-finding-provenance:start -->
@@ -63,24 +61,8 @@ IntroducedとRegressionは今回のP0 / P1 / P2、修正状態、証跡へ結び
 
 Issue / PR template、repository Markdown、workflow入力では、変更した文言、項目、順序、必須性、Markdown / YAML / frontmatter構造、link、command、公開安全性、preview要否を確認します。GitHubが所有する未変更UIのscreenshot、runtime、state matrixは要求しません。
 
-## 7. 配送checkpointと再取得
+## 7. 対象面別の受け入れ
 
-配送は implementation → focused_verification → code_freeze → measurement → publication_freeze → external_gate → review_fix → accepted の順に進めます。各gateの入力はHEAD / base、changed paths、関連設定、生成物、実行条件へ閉じます。
+アプリ本体UIでは、ユーザー価値、初見理解、主要state、accessibility、visual hierarchy、copy、効率、trust、反証review、必要なbefore / afterを確認します。差分reviewではscopeと追加・削除を見て、今回変更によるfindingを既存問題と区別します。
 
-stable evidenceとvolatile delivery state（CI、review / thread、mergeability、待機中status）を分けます。HEADが変わっただけで全gateを失効させず、path・設定・生成物・条件と交差したgateだけを再取得します。latest meaningful changeに対するCI、review、thread、mergeabilityをacceptedで同一snapshotへ照合します。
-
-## 8. 完了ゲート
-
-共通条件は、受け入れ条件と対象面の証跡、P0の不在、実行済み検証、未実行検証と理由、残るrisk、公開安全性、未確認事項の明示です。
-
-UIでは、価値、初見理解、主要state、accessibility、visual hierarchy、copy、効率、trust、反証review、必要なbefore / after、runtime cleanupを確認します。差分reviewではscope、base / head、intent、追加・削除、coverage、Introduced / Regression / Pre-existingを確認します。
-
-GitHub共同作業面では、文言、構造、順序、必須性、link、公開安全性を範囲に比例して確認し、UI用screenshotやdev serverを完了条件にしません。
-
-## 9. Pull Request
-
-PRをmerge可能と報告するには、latest headの対象CIが成功し、latest meaningful changeへの利用可能なcode reviewがcleanで、actionableな未解決threadがなく、GitHubのmergeabilityがcleanであることを確認します。same closureで成功したgateは再利用し、closureが変わった時だけ再取得します。mergeまたはcloseは別の明示指示が必要です。
-
-## 10. 推奨検証と報告
-
-変更に応じてlint、format、typecheck、Unit / Integration / contract / E2E、Playwright、accessibility、screenshot、Markdown / YAML / frontmatter / link検査を選びます。利用できない検証を成功扱いせず、理由と残るriskを報告します。completion-gate-report templateまたは同等の台帳に、snapshot、closure、条件、結果、artifact参照を残します。
+GitHub共同作業面では、変更した文言、構造、順序、必須性、link、公開安全性を確認します。UI用screenshotやdev serverは完了条件にしません。

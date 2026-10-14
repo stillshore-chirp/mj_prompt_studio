@@ -1,4 +1,4 @@
-# 完了ゲート報告
+# UI/UX受け入れ報告
 
 ## 判定
 
@@ -41,13 +41,11 @@
 |---|---|---|
 |  |  |  |
 
-## PR / CI / Review
+## 対象revisionと画面条件
 
-- latest commit:
-- required CI:
-- 利用可能な自動・手動review:
-- 未解決review thread:
-- review未提供時の代替自己review:
+- 対象revision / diff:
+- viewport / locale / mock data:
+- 確認できなかった条件:
 
 ## 未実行項目
 

@@ -9,8 +9,8 @@ MJ Prompt Studioは、画像生成向けプロンプトの設計、語彙補助�
 
 ## 開発ガバナンス
 
-- [`AGENTS.md`](AGENTS.md): Codex・Claude Code・Cursorが共有する短い常時読込契約とpath / taskの入口。
-- [`docs/agent-harness.md`](docs/agent-harness.md): 3製品の正本・adapter、委任、checkpoint、evidence、task-state、runtime境界、instruction budget。
+- [`AGENTS.md`](AGENTS.md): MJ Prompt Studio固有の常時読込契約とpath / taskの入口。Codexの共通業務運用は利用者ローカルの `AGENTS.md` を正本とします。
+- [`docs/agent-harness.md`](docs/agent-harness.md): 3製品の正本・adapter、static contract、任意task-state形式とそのruntime境界。
 - [`docs/agent-principles.md`](docs/agent-principles.md): 設計・実装・test判断のheuristic。
 - [`client/AGENTS.md`](client/AGENTS.md): React clientと関連E2E・利用者文書の契約。
 - [`src/mj_prompt_studio/AGENTS.md`](src/mj_prompt_studio/AGENTS.md): Python API、Application / Domain / Infrastructure / LLMの契約。

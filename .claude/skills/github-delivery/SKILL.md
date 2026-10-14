@@ -1,6 +1,6 @@
 ---
 name: github-delivery
-description: "共有GitHub配送SkillをClaude Codeから発動する。"
+description: "Issue・PRの内容とMJ Prompt Studio固有の受け入れ条件を整理する時に使う。"
 ---
 
 # github-delivery adapter

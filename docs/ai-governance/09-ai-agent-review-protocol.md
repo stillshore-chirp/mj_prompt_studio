@@ -1,6 +1,6 @@
 # AIエージェントレビュー・プロトコル
 
-この文書は、AI agentがMJ Prompt StudioのUI/UX reviewを実行する手順です。変更差分reviewでは、03の証跡にtarget scopeとfindingの由来を追加します。
+この文書は、MJ Prompt StudioのUI/UX review観点を定めます。Codexの共通委任・検証・review運用は利用者ローカルの `AGENTS.md` に従います。変更差分reviewでは、03の対象面証跡にfindingの由来を追加します。
 
 ## 1. 目的
 
