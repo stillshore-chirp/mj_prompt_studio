@@ -121,6 +121,21 @@ def test_package_and_public_text_inputs_are_explicit() -> None:
     assert public_text.backend is False
 
 
+def test_node_runtime_policy_inputs_select_runtime_gates() -> None:
+    plan = classify_paths(
+        [
+            ".nvmrc",
+            "scripts/check_node_runtime.cjs",
+            "scripts/check_node_runtime.test.cjs",
+        ]
+    )
+
+    assert plan.classification_ok is True
+    assert plan.package is True
+    assert plan.frontend is True
+    assert plan.e2e is True
+
+
 def test_api_contract_selects_generated_client_and_acceptance_gates() -> None:
     plan = classify_paths(["src/mj_prompt_studio/server/schemas.py"])
 
