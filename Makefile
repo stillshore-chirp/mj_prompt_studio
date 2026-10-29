@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck test build package run run-api run-react run-desktop package-desktop client-install client-lint client-typecheck client-test client-build generate-openapi e2e verify-governance clean
+.PHONY: format lint typecheck test build package run run-api run-react run-desktop package-desktop check-node-runtime client-install client-lint client-typecheck client-test client-build generate-openapi e2e verify-governance clean
 
 PYTHON ?= $(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else echo python3; fi)
 
@@ -37,32 +37,35 @@ run:
 run-api:
 	$(PYTHON) -m mj_prompt_studio.server.main
 
-run-react:
+run-react: check-node-runtime
 	cd client && npm run dev -- --host 127.0.0.1 --port 5173
 
 run-desktop: run
 
 package-desktop: client-build package
 
-client-install:
+check-node-runtime:
+	node scripts/check_node_runtime.cjs
+
+client-install: check-node-runtime
 	cd client && npm install
 
-client-lint:
+client-lint: check-node-runtime
 	cd client && npm run lint
 
-client-typecheck:
+client-typecheck: check-node-runtime
 	cd client && npm run typecheck
 
-client-test:
+client-test: check-node-runtime
 	cd client && npm run test:run
 
-client-build:
+client-build: check-node-runtime
 	cd client && npm run build
 
 generate-openapi:
 	$(PYTHON) scripts/generate_openapi.py
 
-e2e:
+e2e: check-node-runtime
 	cd client && MJPS_E2E_PYTHON="$(PYTHON)" npm run e2e
 
 verify-governance:

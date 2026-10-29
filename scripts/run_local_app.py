@@ -15,6 +15,24 @@ def main() -> int:
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
+    try:
+        runtime_check = subprocess.run(
+            ["node", "scripts/check_node_runtime.cjs"],
+            cwd=repo_root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except OSError:
+        runtime_check = None
+    if runtime_check is None or runtime_check.returncode != 0:
+        print(
+            "Node.js runtime preflight failed; install the version in .nvmrc "
+            "(with nvm: run nvm install, then nvm use), then run make check-node-runtime.",
+            file=sys.stderr,
+        )
+        return 1
+
     api_env = os.environ.copy()
     api_env.setdefault("MJPS_SERVER_PORT", "8765")
     api = subprocess.Popen(

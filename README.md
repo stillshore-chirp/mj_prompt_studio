@@ -30,6 +30,11 @@ python scripts/validate_governance.py
 
 ## セットアップ
 
+Node.js と npm が必要です。Node.js の基準版は [.nvmrc](.nvmrc) の 22.23.4 です。nvmを使う場合は、
+以下の手順へ進む前に `nvm install` と `nvm use` で切り替えてください。Makeのclient操作と `make run` はNodeの安全な
+実行条件を確認してから起動します。直接 `npm` / `npx` を実行する場合は、先に
+`make check-node-runtime` を実行してください。
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
@@ -37,7 +42,9 @@ python -m pip install -e ".[dev]"
 make client-install
 ```
 
-Node.js と npm が必要です。Apple Silicon で Python の architecture mismatch が出る場合は、Terminal の Rosetta 起動をオフにするか、`arch -arm64 python3 -m venv .venv` で venv を作り直してください。`make` は `.venv/bin/python` を優先して使います。
+Apple Silicon で Python の architecture mismatch が出る場合は、Terminal の Rosetta 起動をオフにするか、
+`arch -arm64 python3 -m venv .venv` で venv を作り直してください。`make` は `.venv/bin/python` を
+優先して使います。
 
 起動時は `OPENAI_API_KEY`（互換名 `OPENAI_KEY`、`MJPS_OPENAI_API_KEY`）とOS資格情報ストアを順に解決します。APIキーが見つかれば実APIを利用し、見つからなければAI実行は開始せず、Settingsで安全な理由と設定導線を表示します。通常起動でMockLLMへ自動フォールバックすることはありません。
 

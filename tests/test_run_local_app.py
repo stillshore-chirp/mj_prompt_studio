@@ -4,6 +4,7 @@ import signal
 import subprocess
 import sys
 from collections.abc import Sequence
+from types import SimpleNamespace
 
 import pytest
 from scripts import run_local_app
@@ -31,6 +32,11 @@ def _run_and_capture_commands(monkeypatch: pytest.MonkeyPatch) -> tuple[int, lis
         return _FakeProcess(0 if len(commands) == 1 else None)
 
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=0),
+    )
     monkeypatch.setattr(signal, "signal", lambda *_args: None)
     monkeypatch.setattr(sys, "argv", ["run_local_app.py"])
     return run_local_app.main(), commands
@@ -62,3 +68,22 @@ def test_python_command_defaults_to_current_interpreter(monkeypatch: pytest.Monk
         "-m",
         "mj_prompt_studio.server.main",
     ]
+
+
+def test_node_guard_failure_stops_before_starting_api_or_client(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(returncode=1),
+    )
+    monkeypatch.setattr(
+        subprocess,
+        "Popen",
+        lambda *_args, **_kwargs: pytest.fail("app process started after Node guard failure"),
+    )
+    monkeypatch.setattr(sys, "argv", ["run_local_app.py"])
+
+    assert run_local_app.main() == 1
+    assert "Node.js runtime preflight failed" in capsys.readouterr().err

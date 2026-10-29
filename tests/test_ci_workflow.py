@@ -87,6 +87,57 @@ def test_package_gate_rejects_stale_generated_openapi() -> None:
     assert "git diff --exit-code -- client/src/shared/types/openapi.json" in text
 
 
+def test_node_runtime_is_pinned_and_preflighted_before_npm_commands() -> None:
+    workflow = _workflow()
+    jobs = workflow["jobs"]
+    assert isinstance(jobs, dict)
+
+    for job_name in ("frontend", "e2e", "package", "platform_smoke"):
+        job = jobs[job_name]
+        assert isinstance(job, dict)
+        steps = job["steps"]
+        setup_index = next(
+            index
+            for index, step in enumerate(steps)
+            if isinstance(step, dict) and step.get("name") == "Set up Node.js"
+        )
+        setup = steps[setup_index]
+        assert isinstance(setup, dict)
+        assert setup["with"]["node-version-file"] == ".nvmrc"
+
+        preflight_index = next(
+            index
+            for index, step in enumerate(steps)
+            if isinstance(step, dict) and step.get("name") == "Verify Node.js runtime policy"
+        )
+        assert preflight_index > setup_index
+        preflight = steps[preflight_index]
+        assert isinstance(preflight, dict)
+        assert preflight["shell"] == "bash"
+        assert "node scripts/check_node_runtime.cjs" in preflight["run"]
+        assert "node --test scripts/check_node_runtime.test.cjs" in preflight["run"]
+
+        node_commands = (
+            "npm install",
+            "npm ci",
+            "npm run ",
+            "npx ",
+            "make client-install",
+            "make client-lint",
+            "make client-typecheck",
+            "make client-test",
+            "make client-build",
+            "make e2e",
+            "make package",
+        )
+        for index, step in enumerate(steps):
+            if not isinstance(step, dict):
+                continue
+            run = str(step.get("run", ""))
+            if any(command in run for command in node_commands):
+                assert index > preflight_index, f"{job_name} starts npm before the preflight"
+
+
 def test_platform_smoke_is_main_push_only() -> None:
     workflow = _workflow()
     platform_smoke = workflow["jobs"]["platform_smoke"]
